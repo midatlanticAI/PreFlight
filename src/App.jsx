@@ -128,9 +128,30 @@ export {
   probeCodeQuality,
   probeArchitecture,
   PROBES,
+  PROBE_META,
+  stableId,
+  attachStableIds,
+  attachProbeMeta,
+  SUPPRESSION_KEY,
+  SUPPRESSION_DISPOSITIONS,
+  loadSuppressions,
+  saveSuppressions,
+  suppressFinding,
+  unsuppressFinding,
+  partitionFindings,
 } from './lib/probes.js';
 // Bring shouldScanFile into local scope for fetchGitHubRepo and handleFiles below.
-import { shouldScanFile, PROBES } from './lib/probes.js';
+import {
+  shouldScanFile,
+  PROBES,
+  attachStableIds,
+  attachProbeMeta,
+  loadSuppressions,
+  saveSuppressions,
+  suppressFinding,
+  unsuppressFinding,
+  partitionFindings,
+} from './lib/probes.js';
 
 // ==========================================================================
 // SCORING
@@ -592,8 +613,10 @@ export function computeDiffAgainstPrior(currentResults, history) {
   );
   if (!prior) return null;
 
-  // Use a stable key per finding so we can diff: probe + file + line + title (id contains random offset, not stable).
-  const keyOf = (f) => `${f.probe}|${f.file}|${f.line}|${f.title}`;
+  // Use the deterministic stableId where available; fall back to the legacy composite key for
+  // older history entries written before stable IDs existed. New scans always carry stableId
+  // because handleScan calls attachStableIds(); old entries shipped without it.
+  const keyOf = (f) => f.stableId || `legacy|${f.probe}|${f.file}|${f.line}|${f.title}`;
   const currentSet = new Set(currentResults.findings.map(keyOf));
   const priorSet = new Set((prior.findings || []).map(keyOf));
 
@@ -1200,7 +1223,7 @@ export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
   );
 }
 
-export function FindingCard({ finding, expanded, onToggle }) {
+export function FindingCard({ finding, expanded, onToggle, onSuppress, onUnsuppress }) {
   const c = T.sev[finding.severity];
   return (
     <div className="ap-finding" style={{ borderLeftColor: c.fg, marginBottom: 8 }}>
@@ -1248,6 +1271,63 @@ export function FindingCard({ finding, expanded, onToggle }) {
             <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>
               {finding.cwe}
             </span>
+            {finding.confidence && (
+              <span
+                className="ap-mono"
+                title={
+                  finding.confidence === 'high'
+                    ? 'High confidence — deterministic pattern match'
+                    : finding.confidence === 'medium'
+                      ? 'Medium confidence — regex match that benefits from a glance'
+                      : 'Heuristic — path / structural inference; manual review recommended'
+                }
+                style={{
+                  fontSize: 10,
+                  color: T.textDim,
+                  background: T.panelAlt,
+                  border: `1px solid ${T.border}`,
+                  padding: '1px 6px',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {finding.confidence === 'heuristic' ? 'heur.' : finding.confidence}
+              </span>
+            )}
+            {finding.autofix && (
+              <span
+                className="ap-mono"
+                title={
+                  finding.autofix === 'mechanical'
+                    ? 'Mechanical — a one-or-two-line drop-in patch fixes it'
+                    : finding.autofix === 'review-needed'
+                      ? 'Review needed — clear remediation path, requires reading surrounding code'
+                      : 'Manual — architectural / scope-dependent; no canned fix'
+                }
+                style={{
+                  fontSize: 10,
+                  // Mint highlight on "mechanical" — easy-win signal.
+                  color:
+                    finding.autofix === 'mechanical'
+                      ? T.bg
+                      : finding.autofix === 'review-needed'
+                        ? T.textDim
+                        : T.textMuted,
+                  background: finding.autofix === 'mechanical' ? T.accentAlt : T.panelAlt,
+                  border: `1px solid ${finding.autofix === 'mechanical' ? T.accentAlt : T.border}`,
+                  padding: '1px 6px',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  fontWeight: finding.autofix === 'mechanical' ? 600 : 400,
+                }}
+              >
+                {finding.autofix === 'mechanical'
+                  ? 'easy fix'
+                  : finding.autofix === 'review-needed'
+                    ? 'review'
+                    : 'manual'}
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 13, color: T.text, marginBottom: 4, fontWeight: 500 }}>
             {finding.title}
@@ -1401,6 +1481,84 @@ export function FindingCard({ finding, expanded, onToggle }) {
               probe: {finding.probe}
             </span>
           </div>
+          {/* Disposition row: lets the user decide what to do with this finding on future scans. */}
+          {finding.suppression ? (
+            <div style={{ marginTop: 14 }}>
+              <div className="ap-eyebrow" style={{ marginBottom: 6 }}>
+                DISPOSITION
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span
+                  className="ap-mono"
+                  style={{
+                    fontSize: 10,
+                    padding: '3px 8px',
+                    background: T.panelAlt,
+                    border: `1px solid ${T.borderAlt}`,
+                    color: T.textDim,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {finding.suppression.disposition.replace(/-/g, ' ')}
+                </span>
+                <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>
+                  set {timeAgo(finding.suppression.at)}
+                </span>
+                {finding.suppression.note && (
+                  <span style={{ fontSize: 11, color: T.textDim, fontStyle: 'italic' }}>
+                    “{finding.suppression.note}”
+                  </span>
+                )}
+                {onUnsuppress && (
+                  <button
+                    onClick={() => onUnsuppress(finding)}
+                    className="ap-btn ap-btn-ghost"
+                    style={{ padding: '4px 10px', fontSize: 10 }}
+                  >
+                    <RefreshCw
+                      size={10}
+                      aria-hidden="true"
+                      style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }}
+                    />
+                    Un-suppress
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : onSuppress ? (
+            <div style={{ marginTop: 14 }}>
+              <div className="ap-eyebrow" style={{ marginBottom: 6 }}>
+                DISPOSITION · hide on future scans
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => onSuppress(finding, 'false-positive')}
+                  className="ap-btn ap-btn-ghost"
+                  style={{ padding: '4px 10px', fontSize: 10 }}
+                  title="The scanner is wrong — this is not a real issue"
+                >
+                  False positive
+                </button>
+                <button
+                  onClick={() => onSuppress(finding, 'wont-fix')}
+                  className="ap-btn ap-btn-ghost"
+                  style={{ padding: '4px 10px', fontSize: 10 }}
+                  title="Real issue but intentionally not fixing"
+                >
+                  Won't fix
+                </button>
+                <button
+                  onClick={() => onSuppress(finding, 'accepted-risk')}
+                  className="ap-btn ap-btn-ghost"
+                  style={{ padding: '4px 10px', fontSize: 10 }}
+                  title="Real risk that's been formally accepted"
+                >
+                  Accepted risk
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
     </div>
@@ -1428,6 +1586,12 @@ export default function App() {
   const [probeErrors, setProbeErrors] = useState([]);
   const [diagOpen, setDiagOpen] = useState(false);
   const [diagFilter, setDiagFilter] = useState('debug');
+  const [suppressions, setSuppressions] = useState(() => loadSuppressions());
+  const [showSuppressed, setShowSuppressed] = useState(false);
+  // Persist suppressions whenever they change.
+  useEffect(() => {
+    saveSuppressions(suppressions);
+  }, [suppressions]);
   // logsTick exists only as a re-render trigger when the logger emits new entries.
   // The value itself is unread — we just bump it from the subscriber callback.
   const [, setLogsTick] = useState(0);
@@ -1701,6 +1865,11 @@ export default function App() {
           });
         }
       });
+      // Stable IDs: hash(probe + file + title + ±3-line context). Unlocks cross-scan diff
+      // and suppression; the byte-offset-based `id` field stays as the React key.
+      attachStableIds(allFindings, scanFiles);
+      // Probe-level confidence + autofix metadata so the UI can render calibration tags.
+      attachProbeMeta(allFindings);
       const score = computeScore(allFindings);
       const finalResults = {
         findings: allFindings,
@@ -1753,20 +1922,48 @@ export default function App() {
     setExpanded(new Set());
   };
 
-  const filteredFindings = useMemo(() => {
-    if (!results) return [];
-    if (filter === 'all') return results.findings;
-    return results.findings.filter((f) => f.severity === filter || f.category === filter);
-  }, [results, filter]);
+  // Partition findings by suppression status. The visible bucket drives the main list +
+  // score recalculation; the suppressed bucket renders at the bottom with un-suppress buttons.
+  const partitioned = useMemo(() => {
+    if (!results) return { visible: [], suppressed: [] };
+    return partitionFindings(results.findings, suppressions);
+  }, [results, suppressions]);
 
+  const handleSuppress = (finding, disposition, note = '') => {
+    if (!finding?.stableId) return;
+    setSuppressions((prev) => suppressFinding(prev, finding.stableId, disposition, note));
+    track(`suppress.${disposition}`);
+  };
+  const handleUnsuppress = (finding) => {
+    if (!finding?.stableId) return;
+    setSuppressions((prev) => unsuppressFinding(prev, finding.stableId));
+    track('unsuppress');
+  };
+
+  const filteredFindings = useMemo(() => {
+    const source = partitioned.visible;
+    if (filter === 'all') return source;
+    return source.filter((f) => f.severity === filter || f.category === filter);
+  }, [partitioned.visible, filter]);
+
+  // Score is recomputed against the *visible* (non-suppressed) findings so dismissing a
+  // false-positive raises the score honestly. Original results.score stays as the raw
+  // historical baseline for the diff component.
+  const liveScore = useMemo(() => {
+    if (!results) return 100;
+    return computeScore(partitioned.visible);
+  }, [results, partitioned.visible]);
+
+  // All severity / category counts use the VISIBLE (non-suppressed) findings so dismissing
+  // a false-positive immediately updates everything the user sees.
   const sevCounts = useMemo(() => {
     if (!results) return {};
     const c = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-    results.findings.forEach((f) => {
+    partitioned.visible.forEach((f) => {
       c[f.severity] = (c[f.severity] || 0) + 1;
     });
     return c;
-  }, [results]);
+  }, [results, partitioned.visible]);
 
   const catCounts = useMemo(() => {
     if (!results) return {};
@@ -1774,15 +1971,15 @@ export default function App() {
     Object.keys(T.cat).forEach((k) => {
       c[k] = 0;
     });
-    results.findings.forEach((f) => {
+    partitioned.visible.forEach((f) => {
       c[f.category] = (c[f.category] || 0) + 1;
     });
     return c;
-  }, [results]);
+  }, [results, partitioned.visible]);
 
   const maxCat = Math.max(1, ...Object.values(catCounts));
-  const tier = results ? riskTier(results.score) : null;
-  const topFindings = results ? results.findings.slice(0, 3) : [];
+  const tier = results ? riskTier(liveScore) : null;
+  const topFindings = partitioned.visible.slice(0, 3);
   // Compare current scan to prior scan of the same source (history is newest-first).
   // The current scan IS the head of history (just appended), so we look for a same-source entry below.
   const diff = useMemo(() => computeDiffAgainstPrior(results, history), [results, history]);
@@ -2525,7 +2722,30 @@ export default function App() {
                     </div>
                   )}
                 </div>
-                <ScoreGauge score={results.score} />
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
+                >
+                  <ScoreGauge score={liveScore} />
+                  {partitioned.suppressed.length > 0 && (
+                    <button
+                      onClick={() => setShowSuppressed((v) => !v)}
+                      className="ap-mono"
+                      style={{
+                        background: 'transparent',
+                        border: `1px solid ${T.border}`,
+                        color: T.textMuted,
+                        cursor: 'pointer',
+                        fontSize: 10,
+                        padding: '4px 10px',
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                      }}
+                      title="Toggle the list of suppressed findings"
+                    >
+                      Score excludes {partitioned.suppressed.length} suppressed
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -2869,6 +3089,7 @@ export default function App() {
                         next.has(f.id) ? next.delete(f.id) : next.add(f.id);
                         setExpanded(next);
                       }}
+                      onSuppress={handleSuppress}
                     />
                   ))}
                   {filteredFindings.length === 0 && (
@@ -2879,6 +3100,40 @@ export default function App() {
                     </div>
                   )}
                 </div>
+
+                {/* Suppressed-findings block — collapsed by default, shown via the score-area toggle. */}
+                {showSuppressed && partitioned.suppressed.length > 0 && (
+                  <div style={{ marginTop: 32 }}>
+                    <h3
+                      className="ap-display"
+                      style={{
+                        margin: '0 0 12px',
+                        fontSize: 20,
+                        fontWeight: 700,
+                        color: T.textDim,
+                      }}
+                    >
+                      Suppressed ({partitioned.suppressed.length})
+                    </h3>
+                    <p style={{ fontSize: 12, color: T.textMuted, marginBottom: 12 }}>
+                      These findings are excluded from the score and the filtered list above. Click
+                      to expand and un-suppress.
+                    </p>
+                    {partitioned.suppressed.map((f) => (
+                      <FindingCard
+                        key={f.id}
+                        finding={f}
+                        expanded={expanded.has(f.id)}
+                        onToggle={() => {
+                          const next = new Set(expanded);
+                          next.has(f.id) ? next.delete(f.id) : next.add(f.id);
+                          setExpanded(next);
+                        }}
+                        onUnsuppress={handleUnsuppress}
+                      />
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </div>
