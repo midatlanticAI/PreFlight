@@ -1,0 +1,108 @@
+# Pre-Flight Audit Tool
+
+> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 26 probes covering OWASP Top 10 2025, OWASP LLM Top 10, 2025–2026 supply-chain incidents, MCP security, AI-tooling rules-file backdoors, and conventional SAST checks. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
+
+The Pre-Flight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai). Contact: John@midatlantic.ai. License: free for individual and team use.
+
+## What it does
+
+The tool extracts text from selected files or a public GitHub repository and runs 26 pure-function probes against the content. Each probe emits zero or more findings with severity (critical / high / medium / low / info), a CWE reference, a file path and line number, evidence, and a remediation block. Findings are aggregated into a risk score out of 100 with a tier label (LOW / MODERATE / HIGH / CRITICAL RISK).
+
+## Input modes
+
+- **GitHub URL** — paste `https://github.com/owner/repo`; the tool reads up to 80 security-relevant files via the unauthenticated GitHub API (60-requests-per-hour-per-IP limit).
+- **Files / Folder** — select files or a directory via the browser File API; contents are read with `FileReader.text()` and never leave the tab.
+
+## Output
+
+- Interactive results dashboard with score gauge, severity distribution, category breakdown, expandable findings with ±5-line code snapshots.
+- Five export formats: JSON (machine-readable schema `midatlantic-audit/v1`), Markdown report, GitHub PR-comment Markdown (collapsible `<details>` block), agent-ready fix-this prompt (formatted for Claude / ChatGPT / Cursor), single-snippet copy.
+- Local scan history (up to 10 entries, localStorage-only) with one-click View (load cached findings) or Re-run (re-fetch + re-scan).
+- Baseline diff vs. prior scan of the same source (introduced / fixed / persisted findings, score delta).
+- Diagnostics drawer with structured logs (debug / info / warn / error filterable, copy / save / clear).
+
+## The 26 probes
+
+1. **Secret Scanner** — AWS keys, Stripe keys (live + test), OpenAI, Anthropic, Google, GitHub PAT, Slack tokens, SendGrid, Hugging Face, Replicate, Groq, Perplexity, generic hardcoded secrets, database connection URLs with credentials, private key blocks.
+2. **NEXT_PUBLIC_ Misuse** — server secrets exposed via `NEXT_PUBLIC_` prefix in Next.js apps.
+3. **Supabase RLS** — tables created without `ENABLE ROW LEVEL SECURITY`; permissive `USING (true)` policies. Case-insensitive table-name matching.
+4. **Firebase Rules** — `allow read: if true`, storage rules that allow any authenticated user.
+5. **Package.json** — suspicious postinstall hooks (curl/wget), non-registry dependencies (git+ / http: / file:), floating versions (* / latest).
+6. **Env File Hygiene** — `.env` files tracked in repo (vs. `.env.example`).
+7. **Auth Weakness** — JWT `algorithm: none` (quoted or unquoted), `jwt.verify` without a secret argument, `eval()`, `dangerouslySetInnerHTML`. Comment-aware (won't fire on `// TODO: never use eval()`).
+8. **Admin Route Exposure** — admin / dashboard / internal routes relying on client-only auth hooks (`useUser`, `useSession`). Excludes marketing-preview paths.
+9. **Security Headers** — missing `headers()` function in `next.config`, missing `headers` array in `vercel.json`.
+10. **CORS** — wildcard `Access-Control-Allow-Origin: *`.
+11. **LLM Security** (OWASP LLM Top 10 2025) — prompt injection (user input interpolated into prompts), LLM API calls from client components (key exposure / LLM02), LLM output rendered as raw HTML (LLM05), dangerous LangChain tools (`PythonREPL`, `ShellTool`, `RequestsTool` — LLM06), destructively-named tools, system prompts embedded in client bundles (LLM07), unbounded `max_tokens` (LLM10).
+12. **Webhook Validation** — Stripe webhooks without `constructEvent` signature verification, GitHub webhooks without `X-Hub-Signature-256` HMAC check.
+13. **GitHub Actions** — `pull_request_target` workflows that check out untrusted PR code (privilege-escalation pattern), actions pinned to mutable refs (branches/tags) instead of SHA.
+14. **Client Auth Storage** — auth / JWT / session / access_token / refresh_token stored in `localStorage`.
+15. **SSRF / Open Redirect** — redirect target from user input (CWE-601), server-side fetch with user-controlled URL (CWE-918).
+16. **Cookie Security** — auth cookies missing `httpOnly`, `secure`, or `sameSite` attributes.
+17. **API Route Auth** — sensitive API routes without auth-function call; destructive HTTP handlers (DELETE/PUT/PATCH) without auth check. Recognizes only `jwt.verify(token, secret)` with 2+ args as actual auth (lone `jwt.verify(token)` is flagged).
+18. **Compromised Packages** — known-malicious versions from 2025–2026: Axios 1.14.1 / 0.30.4 (Sapphire Sleet DPRK, March 2026), Bitwarden CLI 2026.4.0 (April 2026), Intercom-client 7.0.4-7.0.5 (Mini Shai-Hulud, April 2026), @cap-js/sqlite, @cap-js/db-service, lightning 2.6.2-2.6.3 (PyPI variant), plain-crypto-js (any version).
+19. **Slopsquat / Typosquat** — LLM-hallucinated and typosquatted package names (`lodahs`, `expreess`, `reactt`, etc.) plus generic-shape heuristic for `auth-tool` / `api-helper` patterns common in AI hallucinations.
+20. **MCP Security** — Model Context Protocol servers spawning shell interpreters (`bash -c`, `sh -e`, `powershell -Command`), `mcp-server-git` versions pre-Dec 2025 (indirect prompt injection via README/issue), MCP servers binding to 0.0.0.0 or `::` (April 2026 OX Security advisory: ~200K MCP servers internet-exposed with command-execution flaws). Traverses `mcpServers`, `servers`, `tools`, and nested `mcp.servers` config keys.
+21. **Trojan Source** — bidirectional Unicode control characters (U+202A-U+202E, U+2066-U+2069; CVE-2021-42574).
+22. **AI Rules Files** — hidden bidi Unicode in `.cursorrules` / `.cursor/rules/*` / `.windsurfrules` / `CLAUDE.md` (the 2026 "rules file backdoor" attacks against Cursor and GitHub Copilot demonstrated by Pillar Security); instruction-override language (`ignore previous instructions`, `disregard system`).
+23. **AI Code Smells** — empty `catch {}` blocks (Veracode 2026 study: AI code introduces OWASP Top 10 issues at 45%), heavy `any` type usage (correlates with missing input validation).
+24. **Package Manager Hardening** — missing `.npmrc`, missing `min-release-age` cooldown directive (recommended ≥7 days after Shai-Hulud, Axios, and Mini Shai-Hulud worm windows).
+25. **URL Reputation** — extracts external HTTP/HTTPS URLs from source, applies heuristics (raw IP, suspicious TLDs like .tk/.xyz/.gq, URL shorteners, http-only), produces info/low/medium findings with click-through links to VirusTotal, urlhaus.abuse.ch, and whois lookups.
+26. **HTML Hygiene** — inline event handlers (`onclick=`), `target="_blank"` without `rel="noopener"` (tabnabbing), mixed-content `http://` scripts on HTTPS pages, `eval()` / `new Function()` inside `<script>`, forms posting over HTTP, inline `<script>` without a CSP meta tag.
+
+## What it does NOT do
+
+- No live exploitation. We are static analysis. We say "this looks bad"; we do not run payloads.
+- No IDOR / BOLA testing — those require a running auth context.
+- No runtime probing of deployed endpoints.
+- No back-end. There is no server. The tool is a single-page React app.
+- No data collection beyond local-only counter analytics (counts of `scan_started`, `probe_run.<name>`, `export.<format>`, etc.; never URLs, file content, or finding details).
+
+## Differentiators from other security tools
+
+- **Free, no signup.** Some competitors start at $79/mo with credit budgets and ownership verification flows. This tool has neither.
+- **Privacy by architecture, not by promise.** Everything runs in the browser. There is no server that could leak data.
+- **AI-tooling-specific probes in the free tier.** MCP attack surface, Cursor / Copilot rules-file backdoors, slopsquatted package names, system prompts leaked to client bundles, prompt-injection sinks.
+- **2025–2026 threat intel hard-coded.** Specific versions from named incidents, not generic CVE matching.
+- **Agent-friendly exports.** "Copy Agent Prompt" formats findings for Claude / ChatGPT / Cursor with code snippets and explicit fix-this framing.
+- **Pre-merge, not post-deploy.** Catches the bug before it ships. Complementary to DAST tools like hacker-bot.com.
+
+## Architecture
+
+Single-page React 18 application, Vite-built, no backend. Source code is in a single `App.jsx` file (~3500 lines) with extracted modules for logger, analytics, and ErrorBoundary. All probes are pure functions exported from `App.jsx` and tested individually. 164 unit tests covering probes, formatters, history, scoring, snippet rendering, and logger behavior.
+
+Stack:
+- React 18 + Vite 5
+- lucide-react for icons
+- localStorage for history and analytics
+- Vitest + jsdom for tests
+- No remote services, no external API keys, no fetch destinations other than `api.github.com` and `raw.githubusercontent.com` (only when scanning a GitHub URL the user explicitly entered)
+
+## Accessibility
+
+- WCAG 2.1 AA compliant color contrast (verified pair-by-pair against the brand palette).
+- Full keyboard navigation. Skip-to-content link. Focus-visible outlines.
+- ARIA combobox / listbox on the URL autocomplete dropdown.
+- ARIA dialog with focus trap on the Diagnostics drawer.
+- `prefers-reduced-motion` honored.
+- All findings communicated by both color AND text label (no color-only signal).
+- Screen reader tested with NVDA.
+
+## Versioning + freshness
+
+- Schema version: `midatlantic-audit/v1` (JSON export).
+- Probe set last expanded: 2026-05-11 (HTML Hygiene + URL Reputation added).
+- Threat intel last updated: 2026-05 (Mini Shai-Hulud SAP campaign).
+- Brand: Mid-Atlantic AI — palette navy `#0a1226` / orange `#f26b1f` / mint `#9fe5dd`.
+
+## Citations / sources for threat intel
+
+- CISA advisories: https://www.cisa.gov/news-events/cybersecurity-advisories
+- GTIG (Google Threat Intelligence Group) / Mandiant: https://cloud.google.com/blog/topics/threat-intelligence
+- Socket: https://socket.dev/blog
+- Wiz: https://www.wiz.io/blog
+- Unit 42 (Palo Alto): https://unit42.paloaltonetworks.com/
+- OX Security: https://www.ox.security/blog
+- OWASP LLM Top 10 (2025): https://genai.owasp.org/llm-top-10/
+- OWASP Top 10 (2025): https://owasp.org/Top10/
+- Pillar Security "rules file backdoor": https://www.pillar.security/blog
