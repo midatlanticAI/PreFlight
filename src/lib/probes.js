@@ -195,8 +195,39 @@ export const TYPOSQUATS = {
 export const SLOPSQUAT_GENERIC_RE =
   /^(auth|api|db|user|admin|util|helper|core|server|client|app|web|http|json|crypto|fast|smart|easy|simple|secure|pro|advanced)-(auth|api|util|utils|helper|helpers|core|client|server|tool|tools|kit|lib|js|ts|node|sdk|wrapper|manager)$/i;
 
-// Bidirectional Unicode control characters (CVE-2021-42574 / Trojan Source)
-export const BIDI_CONTROL_RE = /[‪-‮⁦-⁩]/;
+// Bidirectional Unicode control characters (CVE-2021-42574 / Trojan Source).
+// Built from \u escape codes (NOT literal characters) so this file itself doesn't trip our own
+// Trojan Source probe when scanning the scanner. The codepoint ranges are:
+//   U+202A-U+202E  LRE / RLE / PDF / LRO / RLO
+//   U+2066-U+2069  LRI / RLI / FSI / PDI
+export const BIDI_CONTROL_RE = new RegExp('[' + '\\u202A-\\u202E\\u2066-\\u2069' + ']');
+
+// --- Test-file exclusion: pattern-matching probes should skip test files ---
+// Test files legitimately demonstrate vulnerable patterns to verify detection. Running content-
+// pattern probes against `*.test.{js,jsx,ts,tsx}`, `*.spec.*`, or anything under `test/`/`tests/`
+// /`__tests__/` produces self-reference findings instead of real ones (the regression test for
+// "we should detect eval()" is itself a string containing `eval(`).
+// Structural probes (file size, missing .npmrc, architecture) should still see test files.
+export function isTestFile(path) {
+  if (!path) return false;
+  if (/\.(test|spec)\.[jt]sx?$/i.test(path)) return true;
+  if (/(^|\/)(test|tests|__tests__)\//i.test(path)) return true;
+  return false;
+}
+
+// --- Self-source exclusion: pattern-matching probes should skip scanner internals ---
+// The scanner's own regex literals and remediation copy contain the exact patterns it looks
+// for (eval, PythonREPL, dangerouslySetInnerHTML, algorithm: 'none'). Without an exclusion,
+// every pattern-matching probe finds itself in src/lib/probes.js and in the production
+// bundle (dist/) which inlines probes.js. These aren't real vulnerabilities; they're the
+// scanner's definitions of what real vulnerabilities look like.
+export function isScannerSelfSource(path) {
+  if (!path) return false;
+  if (/(^|\/)src\/lib\/probes\.[jt]sx?$/i.test(path)) return true;
+  // The Vite-bundled JS in dist/ contains the inlined probes.js source.
+  if (/(^|\/)dist\/.*\.js$/i.test(path)) return true;
+  return false;
+}
 
 export const FILE_INCLUDE = [
   /(^|\/)\.env(\..+)?$/i,
@@ -263,6 +294,7 @@ export function shouldScanFile(path) {
 export function probeSecrets(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     SECRET_PATTERNS.forEach((pat) => {
       const matches = [...file.content.matchAll(pat.regex)];
       matches.forEach((m) => {
@@ -527,6 +559,7 @@ function stripLineComments(line) {
 export function probeAuthWeakness(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$/.test(file.path)) return;
     const lines = file.content.split('\n');
     lines.forEach((rawLine, i) => {
@@ -596,6 +629,7 @@ export function probeAuthWeakness(files) {
 export function probeAdminRoutes(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$/.test(file.path)) return;
     if (!/(admin|dashboard|internal)/i.test(file.path)) return;
     // Exclude obvious marketing/preview routes that happen to contain "dashboard" in the path.
@@ -668,6 +702,7 @@ export function probeMissingHeaders(files) {
 export function probeCORS(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$/.test(file.path)) return;
     const lines = file.content.split('\n');
     lines.forEach((line, i) => {
@@ -698,6 +733,7 @@ export function probeCORS(files) {
 export function probeLLMSecurity(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$|\.py$/.test(file.path)) return;
     const content = file.content;
     const lines = content.split('\n');
@@ -874,6 +910,7 @@ export function probeLLMSecurity(files) {
 export function probeWebhookValidation(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$|\.py$/.test(file.path)) return;
     if (!/webhook/i.test(file.path) && !/webhook/i.test(file.content)) return;
     const c = file.content;
@@ -973,6 +1010,7 @@ export function probeGitHubActions(files) {
 export function probeClientAuthStorage(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$/.test(file.path)) return;
     file.content.split('\n').forEach((line, i) => {
       if (
@@ -1003,6 +1041,7 @@ export function probeClientAuthStorage(files) {
 export function probeSSRFOpenRedirect(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$|\.py$/.test(file.path)) return;
     file.content.split('\n').forEach((line, i) => {
       if (
@@ -1086,6 +1125,7 @@ export function probeCookieFlags(files) {
 export function probeAPIRouteAuth(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/(?:\/api\/.*route\.[jt]sx?$|pages\/api\/)/.test(file.path)) return;
     const c = file.content;
     // jwt.verify alone is NOT proof of valid auth — it must be called with a secret/key as a 2nd arg.
@@ -1222,6 +1262,7 @@ export function probeSlopsquatting(files) {
 export function probeMCPSecurity(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     const isMCPConfig = /(claude_desktop_config\.json|\.mcp\.json|mcp\.json)$/.test(file.path);
     if (isMCPConfig) {
       let cfg;
@@ -1328,6 +1369,7 @@ export function probeMCPSecurity(files) {
 export function probeTrojanSource(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!BIDI_CONTROL_RE.test(file.content)) return;
     const lines = file.content.split('\n');
     lines.forEach((line, i) => {
@@ -1355,6 +1397,7 @@ export function probeTrojanSource(files) {
 export function probeAIRulesFiles(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.cursorrules$|\.cursor\/rules\/|\.windsurfrules$|CLAUDE\.md$/.test(file.path)) return;
     if (BIDI_CONTROL_RE.test(file.content)) {
       findings.push({
@@ -1398,6 +1441,7 @@ export function probeAIRulesFiles(files) {
 export function probeAICodeSmells(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$/.test(file.path)) return;
     const lines = file.content.split('\n');
     let emptyCatch = 0,
@@ -1481,6 +1525,30 @@ export function probeNpmrcHygiene(files) {
 }
 
 // --- 2026: External URL reputation surface (extract + heuristic + lookup links) ---
+// Placeholder / documentation-example hosts that appear in copy and aren't real references.
+// Includes the IANA-reserved example domains, common documentation strings, and RFC 5737
+// reserved IP ranges (TEST-NET-1/2/3 — used in code samples and test fixtures).
+export const URL_PLACEHOLDER_HOSTS = new Set([
+  'example.com',
+  'example.org',
+  'example.net',
+  'example.io',
+  'yourdomain.com',
+  'yoursite.com',
+  'mydomain.com',
+  'somedomain.com',
+  'foo.bar',
+  'foo.baz',
+  'host',
+  '[::1]',
+  'localhost',
+  '127.0.0.1',
+  '0.0.0.0',
+  '::1',
+]);
+// RFC 5737 ranges: 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 — reserved for documentation.
+export const URL_PLACEHOLDER_IP_RE = /^(?:192\.0\.2|198\.51\.100|203\.0\.113)\.\d{1,3}$/;
+
 export const URL_SAFE_HOSTS = new Set([
   'localhost',
   '127.0.0.1',
@@ -1570,7 +1638,34 @@ export function probeExternalURLs(files) {
   // host -> { occurrences: [{file,line,url}], allHttp: bool }
   const seen = new Map();
 
+  // Self-domain allowlist from package.json#homepage (if present).
+  const selfDomains = new Set();
+  const pkgFile = files.find(
+    (f) => /(^|\/)package\.json$/.test(f.path) && !/node_modules/.test(f.path)
+  );
+  if (pkgFile) {
+    try {
+      const pkg = JSON.parse(pkgFile.content);
+      if (pkg.homepage) {
+        try {
+          selfDomains.add(new URL(pkg.homepage).hostname.toLowerCase());
+        } catch {}
+      }
+    } catch {}
+  }
+
+  // Returns true if the URL match sits inside a remediation/description/help string literal
+  // context — i.e. it's documentation, not a real reference. Heuristic: walk back up to 80
+  // chars from the match index looking for one of those property names.
+  const isInHelpContext = (content, idx) => {
+    const back = content.slice(Math.max(0, idx - 120), idx);
+    return /\b(remediation|description|help|docs?Url|message|note|hint)\s*[:=]\s*[`'"][^`'"]*$/i.test(
+      back
+    );
+  };
+
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     // Skip lockfiles (massive volume of registry URLs that drown the signal).
     if (/(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/i.test(file.path)) return;
     const content = file.content || '';
@@ -1585,6 +1680,10 @@ export function probeExternalURLs(files) {
         continue;
       }
       if (!host || isHostInSafeList(host)) continue;
+      if (URL_PLACEHOLDER_HOSTS.has(host)) continue;
+      if (URL_PLACEHOLDER_IP_RE.test(host)) continue;
+      if (selfDomains.has(host)) continue;
+      if (isInHelpContext(content, m.index)) continue;
 
       const lineNum = content.slice(0, m.index).split('\n').length;
       const isHttp = raw.startsWith('http:');
@@ -1647,6 +1746,7 @@ export function probeExternalURLs(files) {
 export function probeHTML(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.html?$/i.test(file.path)) return;
     const content = file.content || '';
     const lines = content.split('\n');
@@ -2090,6 +2190,7 @@ export function probeGEOHygiene(files) {
 export function probeA11yLandmarks(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     const isHtml = /\.html?$/i.test(file.path);
     const isJsx = /\.[jt]sx$/i.test(file.path);
     const isVue = /\.vue$/i.test(file.path);

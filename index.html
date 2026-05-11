@@ -28,6 +28,16 @@
     <meta name="color-scheme" content="dark" />
     <meta name="format-detection" content="telephone=no" />
 
+    <!-- Content-Security-Policy: locks down what scripts/connections/styles the page can use.
+         Allows: self for code, Google Fonts (CSS host + woff host), unauthenticated GitHub API
+         + raw blob host for scan reads, and the two BYOK AI providers (only contacted when the
+         user opts in by saving a key). Inline-style is allowed because Vite-bundled component
+         styles live inline; inline-script is NOT allowed. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://api.openai.com https://api.anthropic.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none';"
+    />
+
     <!-- Canonical -->
     <link rel="canonical" href="https://audit.midatlantic.ai/" />
     <link rel="alternate" hreflang="en" href="https://audit.midatlantic.ai/" />
@@ -69,26 +79,18 @@
     <meta name="twitter:image" content="https://audit.midatlantic.ai/maai-logo.svg" />
     <meta name="twitter:image:alt" content="Mid-Atlantic AI logo" />
 
-    <!-- Brand fonts: preconnect + non-blocking stylesheet load with font-display:swap.
-         Moves font load out of the React component CSS-in-JS @import (which was render-blocking),
-         improving LCP and INP scores per Core Web Vitals 2026 guidance. -->
+    <!-- Brand fonts: preconnect to cut connection-setup latency, then a regular stylesheet
+         link. We used to do the rel=preload + onload="rel=stylesheet" non-blocking trick, but
+         that requires an inline event handler which conflicts with our strict CSP (no inline
+         scripts / handlers). With preconnect already in place + font-display:swap baked into
+         the URL, the perceived render cost is small: fallback text shows immediately, then
+         re-flows when Rubik/Roboto land. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      rel="preload"
-      as="style"
+      rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Roboto:ital,wght@0,400;0,500;0,700;1,400&family=Roboto+Condensed:wght@400;500;700&display=swap"
-      onload="
-        this.onload = null;
-        this.rel = 'stylesheet';
-      "
     />
-    <noscript>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Roboto:ital,wght@0,400;0,500;0,700;1,400&family=Roboto+Condensed:wght@400;500;700&display=swap"
-      />
-    </noscript>
 
     <!-- JSON-LD: SoftwareApplication + Organization + WebSite + FAQPage -->
     <script type="application/ld+json">
