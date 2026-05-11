@@ -152,6 +152,14 @@ import {
   unsuppressFinding,
   partitionFindings,
 } from './lib/probes.js';
+import {
+  AI_PROVIDERS,
+  loadAIConfig,
+  saveAIConfig,
+  clearAIConfig,
+  validateKeyShape,
+  explainAndVerify,
+} from './lib/ai.js';
 
 // ==========================================================================
 // SCORING
@@ -1223,7 +1231,16 @@ export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
   );
 }
 
-export function FindingCard({ finding, expanded, onToggle, onSuppress, onUnsuppress }) {
+export function FindingCard({
+  finding,
+  expanded,
+  onToggle,
+  onSuppress,
+  onUnsuppress,
+  aiResponse,
+  onExplainVerify,
+  aiEnabled,
+}) {
   const c = T.sev[finding.severity];
   return (
     <div className="ap-finding" style={{ borderLeftColor: c.fg, marginBottom: 8 }}>
@@ -1476,6 +1493,81 @@ export function FindingCard({ finding, expanded, onToggle, onSuppress, onUnsuppr
           <div style={{ fontSize: 13, color: T.textDim, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
             {finding.remediation}
           </div>
+          {/* Explain & Verify — BYOK AI feature.
+              The button calls the user's chosen provider with the user's key. The response is
+              visually segregated (panel-alt background, provider eyebrow) so users always know
+              when they are reading the scanner's voice vs. the model's. */}
+          {onExplainVerify && (
+            <div style={{ marginTop: 14 }}>
+              <div className="ap-eyebrow" style={{ marginBottom: 6 }}>
+                AI ASSIST · uses your own key, sent only to the provider you chose
+              </div>
+              <button
+                onClick={() => onExplainVerify(finding)}
+                className="ap-btn ap-btn-ghost"
+                disabled={aiResponse?.status === 'streaming'}
+                style={{ fontSize: 11, padding: '6px 14px' }}
+              >
+                <MessageSquare
+                  size={11}
+                  aria-hidden="true"
+                  style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }}
+                />
+                {aiResponse?.status === 'streaming'
+                  ? 'Streaming…'
+                  : aiResponse?.status === 'done'
+                    ? 'Re-run Explain & Verify'
+                    : aiEnabled
+                      ? 'Explain & Verify'
+                      : 'Configure AI to enable'}
+              </button>
+              {aiResponse && (
+                <div
+                  role="region"
+                  aria-label="AI-generated explanation and verification"
+                  style={{
+                    marginTop: 10,
+                    padding: 14,
+                    background: T.panelAlt,
+                    border: `1px solid ${T.borderAlt}`,
+                    borderLeft: `3px solid ${T.accentAlt}`,
+                  }}
+                >
+                  <div
+                    className="ap-mono"
+                    style={{
+                      fontSize: 10,
+                      color: T.accentAlt,
+                      marginBottom: 8,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    AI · {aiResponse.provider || 'unknown provider'} · {aiResponse.model || '?'}
+                    {aiResponse.status === 'streaming' && (
+                      <span className="ap-pulse" style={{ marginLeft: 8 }}>
+                        streaming…
+                      </span>
+                    )}
+                  </div>
+                  {aiResponse.status === 'error' ? (
+                    <div style={{ fontSize: 12, color: T.sev.critical.fg }}>{aiResponse.error}</div>
+                  ) : (
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: T.textDim,
+                        lineHeight: 1.7,
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {aiResponse.text || ' '}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <div style={{ marginTop: 12 }}>
             <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>
               probe: {finding.probe}
@@ -1566,6 +1658,286 @@ export function FindingCard({ finding, expanded, onToggle, onSuppress, onUnsuppr
 }
 
 // ==========================================================================
+// AI SETTINGS MODAL
+// =========================================================================
+// BYOK panel. The user's key never leaves their browser — saved to
+// localStorage, sent only to the provider endpoint they chose. The modal
+// shows the privacy contract in plain language so it's clear what happens.
+
+export function AISettingsModal({ open, onClose, onSaved }) {
+  // We pull `existing` lazily into a state slot so we can refresh it (without `useMemo` having
+  // a deps-array lint complaint) and so the form resets to the stored values each time the
+  // modal re-opens. Updates are deferred via queueMicrotask so they don't fire synchronously
+  // inside the effect tick (react-hooks/set-state-in-effect).
+  const [existing, setExisting] = useState(() => loadAIConfig());
+  const [provider, setProvider] = useState(existing?.provider || 'openai');
+  const [apiKey, setApiKey] = useState(existing?.apiKey || '');
+  const [model, setModel] = useState(existing?.model || AI_PROVIDERS.openai.defaultModel);
+  const [reveal, setReveal] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!open) return;
+    queueMicrotask(() => {
+      const cfg = loadAIConfig();
+      setExisting(cfg);
+      setProvider(cfg?.provider || 'openai');
+      setApiKey(cfg?.apiKey || '');
+      setModel(cfg?.model || AI_PROVIDERS[cfg?.provider || 'openai'].defaultModel);
+      setError(null);
+    });
+  }, [open]);
+
+  if (!open) return null;
+  const meta = AI_PROVIDERS[provider];
+  const keyOk = !apiKey || validateKeyShape(provider, apiKey);
+
+  const handleSave = () => {
+    if (!apiKey.trim()) {
+      setError('Paste an API key, or click Clear to remove the current one.');
+      return;
+    }
+    if (!validateKeyShape(provider, apiKey)) {
+      setError(
+        `That doesn't look like a ${meta.label} key (expected pattern: ${meta.keyPlaceholder}).`
+      );
+      return;
+    }
+    try {
+      saveAIConfig({ provider, apiKey, model });
+      track(`ai.config.save.${provider}`);
+      onSaved?.();
+      onClose();
+    } catch (e) {
+      setError(e?.message || 'Could not save.');
+    }
+  };
+
+  const handleClear = () => {
+    clearAIConfig();
+    setApiKey('');
+    track('ai.config.clear');
+    onSaved?.();
+  };
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        aria-hidden="true"
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 70 }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="AI provider settings"
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          maxWidth: 540,
+          width: 'calc(100vw - 32px)',
+          maxHeight: 'calc(100vh - 32px)',
+          overflow: 'auto',
+          background: T.panel,
+          border: `1px solid ${T.borderAlt}`,
+          padding: 24,
+          zIndex: 80,
+          boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 16,
+          }}
+        >
+          <h2
+            className="ap-display"
+            style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.text }}
+          >
+            AI provider · BYOK
+          </h2>
+          <button
+            onClick={onClose}
+            aria-label="Close settings"
+            type="button"
+            style={{
+              background: 'transparent',
+              border: `1px solid ${T.border}`,
+              color: T.textDim,
+              cursor: 'pointer',
+              padding: '6px 8px',
+            }}
+          >
+            <X size={12} aria-hidden="true" />
+          </button>
+        </div>
+
+        <p style={{ fontSize: 12, color: T.textDim, lineHeight: 1.7, marginBottom: 16 }}>
+          The "Explain & Verify" button on each finding sends the finding metadata plus its ±5-line
+          code snippet to the AI provider you choose, using <strong>your own key</strong>. Your key
+          is stored in this browser's localStorage and is sent only to the provider's endpoint —
+          never to our origin. There is no server proxy.
+        </p>
+
+        <div className="ap-eyebrow" style={{ marginBottom: 8 }}>
+          PROVIDER
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          {Object.entries(AI_PROVIDERS).map(([key, p]) => (
+            <button
+              key={key}
+              onClick={() => {
+                setProvider(key);
+                setModel(p.defaultModel);
+                setError(null);
+              }}
+              className="ap-mono"
+              style={{
+                flex: 1,
+                padding: '10px 12px',
+                fontSize: 12,
+                background: provider === key ? T.accent : 'transparent',
+                color: provider === key ? T.bg : T.textDim,
+                border: `1px solid ${provider === key ? T.accent : T.border}`,
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        <label
+          htmlFor="ai-key-input"
+          className="ap-eyebrow"
+          style={{ display: 'block', marginBottom: 8 }}
+        >
+          API KEY
+        </label>
+        <div style={{ position: 'relative', marginBottom: 4 }}>
+          <input
+            id="ai-key-input"
+            className="ap-input"
+            type={reveal ? 'text' : 'password'}
+            placeholder={meta.keyPlaceholder}
+            value={apiKey}
+            onChange={(e) => {
+              setApiKey(e.target.value);
+              setError(null);
+            }}
+            autoComplete="off"
+            spellCheck={false}
+            style={{ paddingRight: 70 }}
+          />
+          <button
+            type="button"
+            onClick={() => setReveal((v) => !v)}
+            className="ap-mono"
+            style={{
+              position: 'absolute',
+              right: 8,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'transparent',
+              border: `1px solid ${T.border}`,
+              color: T.textDim,
+              cursor: 'pointer',
+              fontSize: 10,
+              padding: '4px 10px',
+            }}
+          >
+            {reveal ? 'hide' : 'show'}
+          </button>
+        </div>
+        <p style={{ fontSize: 11, color: T.textMuted, marginBottom: 16 }}>
+          Get a key from{' '}
+          <a
+            href={meta.docsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: T.accent }}
+          >
+            {meta.docsUrl}
+          </a>
+          .{' '}
+          {apiKey && !keyOk && (
+            <span style={{ color: T.sev.medium.fg }}> Key shape doesn't match {meta.label}.</span>
+          )}
+        </p>
+
+        <label
+          htmlFor="ai-model-input"
+          className="ap-eyebrow"
+          style={{ display: 'block', marginBottom: 8 }}
+        >
+          MODEL
+        </label>
+        <select
+          id="ai-model-input"
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          className="ap-input"
+          style={{ marginBottom: 16 }}
+        >
+          {meta.models.map((m) => (
+            <option key={m} value={m}>
+              {m}
+              {m === meta.defaultModel ? ' (default)' : ''}
+            </option>
+          ))}
+        </select>
+
+        {error && (
+          <div
+            role="alert"
+            style={{
+              padding: 10,
+              marginBottom: 16,
+              fontSize: 12,
+              background: T.sev.critical.bg,
+              border: `1px solid ${T.sev.critical.border}`,
+              color: T.sev.critical.fg,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          {existing && (
+            <button onClick={handleClear} className="ap-btn ap-btn-ghost" type="button">
+              <Trash2
+                size={12}
+                aria-hidden="true"
+                style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }}
+              />
+              Clear stored key
+            </button>
+          )}
+          <button onClick={onClose} className="ap-btn ap-btn-ghost" type="button">
+            Cancel
+          </button>
+          <button onClick={handleSave} className="ap-btn" type="button">
+            <Check
+              size={12}
+              aria-hidden="true"
+              style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }}
+            />
+            Save
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// =========================================================================
 // MAIN APP
 // ==========================================================================
 export default function App() {
@@ -1592,6 +1964,66 @@ export default function App() {
   useEffect(() => {
     saveSuppressions(suppressions);
   }, [suppressions]);
+
+  // AI settings (BYOK). aiConfig is null until the user opens settings and pastes a key.
+  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  const [aiConfig, setAiConfig] = useState(() => loadAIConfig());
+  // Per-finding AI responses, keyed by stableId. Session-only — not persisted, so users
+  // re-running can choose to re-spend tokens or not. The shape is:
+  //   { [stableId]: { status: 'streaming' | 'done' | 'error', text: string, error?: string, provider, model } }
+  const [aiResponses, setAiResponses] = useState({});
+
+  const handleAISaved = () => setAiConfig(loadAIConfig());
+
+  const handleExplainVerify = async (finding) => {
+    if (!finding?.stableId) return;
+    if (!aiConfig) {
+      setAiSettingsOpen(true);
+      return;
+    }
+    track(`ai.explain_verify.start.${aiConfig.provider}`);
+    setAiResponses((prev) => ({
+      ...prev,
+      [finding.stableId]: {
+        status: 'streaming',
+        text: '',
+        provider: aiConfig.provider,
+        model: aiConfig.model,
+      },
+    }));
+    const t0 = performance.now();
+    try {
+      await explainAndVerify(finding, (chunk, total) => {
+        setAiResponses((prev) => ({
+          ...prev,
+          [finding.stableId]: {
+            ...(prev[finding.stableId] || {}),
+            status: 'streaming',
+            text: total,
+            provider: aiConfig.provider,
+            model: aiConfig.model,
+          },
+        }));
+      });
+      setAiResponses((prev) => ({
+        ...prev,
+        [finding.stableId]: { ...(prev[finding.stableId] || {}), status: 'done' },
+      }));
+      timing(`ai.explain_verify.ms`, performance.now() - t0);
+      track(`ai.explain_verify.done.${aiConfig.provider}`);
+    } catch (e) {
+      log.error('Explain & Verify failed', { error: e?.message });
+      setAiResponses((prev) => ({
+        ...prev,
+        [finding.stableId]: {
+          ...(prev[finding.stableId] || {}),
+          status: 'error',
+          error: e?.message || 'AI call failed',
+        },
+      }));
+      track('ai.explain_verify.error');
+    }
+  };
   // logsTick exists only as a re-render trigger when the logger emits new entries.
   // The value itself is unread — we just bump it from the subscriber callback.
   const [, setLogsTick] = useState(0);
@@ -3090,6 +3522,9 @@ export default function App() {
                         setExpanded(next);
                       }}
                       onSuppress={handleSuppress}
+                      aiResponse={f.stableId ? aiResponses[f.stableId] : undefined}
+                      onExplainVerify={handleExplainVerify}
+                      aiEnabled={!!aiConfig}
                     />
                   ))}
                   {filteredFindings.length === 0 && (
@@ -3130,6 +3565,9 @@ export default function App() {
                           setExpanded(next);
                         }}
                         onUnsuppress={handleUnsuppress}
+                        aiResponse={f.stableId ? aiResponses[f.stableId] : undefined}
+                        onExplainVerify={handleExplainVerify}
+                        aiEnabled={!!aiConfig}
                       />
                     ))}
                   </div>
@@ -3571,6 +4009,47 @@ export default function App() {
           </nav>
         </footer>
       </main>
+
+      {/* AI SETTINGS: floating toggle (BYOK panel) */}
+      <button
+        onClick={() => setAiSettingsOpen(true)}
+        aria-label="Open AI provider settings"
+        title={
+          aiConfig
+            ? `AI configured: ${AI_PROVIDERS[aiConfig.provider]?.label || aiConfig.provider} · ${aiConfig.model}`
+            : 'Configure AI provider (BYOK) to unlock Explain & Verify'
+        }
+        type="button"
+        style={{
+          position: 'fixed',
+          right: 18,
+          bottom: 68,
+          background: T.panel,
+          color: aiConfig ? T.accentAlt : T.textDim,
+          border: `1px solid ${aiConfig ? T.accentAlt : T.borderAlt}`,
+          padding: '10px 14px',
+          fontFamily: fontMono,
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          cursor: 'pointer',
+          zIndex: 40,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+        }}
+      >
+        <MessageSquare size={12} aria-hidden="true" />
+        AI · {aiConfig ? 'configured' : 'off'}
+      </button>
+
+      <AISettingsModal
+        open={aiSettingsOpen}
+        onClose={() => setAiSettingsOpen(false)}
+        onSaved={handleAISaved}
+      />
 
       {/* DIAGNOSTICS: floating toggle + drawer */}
       <button
