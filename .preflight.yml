@@ -17,6 +17,11 @@
 #   reason:      Free text — why this is intentional / accepted.
 #   disposition: 'false-positive' | 'wont-fix' | 'accepted-risk' (default: 'wont-fix')
 #   expires:     ISO date or `~` for never. Past-expiry rules are ignored.
+#
+# Discipline: every entry below describes a finding that we currently choose not to
+# fix in code. Stale entries (where the underlying code was fixed) are deleted, not
+# left lying around. If you find an entry here that no longer matches any finding,
+# delete it — keeping noop suppressions makes it impossible to tell intent from rot.
 
 schema: preflight/v1
 
@@ -25,47 +30,9 @@ self_domains:
   - midatlantic.ai
 
 suppress:
-  # --- Self-reference: FAQ documentation copy that DESCRIBES what the probes detect ---
-  - probe: Auth Weakness
-    file: src/App.jsx
-    title-pattern: 'algorithm "none"'
-    disposition: false-positive
-    reason: 'FAQ answer literal that documents what the JWT-alg-none probe detects.'
-
-  # --- AI Code Smells: intentional empty catches with documented fallback semantics ---
-  # These all follow a pattern: a localStorage / clipboard / persistence call that we
-  # want to degrade silently if the underlying API is unavailable (private mode,
-  # quota exceeded, no user gesture). The catch IS the recovery — there's nothing to
-  # report. Each module documents the rationale in its source comments.
-  - probe: AI Code Smells
-    file: src/App.jsx
-    title-pattern: 'empty catch'
-    disposition: wont-fix
-    reason: 'Intentional silent fallback for localStorage / clipboard failures.'
-  - probe: AI Code Smells
-    file: src/ErrorBoundary.jsx
-    title-pattern: 'empty catch'
-    disposition: wont-fix
-    reason: 'Best-effort clipboard write in the recovery UI; failure leaves user no worse off.'
-  - probe: AI Code Smells
-    file: src/lib/ai.js
-    title-pattern: 'empty catch'
-    disposition: wont-fix
-    reason: 'localStorage availability check + clearAIConfig no-op-on-failure pattern.'
-  - probe: AI Code Smells
-    file: src/lib/logger.js
-    title-pattern: 'empty catch'
-    disposition: wont-fix
-    reason: 'Subscriber callback errors must not propagate out of notify().'
-
-  # --- Code Quality: async-without-try where the failure mode is benign ---
-  - probe: Code Quality
-    file: src/App.jsx
-    title-pattern: 'no try/catch in body'
-    disposition: wont-fix
-    reason: 'Clipboard / download user-action callbacks. Browser surfaces the rejection in DevTools; UI degrades gracefully.'
-
   # --- Architecture / Code Quality: known monolith debt, tracked separately ---
+  # The fix is the multi-hour split of App.jsx and probes.js. Suppressed with a hard
+  # expiry so the deadline survives any later edit to this file.
   - probe: Architecture
     file: 'src/ (root)'
     title-pattern: 'consider splitting'
@@ -86,6 +53,9 @@ suppress:
     expires: '2026-09-01'
 
   # --- Architecture classifier informational ---
+  # Always-emits info finding that reports the inferred project type so the type-specific
+  # advice below it makes sense. Not actionable; suppression is the right answer until
+  # the probe is restructured to emit this as scan metadata rather than as a finding.
   - probe: Architecture
     file: project root
     title-pattern: 'Detected: Monolithic SPA'

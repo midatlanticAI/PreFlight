@@ -516,6 +516,17 @@ describe('probeExternalURLs', () => {
     expect(f).toEqual([]);
   });
 
+  it('skips meta/doc files (llms.txt, robots.txt, sitemap.xml, .preflight.yml)', () => {
+    // These files are *expected* to enumerate URLs as content — flagging them is pure noise.
+    const f = probeExternalURLs([
+      { path: 'public/llms.txt', content: 'See https://dasgas.com for one example.' },
+      { path: 'public/robots.txt', content: 'Sitemap: https://dasgas.com/sitemap.xml' },
+      { path: 'public/sitemap.xml', content: '<loc>https://dasgas.com/page</loc>' },
+      { path: '.preflight.yml', content: "reason: 'fix per https://dasgas.com/advisory'" },
+    ]);
+    expect(f).toEqual([]);
+  });
+
   it('flags URL shorteners', () => {
     const f = probeExternalURLs([{ path: 'a.ts', content: 'fetch("https://bit.ly/abc123")' }]);
     expect(f[0].title).toMatch(/shortener/i);

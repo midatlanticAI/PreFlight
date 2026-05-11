@@ -1,3 +1,4 @@
+import { log } from './logger.js';
 // Privacy-preserving counter analytics.
 //
 // What this records:        action counts (e.g. "scan_started"), per-probe run/fail
@@ -65,7 +66,10 @@ function notify() {
   for (const fn of subscribers) {
     try {
       fn(state);
-    } catch {}
+    } catch (e) {
+      // Subscriber callback threw — isolate so one bad listener can't break the rest.
+      log.debug('analytics: subscriber threw', { error: e?.message });
+    }
   }
 }
 

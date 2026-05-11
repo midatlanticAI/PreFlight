@@ -61,7 +61,11 @@ function notify() {
   for (const fn of subscribers) {
     try {
       fn(buffer);
-    } catch {}
+    } catch (e) {
+      // Subscriber threw — isolate so one bad listener can't break the rest. Can't use the
+      // logger here (would recurse into notify), so write straight to console.
+      console.debug('logger: subscriber threw', e?.message);
+    }
   }
 }
 
@@ -172,7 +176,10 @@ export function persistLogsToLocalStorage() {
       localStorage.setItem(STORAGE_KEY, exportLogs());
       return true;
     }
-  } catch {}
+  } catch (e) {
+    // Quota exceeded or storage disabled — surface via console only (can't logger.error from here).
+    console.debug('logger: persistLogsToLocalStorage failed', e?.message);
+  }
   return false;
 }
 

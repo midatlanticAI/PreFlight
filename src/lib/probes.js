@@ -229,6 +229,22 @@ export function isScannerSelfSource(path) {
   return false;
 }
 
+// --- Meta-doc exclusion: discoverability files inherently contain URL references ---
+// llms.txt, robots.txt, sitemap.xml, .preflight.yml/json are documentation/metadata files
+// that legitimately list URLs as content (sitemap entries, llms.txt outbound links, suppress-
+// rule reasons that quote probe titles). Pattern-matching probes scanning them produce noise:
+// URL Reputation hits every documented help-link, and content probes can match suppress-rule
+// title-patterns. We want these files visible to SEO/GEO probes (which target them by name)
+// but invisible to generic content probes.
+export function isMetaDocFile(path) {
+  if (!path) return false;
+  if (/(^|\/)llms\.txt$/i.test(path)) return true;
+  if (/(^|\/)robots\.txt$/i.test(path)) return true;
+  if (/(^|\/)sitemap\.xml$/i.test(path)) return true;
+  if (/(^|\/)\.preflight\.(ya?ml|json)$/i.test(path)) return true;
+  return false;
+}
+
 export const FILE_INCLUDE = [
   /(^|\/)\.env(\..+)?$/i,
   /package\.json$/,
@@ -1644,7 +1660,10 @@ export function probeExternalURLs(files) {
   // host -> { occurrences: [{file,line,url}], allHttp: bool }
   const seen = new Map();
 
-  // Self-domain allowlist from package.json#homepage (if present).
+  // Self-domain allowlist from two sources:
+  //   1. package.json#homepage  (auto-derived; the conventional npm field)
+  //   2. .preflight.yml `self_domains:` list  (explicit, for sites with multiple domains
+  //      or where homepage is a subdomain but the apex should also be allowlisted)
   const selfDomains = new Set();
   const pkgFile = files.find(
     (f) => /(^|\/)package\.json$/.test(f.path) && !/node_modules/.test(f.path)
@@ -1655,9 +1674,27 @@ export function probeExternalURLs(files) {
       if (pkg.homepage) {
         try {
           selfDomains.add(new URL(pkg.homepage).hostname.toLowerCase());
-        } catch {}
+        } catch {
+          // homepage is malformed — fall through; one bad field shouldn't break the probe
+        }
       }
-    } catch {}
+    } catch {
+      // package.json is malformed — let the dedicated package-manager probe surface that
+    }
+  }
+  const preflightFile = files.find((f) => /(^|\/)\.preflight\.(ya?ml|json)$/i.test(f.path));
+  if (preflightFile) {
+    // Cheap line-grep for `self_domains:` block — avoids depending on the YAML parser here
+    // (probes.js stays parser-free; the App layer owns full config parsing).
+    const lines = (preflightFile.content || '').split('\n');
+    const startIdx = lines.findIndex((l) => /^\s*self_domains\s*:/i.test(l));
+    if (startIdx >= 0) {
+      for (let i = startIdx + 1; i < lines.length; i++) {
+        const m = lines[i].match(/^\s*-\s*['"]?([A-Za-z0-9.\-_]+)['"]?\s*$/);
+        if (m) selfDomains.add(m[1].toLowerCase());
+        else if (/^\s*\S/.test(lines[i]) && !/^\s*-\s/.test(lines[i])) break; // next top-level key
+      }
+    }
   }
 
   // Returns true if the URL match sits inside a remediation/description/help string literal
@@ -1674,6 +1711,9 @@ export function probeExternalURLs(files) {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     // Skip lockfiles (massive volume of registry URLs that drown the signal).
     if (/(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/i.test(file.path)) return;
+    // Skip meta/doc files (llms.txt, sitemap.xml, .preflight.yml) — they are *expected* to
+    // contain URL references as content; flagging those references is pure noise.
+    if (isMetaDocFile(file.path)) return;
     const content = file.content || '';
     let m;
     URL_RE.lastIndex = 0;

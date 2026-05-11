@@ -521,7 +521,9 @@ export async function copyToClipboard(text) {
       await navigator.clipboard.writeText(text);
       return true;
     }
-  } catch {}
+  } catch (e) {
+    log.debug('clipboard: writeText failed, falling back to execCommand', { error: e?.message });
+  }
   // fallback
   const ta = document.createElement('textarea');
   ta.value = text;
@@ -533,7 +535,9 @@ export async function copyToClipboard(text) {
   let ok = false;
   try {
     ok = document.execCommand('copy');
-  } catch {}
+  } catch (e) {
+    log.debug('clipboard: execCommand fallback failed', { error: e?.message });
+  }
   document.body.removeChild(ta);
   return ok;
 }
@@ -587,7 +591,9 @@ export function persistHistory(arr) {
       try {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, Math.floor(arr.length / 2))));
         return true;
-      } catch {}
+      } catch (e) {
+        log.debug('history: shrink-and-retry still over quota', { error: e?.message });
+      }
     }
     return false;
   }
@@ -990,7 +996,11 @@ export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
     return a;
   }, {});
   const handleCopy = async () => {
-    await copyToClipboard(exportLogs());
+    try {
+      await copyToClipboard(exportLogs());
+    } catch (e) {
+      log.warn('diagnostics: copy logs failed', { error: e?.message });
+    }
   };
   const handleDownload = () => {
     downloadFile(exportLogs(), `audit-logs-${timestampSlug(new Date())}.json`, 'application/json');
@@ -1034,7 +1044,9 @@ export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
       if (lastFocusRef.current && lastFocusRef.current.focus) {
         try {
           lastFocusRef.current.focus();
-        } catch {}
+        } catch (e) {
+          log.debug('drawer: focus restore failed', { error: e?.message });
+        }
       }
     };
   }, [open, onClose]);
@@ -1408,9 +1420,13 @@ export function FindingCard({
                 </div>
                 <button
                   onClick={async () => {
-                    const ok = await copyToClipboard(snippetToText(finding.snippet));
-                    if (ok) {
-                      // brief visual confirmation via title on the button itself
+                    try {
+                      const ok = await copyToClipboard(snippetToText(finding.snippet));
+                      if (ok) {
+                        // brief visual confirmation via title on the button itself
+                      }
+                    } catch (e) {
+                      log.debug('snippet: copy failed', { error: e?.message });
                     }
                   }}
                   className="ap-mono"
@@ -1964,7 +1980,9 @@ export default function App() {
   const [diagOpen, setDiagOpen] = useState(false);
   const [diagFilter, setDiagFilter] = useState('debug');
   const [suppressions, setSuppressions] = useState(() => loadSuppressions());
-  const [showSuppressed, setShowSuppressed] = useState(false);
+  // Default to *showing* suppressed findings — they're still useful context (".preflight.yml
+  // says this is intentional, here's why") and hiding them by default obscures the workflow.
+  const [showSuppressed, setShowSuppressed] = useState(true);
   // Persist suppressions whenever they change.
   useEffect(() => {
     saveSuppressions(suppressions);
@@ -2108,27 +2126,31 @@ export default function App() {
     async (kind) => {
       if (!results) return;
       const stamp = timestampSlug(results.scannedAt);
-      if (kind === 'json-dl') {
-        downloadFile(formatJSON(results), `audit-${stamp}.json`, 'application/json');
-      } else if (kind === 'md-dl') {
-        downloadFile(formatMarkdown(results), `audit-${stamp}.md`, 'text/markdown');
-      } else if (kind === 'json-copy') {
-        const ok = await copyToClipboard(formatJSON(results));
-        if (ok) flashCopy('json-copy');
-      } else if (kind === 'md-copy') {
-        const ok = await copyToClipboard(formatMarkdown(results));
-        if (ok) flashCopy('md-copy');
-      } else if (kind === 'agent-copy') {
-        const ok = await copyToClipboard(formatAgentPrompt(results));
-        if (ok) flashCopy('agent-copy');
-        track('export.agent_prompt');
-      } else if (kind === 'pr-copy') {
-        const ok = await copyToClipboard(formatPRComment(results));
-        if (ok) flashCopy('pr-copy');
-        track('export.pr_comment');
-      } else if (kind === 'pr-dl') {
-        downloadFile(formatPRComment(results), `pr-comment-${stamp}.md`, 'text/markdown');
-        track('export.pr_comment');
+      try {
+        if (kind === 'json-dl') {
+          downloadFile(formatJSON(results), `audit-${stamp}.json`, 'application/json');
+        } else if (kind === 'md-dl') {
+          downloadFile(formatMarkdown(results), `audit-${stamp}.md`, 'text/markdown');
+        } else if (kind === 'json-copy') {
+          const ok = await copyToClipboard(formatJSON(results));
+          if (ok) flashCopy('json-copy');
+        } else if (kind === 'md-copy') {
+          const ok = await copyToClipboard(formatMarkdown(results));
+          if (ok) flashCopy('md-copy');
+        } else if (kind === 'agent-copy') {
+          const ok = await copyToClipboard(formatAgentPrompt(results));
+          if (ok) flashCopy('agent-copy');
+          track('export.agent_prompt');
+        } else if (kind === 'pr-copy') {
+          const ok = await copyToClipboard(formatPRComment(results));
+          if (ok) flashCopy('pr-copy');
+          track('export.pr_comment');
+        } else if (kind === 'pr-dl') {
+          downloadFile(formatPRComment(results), `pr-comment-${stamp}.md`, 'text/markdown');
+          track('export.pr_comment');
+        }
+      } catch (e) {
+        log.warn('export: failed', { kind, error: e?.message });
       }
     },
     [results, flashCopy]
@@ -2929,16 +2951,16 @@ export default function App() {
                     DELTA SINCE {timeAgo(diff.priorScannedAt).toUpperCase()}
                   </span>
                   <span className="ap-mono" style={{ fontSize: 12, color: T.textDim }}>
-                    Prior score: {diff.priorScore} → {results.score}
-                    {diff.deltaScore !== 0 && (
+                    Prior score: {diff.priorScore} → {liveScore}
+                    {liveScore - diff.priorScore !== 0 && (
                       <span
                         style={{
                           marginLeft: 8,
-                          color: diff.deltaScore > 0 ? T.good : T.sev.critical.fg,
+                          color: liveScore - diff.priorScore > 0 ? T.good : T.sev.critical.fg,
                           fontWeight: 600,
                         }}
                       >
-                        {diff.deltaScore > 0 ? (
+                        {liveScore - diff.priorScore > 0 ? (
                           <TrendingUp
                             size={11}
                             aria-hidden="true"
@@ -2948,7 +2970,7 @@ export default function App() {
                               marginRight: 2,
                             }}
                           />
-                        ) : diff.deltaScore < 0 ? (
+                        ) : liveScore - diff.priorScore < 0 ? (
                           <TrendingDown
                             size={11}
                             aria-hidden="true"
@@ -2969,8 +2991,8 @@ export default function App() {
                             }}
                           />
                         )}
-                        {diff.deltaScore > 0 ? '+' : ''}
-                        {diff.deltaScore}
+                        {liveScore - diff.priorScore > 0 ? '+' : ''}
+                        {liveScore - diff.priorScore}
                       </span>
                     )}
                   </span>
@@ -3038,7 +3060,7 @@ export default function App() {
                       className="ap-mono"
                       style={{ fontSize: 12, color: T.text, marginLeft: 6 }}
                     >
-                      {diff.persisted.count}
+                      {partitioned.visible.length}
                     </span>
                   </div>
                 </div>
@@ -3087,7 +3109,7 @@ export default function App() {
                         letterSpacing: '0.1em',
                       }}
                     >
-                      {results.findings.length} OPEN
+                      {partitioned.visible.length} OPEN
                     </span>
                   </div>
 
@@ -3948,7 +3970,7 @@ export default function App() {
                 },
                 {
                   q: 'What does the Pre-Flight Audit Tool check?',
-                  a: '26 probes covering hardcoded secrets (AWS, Stripe, OpenAI, Anthropic, GitHub, etc.), NEXT_PUBLIC_ leak of server secrets, Supabase Row-Level-Security misconfigurations, Firebase permissive rules, JWT algorithm: none, package.json supply-chain hooks, known-compromised package versions, typosquatted and LLM-hallucinated package names, MCP server command-injection patterns, Cursor / Copilot rules-file backdoors, Trojan Source Unicode, prompt-injection sinks, system-prompt leakage to client bundles, missing security headers, CORS wildcards, SSRF and open-redirect patterns, and HTML hygiene.',
+                  a: '26 probes covering hardcoded secrets (AWS, Stripe, OpenAI, Anthropic, GitHub, etc.), NEXT_PUBLIC_ leak of server secrets, Supabase Row-Level-Security misconfigurations, Firebase permissive rules, JWT alg-none unsigned tokens, package.json supply-chain hooks, known-compromised package versions, typosquatted and LLM-hallucinated package names, MCP server command-injection patterns, Cursor / Copilot rules-file backdoors, Trojan Source Unicode, prompt-injection sinks, system-prompt leakage to client bundles, missing security headers, CORS wildcards, SSRF and open-redirect patterns, and HTML hygiene.',
                 },
                 {
                   q: 'Is the Pre-Flight Audit Tool free?',

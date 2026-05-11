@@ -11,7 +11,17 @@ import { join, relative } from 'node:path';
 import { PROBES, attachStableIds, attachProbeMeta } from '../lib/probes.js';
 
 const ROOT = process.cwd();
-const TARGET_ROOTS = ['dist', 'public', 'src', 'index.html'];
+// Include `.preflight.yml` so the dogfood scan mirrors what the browser sees when it scans this
+// repo (FILE_INCLUDE pulls .preflight.yml so probes can read self_domains).
+const TARGET_ROOTS = [
+  'dist',
+  'public',
+  'src',
+  'index.html',
+  '.preflight.yml',
+  'package.json',
+  '.npmrc',
+];
 
 function walk(dir, out = []) {
   if (!existsSync(dir)) return out;

@@ -48,7 +48,9 @@ export default class ErrorBoundary extends React.Component {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(payload);
       }
-    } catch {}
+    } catch (e) {
+      log.debug('error-boundary: copy diagnostics failed', { error: e?.message });
+    }
   };
 
   render() {

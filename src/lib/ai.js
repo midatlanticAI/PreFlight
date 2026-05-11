@@ -1,4 +1,5 @@
 // src/lib/ai.js
+import { log } from './logger.js';
 // Bring-Your-Own-Key (BYOK) AI integration for the "Explain & Verify" per-finding action.
 //
 // Privacy contract:
@@ -76,7 +77,9 @@ export function saveAIConfig({ provider, apiKey, model }) {
 export function clearAIConfig() {
   try {
     localStorage.removeItem(STORAGE_KEY);
-  } catch {}
+  } catch (e) {
+    log.debug('ai: clearAIConfig localStorage.removeItem failed', { error: e?.message });
+  }
 }
 
 export function hasAIConfig() {
@@ -196,7 +199,9 @@ async function callAnthropic({ apiKey, model }, { system, user }, onChunk, signa
       if (obj.type === 'content_block_delta' && obj.delta?.type === 'text_delta') {
         return obj.delta.text || '';
       }
-    } catch {}
+    } catch (e) {
+      log.debug('ai: anthropic SSE parse failed', { error: e?.message });
+    }
     return '';
   });
 }
@@ -226,7 +231,9 @@ async function readSSE(resp, onChunk, extractText) {
         total += chunk;
         try {
           onChunk?.(chunk, total);
-        } catch {}
+        } catch (e) {
+          log.debug('ai: onChunk handler threw', { error: e?.message });
+        }
       }
     }
   }
