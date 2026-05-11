@@ -10,45 +10,57 @@ on:
 permissions:
   contents: read
 
+# PR-scoped concurrency: PR updates cancel prior PR runs, but main pushes never cancel each other.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
-    name: Test + build + self-audit
+    name: Test + build + self-audit (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        timeout-minutes: 2
 
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ matrix.node }}
           cache: 'npm'
+        timeout-minutes: 2
 
       - name: Install dependencies
         run: npm ci
+        timeout-minutes: 3
 
       - name: Run unit tests (Vitest)
         run: npm test
+        timeout-minutes: 5
 
       - name: Production build
         run: npm run build
+        timeout-minutes: 5
 
-      # Self-audit reads dist/ + public/ + src/ and runs the scanner against itself.
-      # The test file lives under src/test/ but explicitly requires dist/ to exist —
-      # this re-run is the dogfooding gate.
+      # Self-audit is intentionally excluded from the default Vitest glob (vitest.config.js)
+      # because it requires dist/ to exist. We run it here as its own step AFTER the build,
+      # so a build break is reported clearly rather than as a confusing test failure.
       - name: Self-audit (scanner runs on its own dist/)
-        run: npx vitest run src/test/self-audit.test.js
+        run: npm run test:self-audit
+        timeout-minutes: 2
 
       - name: Upload built artifact
-        if: success()
+        if: success() && matrix.node == '22'
         uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
           retention-days: 14
+        timeout-minutes: 2

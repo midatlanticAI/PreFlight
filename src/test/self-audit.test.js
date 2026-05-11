@@ -3,6 +3,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+// Import probes from the pure module rather than through the React tree, so this
+// node-fs test doesn't drag jsdom + React loading for no reason (adversarial finding).
 import {
   probeSEOHygiene,
   probeGEOHygiene,
@@ -10,7 +12,7 @@ import {
   probeCodeQuality,
   probeSecrets,
   shouldScanFile,
-} from '../App.jsx';
+} from '../lib/probes.js';
 
 const ROOT = process.cwd();
 // Scan everything that ships AND the JSX source — schema-visibility check needs to see

@@ -1382,16 +1382,27 @@ export function probeSEOHygiene(files) {
           remediation: 'Add a line: Sitemap: https://yourdomain.com/sitemap.xml — helps crawlers discover URLs they would otherwise miss.',
         });
       }
-      if (/^\s*Disallow:\s*\/\s*$/im.test(c) && !/^\s*Allow:\s*\//im.test(c)) {
-        findings.push({
-          id: `seo-robots-disallow-all-${file.path}`,
-          probe: 'SEO Hygiene',
-          title: 'robots.txt blocks the entire site (Disallow: /)',
-          severity: 'critical', category: 'Misconfiguration', cwe: 'SEO-fundamentals',
-          file: file.path, line: 1,
-          evidence: 'Disallow: / without a more permissive Allow',
-          remediation: 'A "Disallow: /" at top level blocks every search engine from indexing the site. If this is intentional, ignore; otherwise change to "Disallow:" (empty) to allow all.',
-        });
+      // Only flag a site-blocking Disallow when it appears under a wildcard `User-agent: *` block.
+      // A `Disallow: /` under a specific bot (e.g. BadBot) is a deliberate per-bot block, not a
+      // catastrophic site-wide misconfig (adversarial-agent finding).
+      {
+        const cleanedRobots = c.split('\n').map(l => l.replace(/#.*$/, '').trimEnd()).join('\n');
+        for (const block of cleanedRobots.split(/\n\s*\n/)) {
+          const uas = [...block.matchAll(/^User-agent:\s*(\S+)/gim)].map(m => m[1]);
+          if (!uas.includes('*')) continue;
+          if (!/^Disallow:\s*\/\s*$/im.test(block)) continue;
+          if (/^Allow:\s*\//im.test(block)) continue;
+          findings.push({
+            id: `seo-robots-disallow-all-${file.path}`,
+            probe: 'SEO Hygiene',
+            title: 'robots.txt blocks the entire site (Disallow: / under User-agent: *)',
+            severity: 'critical', category: 'Misconfiguration', cwe: 'SEO-fundamentals',
+            file: file.path, line: 1,
+            evidence: 'Wildcard User-agent block contains "Disallow: /" with no compensating Allow',
+            remediation: 'A "Disallow: /" under "User-agent: *" blocks every search engine from indexing the site. If this is intentional (staging, deprecated), ignore; otherwise change to "Disallow:" (empty) or add a permissive "Allow: /" line.',
+          });
+          break; // one finding per file
+        }
       }
     }
   });
@@ -1422,21 +1433,32 @@ export function probeGEOHygiene(files) {
 
   if (robotsFile) {
     const c = robotsFile.content || '';
-    // Explicit Disallow on an AI bot
-    AI_CRAWLER_BOTS.forEach(bot => {
-      const re = new RegExp(`User-agent:\\s*${bot}[\\s\\S]*?Disallow:\\s*\\/\\s*(\\n|$)`, 'i');
-      if (re.test(c)) {
-        findings.push({
-          id: `geo-block-${bot}`,
-          probe: 'GEO Hygiene',
-          title: `robots.txt blocks ${bot}`,
-          severity: 'low', category: 'Misconfiguration', cwe: 'GEO-fundamentals',
-          file: robotsFile.path, line: 1,
-          evidence: `Disallow: / under User-agent: ${bot}`,
-          remediation: `${bot} is the crawler for an AI search engine. Blocking it means your content cannot appear in AI-generated answers. If that is intentional, ignore. If you want to be cited, remove the Disallow.`,
-        });
-      }
-    });
+    // Walk robots.txt block by block. A "block" is a contiguous set of non-blank lines
+    // (after stripping # comments) that share their User-agent context. This is the only
+    // way to correctly scope `Disallow: /` to the user-agent that owns it — a free-floating
+    // regex falsely attributes one bot's Disallow to a different bot mentioned earlier in a
+    // comment or empty-Disallow block (adversarial-agent finding).
+    const cleaned = c.split('\n').map(l => l.replace(/#.*$/, '').trimEnd()).join('\n');
+    const blocks = cleaned.split(/\n\s*\n/);
+    for (const block of blocks) {
+      const uaLines = [...block.matchAll(/^User-agent:\s*(\S+)/gim)].map(m => m[1]);
+      if (uaLines.length === 0) continue;
+      const fullDisallow = /^Disallow:\s*\/\s*$/im.test(block);
+      if (!fullDisallow) continue;
+      AI_CRAWLER_BOTS.forEach(bot => {
+        if (uaLines.some(ua => ua.toLowerCase() === bot.toLowerCase())) {
+          findings.push({
+            id: `geo-block-${bot}`,
+            probe: 'GEO Hygiene',
+            title: `robots.txt blocks ${bot}`,
+            severity: 'low', category: 'Misconfiguration', cwe: 'GEO-fundamentals',
+            file: robotsFile.path, line: 1,
+            evidence: `User-agent: ${bot} block contains "Disallow: /"`,
+            remediation: `${bot} is the crawler for an AI search engine. Blocking it means your content cannot appear in AI-generated answers. If that is intentional, ignore. If you want to be cited, remove the Disallow.`,
+          });
+        }
+      });
+    }
   }
 
   if (htmlFile) {
@@ -1520,13 +1542,22 @@ export function probeA11yLandmarks(files) {
         });
       }
       // <input type="text|email|search|password|number|tel|url"> without label / aria-label / aria-labelledby
+      // Skip type=hidden / aria-hidden inputs — they're never user-facing (adversarial finding).
       [...content.matchAll(/<input\s[^>]*\btype\s*=\s*["'](?:text|email|search|password|number|tel|url)["'][^>]*>/gi)].forEach(m => {
         const tag = m[0];
+        if (/\baria-hidden\s*=\s*["']true["']/i.test(tag)) return;
+        if (/\bhidden\b(?!\s*=\s*["']false)/i.test(tag) && !/\btype\s*=\s*["'](?:text|email)/i.test(tag.match(/type\s*=\s*["'][^"']+["']/i)?.[0] || '')) {
+          // boolean hidden attribute on a non-text type: skip
+          return;
+        }
         const hasAriaLabel = /\baria-label\s*=\s*["']/i.test(tag);
         const hasAriaLabelledby = /\baria-labelledby\s*=\s*["']/i.test(tag);
         const idMatch = tag.match(/\bid\s*=\s*["']([^"']+)["']/i);
         const hasLabelFor = idMatch ? new RegExp(`<label[^>]*\\bfor\\s*=\\s*["']${idMatch[1]}["']`, 'i').test(content) : false;
-        if (!hasAriaLabel && !hasAriaLabelledby && !hasLabelFor) {
+        // Wrapping <label>…<input/>…</label> association
+        const wrapping = new RegExp(`<label\\b[^>]*>(?:[^<]|<(?!input)[^>]*>)*${tag.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&')}`, 's');
+        const hasWrappingLabel = wrapping.test(content);
+        if (!hasAriaLabel && !hasAriaLabelledby && !hasLabelFor && !hasWrappingLabel) {
           const ln = content.slice(0, m.index).split('\n').length;
           findings.push({
             id: `a11y-input-no-label-${file.path}-${m.index}`,
@@ -1561,13 +1592,19 @@ export function probeA11yLandmarks(files) {
         const attrs = m[1];
         const body = m[2];
         const hasAriaLabel = /\baria-label\s*=/.test(attrs);
-        // strip JSX tags and whitespace; if nothing left, button is icon-only
+        // Strip just the TAG TOKENS (open / close / self-closing) but preserve text and JSX
+        // expressions between them. A button with a Chevron icon AND visible {finding.title}
+        // text in a sibling div still has visible content — it must NOT be flagged. Marking
+        // each JSX expression with a sentinel so we know "this likely resolves to text".
         const stripped = body
-          .replace(/<[^>]+>/g, '')
-          .replace(/\{[^}]+\}/g, '')   // strip JSX expressions
-          .replace(/\s+/g, '')
+          .replace(/<\/?[A-Za-z][^<>]*\/?>/g, ' ')      // tag tokens → space (keeps inner text)
+          .replace(/\{[^}]+\}/g, ' __EXPR__ ')           // JSX expressions → sentinel
+          .replace(/\s+/g, ' ')
           .trim();
-        const hasOnlyIcon = stripped.length === 0 && /<[A-Z][A-Za-z0-9]*\b/.test(body);
+        const hasExpr = /\b__EXPR__\b/.test(stripped);
+        const hasText = stripped.replace(/__EXPR__/g, '').trim().length > 0;
+        const hasCapitalTag = /<[A-Z][A-Za-z0-9]*\b/.test(body);
+        const hasOnlyIcon = hasCapitalTag && !hasText && !hasExpr;
         if (hasOnlyIcon && !hasAriaLabel) {
           const ln = content.slice(0, m.index).split('\n').length;
           findings.push({
@@ -1653,12 +1690,36 @@ export function probeCodeQuality(files) {
     }
 
     // --- .then(...) without a subsequent .catch(...)
-    // Regex-balanced paren matching is messy; instead, find each `.then(` and look ahead
-    // 200 chars on the same statement for a `.catch(` / `.finally(`. Heuristic, but it kills
-    // the false positive on `.then(r => r.json()).catch(...)` that a closed-paren-based regex hits.
+    // Walk the statement to its END (terminating semicolon, end of file, or back-to-column-1 at
+    // the start of a new statement) before deciding it's unhandled. Previous fixed 200-char
+    // window false-positived on .then() handlers with long bodies (adversarial-agent finding).
     [...content.matchAll(/\.then\s*\(/g)].forEach(m => {
-      const window = content.slice(m.index, m.index + 200);
-      // If the same chain has a .catch or .finally, treat as handled.
+      // Walk forward through balanced parens / braces until we hit a semicolon at depth 0
+      // or two consecutive newlines (paragraph break).
+      let i = m.index;
+      let pDepth = 0, bDepth = 0;
+      let inSingle = false, inDouble = false, inBack = false;
+      let lastChar = '';
+      let chainEnd = content.length;
+      for (; i < content.length; i++) {
+        const ch = content[i];
+        if (inSingle) { if (ch === "'" && lastChar !== '\\') inSingle = false; lastChar = ch; continue; }
+        if (inDouble) { if (ch === '"' && lastChar !== '\\') inDouble = false; lastChar = ch; continue; }
+        if (inBack)   { if (ch === '`' && lastChar !== '\\') inBack = false; lastChar = ch; continue; }
+        if (ch === "'") inSingle = true;
+        else if (ch === '"') inDouble = true;
+        else if (ch === '`') inBack = true;
+        else if (ch === '(') pDepth++;
+        else if (ch === ')') pDepth--;
+        else if (ch === '{') bDepth++;
+        else if (ch === '}') bDepth--;
+        else if (ch === ';' && pDepth === 0 && bDepth === 0) { chainEnd = i; break; }
+        else if (ch === '\n' && content[i + 1] === '\n' && pDepth === 0 && bDepth === 0) {
+          chainEnd = i; break;
+        }
+        lastChar = ch;
+      }
+      const window = content.slice(m.index, chainEnd);
       if (/\.catch\s*\(|\.finally\s*\(/.test(window)) return;
       const ln = content.slice(0, m.index).split('\n').length;
       findings.push({
@@ -1674,16 +1735,31 @@ export function probeCodeQuality(files) {
 
     // --- async function with await but no try/catch wrapping (heuristic — top-level await only)
     // Find each `async (...) =>` or `async function ...` body; check whether it contains `await`
-    // but no `try {` before the await. This is intentionally heuristic; it's a soft warning.
+    // but no `try {` before the await. Balanced brace scan SKIPS string and regex literals so a
+    // `const x = "}"` or `/\}/` inside the body doesn't terminate parsing early (adversarial finding).
     const asyncBodies = [...content.matchAll(/async\s+(?:function\s+\w+\s*\([^)]*\)|\([^)]*\)\s*=>)\s*\{/g)];
     asyncBodies.forEach(m => {
-      // Find matching close brace via balanced scan from m.index + m[0].length
       let depth = 1;
       let i = m.index + m[0].length;
+      let inSingle = false, inDouble = false, inBack = false, inLineComment = false, inBlockComment = false;
+      let prev = '';
       while (i < content.length && depth > 0) {
-        const ch = content[i++];
-        if (ch === '{') depth++;
+        const ch = content[i];
+        const next = content[i + 1];
+        if (inLineComment) { if (ch === '\n') inLineComment = false; i++; prev = ch; continue; }
+        if (inBlockComment) { if (ch === '*' && next === '/') { inBlockComment = false; i++; } i++; prev = ch; continue; }
+        if (inSingle) { if (ch === "'" && prev !== '\\') inSingle = false; i++; prev = ch; continue; }
+        if (inDouble) { if (ch === '"' && prev !== '\\') inDouble = false; i++; prev = ch; continue; }
+        if (inBack)   { if (ch === '`' && prev !== '\\') inBack = false; i++; prev = ch; continue; }
+        if (ch === '/' && next === '/') { inLineComment = true; i += 2; prev = next; continue; }
+        if (ch === '/' && next === '*') { inBlockComment = true; i += 2; prev = next; continue; }
+        if (ch === "'") inSingle = true;
+        else if (ch === '"') inDouble = true;
+        else if (ch === '`') inBack = true;
+        else if (ch === '{') depth++;
         else if (ch === '}') depth--;
+        i++;
+        prev = ch;
       }
       const body = content.slice(m.index + m[0].length, i - 1);
       if (/\bawait\b/.test(body) && !/\btry\s*\{/.test(body)) {
@@ -1719,8 +1795,19 @@ export function classifyProject(files) {
   if (pkgFile) { try { pkg = JSON.parse(pkgFile.content); } catch {} }
   const deps = pkg ? { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) } : {};
 
-  const monorepoDirs = files.some(f => /(^|\/)(packages|services|apps)\/[^/]+\/package\.json$/.test(f.path));
-  if (monorepoDirs) signals.push('multiple package.json files in packages/ services/ or apps/');
+  const subPackages = files.filter(f => /(^|\/)(packages|services|apps)\/[^/]+\/package\.json$/.test(f.path));
+  // Require ≥2 sub-packages to qualify as a monorepo. A single package under packages/
+  // is just a folder convention (adversarial finding).
+  const monorepoDirs = subPackages.length >= 2;
+  if (monorepoDirs) signals.push(`${subPackages.length} package.json files under packages/ services/ or apps/`);
+  // Library detection: Vite build.lib config, package.json#main + exports without an index.html.
+  const viteConfig = files.find(f => /(^|\/)vite\.config\.[jt]s$/.test(f.path));
+  const hasViteLibMode = viteConfig && /build\s*:\s*\{[\s\S]*?lib\s*:/.test(viteConfig.content || '');
+  const hasStorybook = files.some(f => /(^|\/)\.storybook\//.test(f.path));
+  const hasPkgExports = pkg && (pkg.exports || pkg.main) && !files.some(f => /(^|\/)index\.html$/.test(f.path));
+  if (hasViteLibMode) signals.push('vite.config has build.lib');
+  if (hasStorybook) signals.push('.storybook directory present');
+  if (hasPkgExports) signals.push('package.json#exports/main set, no index.html');
 
   const hasReactNative = !!deps['react-native'] || !!deps.expo;
   if (hasReactNative) signals.push('react-native or expo dependency');
@@ -1766,6 +1853,11 @@ export function classifyProject(files) {
   } else if (hasExpress && !hasReact && !hasVue && !hasSvelte) {
     type = 'backend-api'; label = 'Backend API';
     summary = 'Express/Fastify/Koa with no frontend framework.';
+  } else if (hasViteLibMode || hasStorybook || hasPkgExports) {
+    type = 'library'; label = 'Component / Utility Library';
+    summary = hasViteLibMode ? 'Vite library mode build.'
+            : hasStorybook ? 'Storybook config present — library shipped with isolated component previews.'
+            : 'package.json declares exports/main and no index.html — meant to be consumed, not deployed.';
   } else if (hasReact || hasVue || hasSvelte) {
     // SPA — distinguish monolith from modular
     if (largestSourceLines >= 1500 && largestSourceLines / Math.max(totalSrcLines, 1) > 0.4) {

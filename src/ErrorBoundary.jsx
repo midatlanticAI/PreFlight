@@ -57,13 +57,36 @@ export default class ErrorBoundary extends React.Component {
         padding: 40,
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
       }}>
-        <div style={{
-          maxWidth: 800, width: '100%',
-          background: '#11192e',
-          border: '1px solid #fb7185',
-          borderLeft: '4px solid #fb7185',
-          padding: 28,
-        }}>
+        {/* Scoped focus + reduced-motion styles for the boundary fallback.
+            The global :focus-visible rule in App.jsx is scoped to .ap-app, which
+            doesn't apply here — without this, keyboard users get only the browser
+            default outline on these recovery buttons (WCAG 2.4.7 / 2.4.13). */}
+        <style>{`
+          .ap-boundary *:focus-visible {
+            outline: 2px solid #f26b1f;
+            outline-offset: 2px;
+          }
+          .ap-boundary button { min-height: 24px; min-width: 24px; }
+          @media (prefers-reduced-motion: reduce) {
+            .ap-boundary *, .ap-boundary *::before, .ap-boundary *::after {
+              animation-duration: 0.01ms !important;
+              transition-duration: 0.01ms !important;
+            }
+          }
+        `}</style>
+        <div
+          className="ap-boundary"
+          role="alertdialog"
+          aria-label="Application error"
+          aria-live="assertive"
+          style={{
+            maxWidth: 800, width: '100%',
+            background: '#11192e',
+            border: '1px solid #fb7185',
+            borderLeft: '4px solid #fb7185',
+            padding: 28,
+          }}
+        >
           <div style={{
             fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
             color: '#fb7185', marginBottom: 12,
