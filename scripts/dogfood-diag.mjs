@@ -5,15 +5,7 @@ import { join, relative } from 'node:path';
 import { PROBES, attachStableIds, attachProbeMeta } from '../src/lib/probes.js';
 
 const ROOT = process.cwd();
-const TARGETS = [
-  'dist',
-  'public',
-  'src',
-  'index.html',
-  '.preflight.yml',
-  'package.json',
-  '.npmrc',
-];
+const TARGETS = ['dist', 'public', 'src', 'index.html', '.preflight.yml', 'package.json', '.npmrc'];
 
 function walk(dir, out = []) {
   if (!existsSync(dir)) return out;

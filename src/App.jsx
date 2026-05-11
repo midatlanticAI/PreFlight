@@ -32,50 +32,68 @@ import {
 import { log, getLogs, clearLogs, subscribe as subscribeLogs, exportLogs } from './lib/logger.js';
 import { track, timing } from './lib/analytics.js';
 
-// ==========================================================================
-// THEME — Mid-Atlantic AI brand: navy ground, orange CTA, mint accent
-// Palette source: official brand kit (navy / white / mint cyan / orange / grays)
-// ==========================================================================
-const T = {
-  bg: '#0a1226', // deep brand navy (darker than logo navy for AA contrast)
-  bgGrid: 'rgba(159, 229, 221, 0.03)', // faint mint tint, echoes the eye color
-  panel: '#11192e',
-  panelAlt: '#172143',
-  panelHover: '#1d294d',
-  border: '#1f2a44',
-  borderAlt: '#2c3a5e',
-  text: '#f5f7fa', // contrast 17.7:1 on bg — WCAG AAA
-  textDim: '#a8b1c5', // contrast 8.94:1 on bg — AAA
-  textMuted: '#8a96b0', // contrast 6.5:1 on bg — AA (was #6b7693 = 4.15:1, failed AA)
-  accent: '#f26b1f', // brand orange (antenna lights) — 6.18:1 on bg = AA Large
-  accentDim: '#c2541a',
-  accentAlt: '#9fe5dd', // brand mint (robot eyes) — for friendly highlights
-  navy: '#1b2d52', // brand navy (logo body) — for chrome accents
-  good: '#9fe5dd', // success uses the brand mint
-  sev: {
-    critical: {
-      bg: '#1f0e1a',
-      fg: '#fb7185',
-      border: '#7f1d1d',
-      glow: 'rgba(251, 113, 133, 0.15)',
-    },
-    high: { bg: '#1f140a', fg: '#f97316', border: '#9a3412', glow: 'rgba(249, 115, 22, 0.15)' },
-    medium: { bg: '#1f1a0a', fg: '#fbbf24', border: '#854d0e', glow: 'rgba(251, 191, 36, 0.12)' },
-    low: { bg: '#0e1a30', fg: '#60a5fa', border: '#1e3a8a', glow: 'rgba(96, 165, 250, 0.12)' },
-    info: { bg: '#0d1d2c', fg: '#9fe5dd', border: '#3b6e69', glow: 'rgba(159, 229, 221, 0.12)' },
-  },
-  cat: {
-    'Data Breach': '#f97316',
-    'Code Injection': '#fbbf24',
-    'Supply Chain': '#a78bfa',
-    'Auth & Access': '#fb7185',
-    'AI/LLM Security': '#9fe5dd',
-    Misconfiguration: '#60a5fa',
-  },
+// Theme, scoring, snippets, formatters, clipboard helpers, history, and the GitHub fetcher
+// live in src/lib/*. They were extracted to keep this file focused on the App component
+// itself. The re-exports just below preserve the historical import surface for tests and
+// any external caller that imported them from App.jsx.
+import {
+  T,
+  fontDisplay,
+  fontUI,
+  fontCondensed,
+  fontEyebrow,
+  fontMono,
+  riskTier,
+} from './lib/theme.js';
+import { SEV_ORDER, SEV_WEIGHT, computeScore } from './lib/scoring.js';
+import { buildSnippet, snippetToText } from './lib/snippet.js';
+import { downloadFile, copyToClipboard, timestampSlug, timeAgo } from './lib/clipboard.js';
+import {
+  HISTORY_KEY,
+  HISTORY_MAX,
+  loadHistory,
+  persistHistory,
+  makeHistoryEntry,
+  computeDiffAgainstPrior,
+  historyEntryToResults,
+} from './lib/history.js';
+import {
+  formatJSON,
+  formatMarkdown,
+  formatPRComment,
+  formatAgentPrompt,
+} from './lib/formatters.js';
+import { fetchGitHubRepo } from './lib/github.js';
+export {
+  T,
+  fontDisplay,
+  fontUI,
+  fontCondensed,
+  fontEyebrow,
+  fontMono,
+  riskTier,
+  SEV_ORDER,
+  SEV_WEIGHT,
+  computeScore,
+  buildSnippet,
+  snippetToText,
+  downloadFile,
+  copyToClipboard,
+  timestampSlug,
+  timeAgo,
+  HISTORY_KEY,
+  HISTORY_MAX,
+  loadHistory,
+  persistHistory,
+  makeHistoryEntry,
+  computeDiffAgainstPrior,
+  historyEntryToResults,
+  formatJSON,
+  formatMarkdown,
+  formatPRComment,
+  formatAgentPrompt,
+  fetchGitHubRepo,
 };
-
-export const SEV_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
-export const SEV_WEIGHT = { critical: 25, high: 10, medium: 5, low: 2, info: 1 };
 
 // All scanning logic lives in ./lib/probes.js. We re-export everything so
 // existing imports (tests, App body) keep working without churn.
@@ -166,523 +184,14 @@ import {
   configToSuppressions,
 } from './lib/preflight-config.js';
 
-// ==========================================================================
-// SCORING
-// ==========================================================================
-export function computeScore(findings) {
-  let score = 100;
-  findings.forEach((f) => {
-    score -= SEV_WEIGHT[f.severity] || 0;
-  });
-  return Math.max(0, score);
-}
-
-export function riskTier(score) {
-  if (score >= 80) return { label: 'LOW RISK', color: T.good, ring: T.good };
-  if (score >= 60) return { label: 'MODERATE RISK', color: T.sev.medium.fg, ring: T.sev.medium.fg };
-  if (score >= 40) return { label: 'HIGH RISK', color: T.sev.high.fg, ring: T.sev.high.fg };
-  return { label: 'CRITICAL RISK', color: T.sev.critical.fg, ring: T.sev.critical.fg };
-}
-
-// ==========================================================================
-// GITHUB FETCHER
-// ==========================================================================
-export async function fetchGitHubRepo(url, onProgress) {
-  const ghLog = log.child('github');
-
-  if (typeof url !== 'string') {
-    ghLog.error('fetchGitHubRepo got non-string url', { typeofArg: typeof url });
-    throw new Error(
-      `We tried to read that GitHub URL but got something that wasn't a string (got ${typeof url}). Refresh the page and try again — if it keeps happening, open the Diagnostics panel and share the log.`
-    );
-  }
-  const trimmed = url.trim();
-  if (!trimmed) throw new Error('GitHub URL is empty.');
-
-  const m = trimmed.match(/github\.com\/([^/]+)\/([^/?#]+)/i);
-  if (!m) {
-    ghLog.warn('URL did not match github.com/owner/repo pattern', { url: trimmed });
-    throw new Error('Use the format https://github.com/owner/repo');
-  }
-  const owner = m[1];
-  const repo = m[2].replace(/\.git$/i, '');
-  ghLog.info('Resolved repo', { owner, repo });
-
-  onProgress?.({ stage: 'Resolving repository', current: 0, total: 1 });
-
-  let repoResp;
-  try {
-    repoResp = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
-  } catch (e) {
-    ghLog.error('Repo metadata fetch threw', { error: e?.message });
-    throw new Error(
-      `Network call to api.github.com failed (${e.message || 'unknown'}). ` +
-        `This artifact runs in a sandboxed iframe; some browsers / extensions ` +
-        `block cross-origin fetches. Workaround: use the Files / Folder tab — ` +
-        `download the repo as a zip from GitHub, expand it, and select the folder.`
-    );
-  }
-
-  ghLog.debug('Repo response', { status: repoResp.status });
-
-  if (repoResp.status === 404) {
-    throw new Error(
-      'Repository not found, or it is private. Public repos only via URL. Use Files / Folder for private repos.'
-    );
-  }
-  if (repoResp.status === 403) {
-    const remaining = repoResp.headers.get('x-ratelimit-remaining');
-    const resetUnix = parseInt(repoResp.headers.get('x-ratelimit-reset') || '0', 10);
-    const resetIn = resetUnix
-      ? Math.max(0, Math.ceil((resetUnix * 1000 - Date.now()) / 60000))
-      : null;
-    ghLog.warn('Rate limit hit', { remaining, resetIn });
-    throw new Error(
-      `GitHub API rate limit hit (${remaining || 0} remaining)` +
-        (resetIn !== null ? `, resets in ~${resetIn} min` : '') +
-        `. Unauthenticated limit is 60/hour per IP. Use Files / Folder upload as fallback.`
-    );
-  }
-  if (!repoResp.ok) {
-    throw new Error(`GitHub API ${repoResp.status} ${repoResp.statusText}`);
-  }
-
-  let repoInfo;
-  try {
-    repoInfo = await repoResp.json();
-  } catch (e) {
-    ghLog.error('Repo metadata JSON parse failed', { error: e?.message });
-    throw new Error('GitHub responded with non-JSON. Try again or use Files upload.');
-  }
-
-  const branch = repoInfo.default_branch;
-  if (!branch) {
-    throw new Error('GitHub did not report a default branch. Repository may be empty.');
-  }
-
-  onProgress?.({ stage: `Walking ${branch} tree`, current: 0, total: 1 });
-  let treeResp;
-  try {
-    treeResp = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
-    );
-  } catch (e) {
-    ghLog.error('Tree fetch threw', { error: e?.message });
-    throw new Error(`Tree fetch failed: ${e.message || 'unknown'}. Try Files / Folder upload.`);
-  }
-  if (!treeResp.ok) {
-    throw new Error(`Tree fetch returned ${treeResp.status}`);
-  }
-  const treeData = await treeResp.json();
-  if (treeData.truncated) {
-    ghLog.warn('Tree was truncated by GitHub (large repo)', { entryCount: treeData.tree?.length });
-  }
-
-  const targets = (treeData.tree || [])
-    .filter(
-      (node) => node.type === 'blob' && shouldScanFile(node.path) && (node.size || 0) < 200000
-    )
-    .slice(0, 80);
-  ghLog.info('Targets selected', {
-    totalEntries: treeData.tree?.length,
-    targetCount: targets.length,
-  });
-
-  if (targets.length === 0) {
-    throw new Error('No security-relevant files found in this repository tree.');
-  }
-
-  const out = [];
-  let blobFailures = 0;
-  for (let i = 0; i < targets.length; i++) {
-    const t = targets[i];
-    onProgress?.({ stage: `Fetching ${t.path}`, current: i + 1, total: targets.length });
-    try {
-      const r = await fetch(
-        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${t.path}`
-      );
-      if (r.ok) {
-        const content = await r.text();
-        out.push({ path: t.path, content });
-      } else {
-        blobFailures++;
-        ghLog.debug('Blob fetch non-OK', { path: t.path, status: r.status });
-      }
-    } catch (e) {
-      blobFailures++;
-      ghLog.debug('Blob fetch threw', { path: t.path, error: e?.message });
-    }
-  }
-  if (blobFailures > 0) {
-    ghLog.warn('Some blob fetches failed', { fetched: out.length, failed: blobFailures });
-  }
-  if (out.length === 0) {
-    throw new Error(
-      'Tree was readable but no file contents could be fetched. Likely a sandbox restriction. Use Files / Folder upload.'
-    );
-  }
-  return out;
-}
-
-// ==========================================================================
-// SNIPPETS, EXPORTS, CLIPBOARD
-// ==========================================================================
-
-// Capture ±ctx lines around the finding line. lineNum is 1-based.
-export function buildSnippet(content, lineNum, ctx = 5) {
-  if (!content || !lineNum) return null;
-  const lines = content.split('\n');
-  if (lines.length === 0) return null;
-  // Clamp into file range — a probe that miscomputes lineNum past EOF still produces a useful snippet
-  // anchored at the last real line, rather than an empty / inverted range.
-  const clampedHit = Math.min(Math.max(1, lineNum), lines.length);
-  const start = Math.max(1, clampedHit - ctx);
-  const end = Math.min(lines.length, clampedHit + ctx);
-  const out = [];
-  for (let i = start; i <= end; i++) {
-    out.push({ n: i, text: lines[i - 1] ?? '', isHit: i === clampedHit });
-  }
-  return { startLine: start, endLine: end, lines: out };
-}
-
-export function snippetToText(snippet) {
-  if (!snippet) return '';
-  return snippet.lines
-    .map((l) => `${String(l.n).padStart(4)}${l.isHit ? '> ' : ': '}${l.text}`)
-    .join('\n');
-}
-
-export function formatJSON(results) {
-  return JSON.stringify(
-    {
-      schema: 'midatlantic-audit/v1',
-      scannedAt: results.scannedAt.toISOString(),
-      source: results.source,
-      filesScanned: results.filesScanned,
-      score: results.score,
-      riskTier: riskTier(results.score).label,
-      summary: {
-        total: results.findings.length,
-        bySeverity: results.findings.reduce((a, f) => {
-          a[f.severity] = (a[f.severity] || 0) + 1;
-          return a;
-        }, {}),
-      },
-      findings: results.findings.map((f) => ({
-        id: f.id,
-        severity: f.severity,
-        category: f.category,
-        cwe: f.cwe,
-        probe: f.probe,
-        title: f.title,
-        file: f.file,
-        line: f.line,
-        evidence: f.evidence,
-        remediation: f.remediation,
-        snippet: f.snippet
-          ? {
-              startLine: f.snippet.startLine,
-              endLine: f.snippet.endLine,
-              text: snippetToText(f.snippet),
-            }
-          : null,
-      })),
-    },
-    null,
-    2
-  );
-}
-
-export function formatMarkdown(results) {
-  const tier = riskTier(results.score);
-  const sevCounts = results.findings.reduce((a, f) => {
-    a[f.severity] = (a[f.severity] || 0) + 1;
-    return a;
-  }, {});
-  const sevLine = SEV_ORDER.filter((s) => sevCounts[s])
-    .map((s) => `${sevCounts[s]} ${s}`)
-    .join(', ');
-
-  let md = `# Pre-Flight Security Audit\n\n`;
-  md += `- **Risk:** ${tier.label} — score ${results.score} / 100\n`;
-  md += `- **Source:** ${results.source}\n`;
-  md += `- **Files scanned:** ${results.filesScanned}\n`;
-  md += `- **Scanned at:** ${results.scannedAt.toISOString()}\n`;
-  md += `- **Findings:** ${results.findings.length}${sevLine ? ` (${sevLine})` : ''}\n\n`;
-  md += `---\n\n`;
-
-  results.findings.forEach((f, i) => {
-    md += `## ${i + 1}. [${f.severity.toUpperCase()}] ${f.title}\n\n`;
-    md += `- **File:** \`${f.file}${f.line ? ':' + f.line : ''}\`\n`;
-    md += `- **Category:** ${f.category}\n`;
-    md += `- **CWE:** ${f.cwe}\n`;
-    md += `- **Probe:** ${f.probe}\n\n`;
-    md += `**Evidence**\n\n\`${f.evidence}\`\n\n`;
-    if (f.snippet) {
-      md += `**Code snapshot** (line ${f.line} marked with \`>\`)\n\n`;
-      md += '```\n' + snippetToText(f.snippet) + '\n```\n\n';
-    }
-    md += `**Remediation**\n\n${f.remediation}\n\n---\n\n`;
-  });
-  return md;
-}
-
-// PR-comment Markdown: fits in a collapsed <details> block, links findings by file path, summary tagline.
-export function formatPRComment(results) {
-  const tier = riskTier(results.score);
-  const sevCounts = results.findings.reduce((a, f) => {
-    a[f.severity] = (a[f.severity] || 0) + 1;
-    return a;
-  }, {});
-  const top = SEV_ORDER.filter((s) => sevCounts[s]);
-  const sevSummary = top.length
-    ? top.map((s) => `${sevCounts[s]} ${s}`).join(' · ')
-    : 'no findings';
-  const titleEmoji = tier.label.startsWith('CRITICAL')
-    ? '🟥'
-    : tier.label.startsWith('HIGH')
-      ? '🟧'
-      : tier.label.startsWith('MODERATE')
-        ? '🟨'
-        : '🟩';
-
-  let md = `## ${titleEmoji} Pre-Flight Audit — ${tier.label} (${results.score}/100)\n\n`;
-  md += `**${results.findings.length} finding${results.findings.length === 1 ? '' : 's'}** · ${sevSummary} · ${results.filesScanned} file${results.filesScanned === 1 ? '' : 's'} scanned\n\n`;
-  if (results.findings.length === 0) {
-    md += '_No findings from this probe set. Manual IDOR / runtime checks remain out of scope._\n';
-    return md;
-  }
-  md += `<details>\n<summary>Click to expand ${results.findings.length} finding${results.findings.length === 1 ? '' : 's'}</summary>\n\n`;
-  // Group by file so the comment shows up next to the code review naturally.
-  const byFile = new Map();
-  results.findings.forEach((f) => {
-    if (!byFile.has(f.file)) byFile.set(f.file, []);
-    byFile.get(f.file).push(f);
-  });
-  for (const [filePath, fs] of byFile) {
-    md += `### \`${filePath}\`\n\n`;
-    for (const f of fs) {
-      md +=
-        `- **[${f.severity.toUpperCase()}]** ${f.title} — ${f.cwe}` +
-        (f.line ? ` _(line ${f.line})_` : '') +
-        `\n`;
-      md += `  _${f.remediation.replace(/\n+/g, ' ').slice(0, 220)}${f.remediation.length > 220 ? '…' : ''}_\n`;
-    }
-    md += '\n';
-  }
-  md += `</details>\n\n`;
-  md += `<sub>Generated by Mid-Atlantic AI Pre-Flight Audit Tool · ${results.scannedAt.toISOString()}</sub>\n`;
-  return md;
-}
-
-export function formatAgentPrompt(results) {
-  const tier = riskTier(results.score);
-  const top = results.findings.slice(0, 30);
-  let p = `You are a senior application-security engineer. The findings below come from a static audit of a web app (score ${results.score}/100, ${tier.label}). For each finding, propose the smallest correct fix:\n`;
-  p += `- If you have enough context, output a unified diff against the file.\n`;
-  p += `- Otherwise describe the change in one or two sentences with a precise file:line reference.\n`;
-  p += `- Group fixes by file when there are multiple in the same file.\n`;
-  p += `- Call out any finding that needs human judgement (auth model, business logic) instead of guessing.\n\n`;
-  p += `Findings (highest severity first):\n\n`;
-
-  top.forEach((f, i) => {
-    p += `### ${i + 1}. [${f.severity}] ${f.title}\n`;
-    p += `- File: ${f.file}${f.line ? ':' + f.line : ''}\n`;
-    p += `- Category: ${f.category} | ${f.cwe} | probe: ${f.probe}\n`;
-    p += `- Evidence: ${f.evidence}\n`;
-    if (f.snippet) {
-      p += `- Code (line ${f.line} marked with \`>\`):\n`;
-      p += '```\n' + snippetToText(f.snippet) + '\n```\n';
-    }
-    p += `- Remediation hint: ${f.remediation}\n\n`;
-  });
-
-  if (results.findings.length > top.length) {
-    p += `(${results.findings.length - top.length} additional findings omitted to keep the prompt small. Re-export to a JSON file for full data.)\n`;
-  }
-  return p;
-}
-
-export function downloadFile(content, filename, mime = 'text/plain') {
-  const blob = new Blob([content], { type: `${mime};charset=utf-8` });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-export async function copyToClipboard(text) {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch (e) {
-    log.debug('clipboard: writeText failed, falling back to execCommand', { error: e?.message });
-  }
-  // fallback
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.setAttribute('readonly', '');
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select();
-  let ok = false;
-  try {
-    ok = document.execCommand('copy');
-  } catch (e) {
-    log.debug('clipboard: execCommand fallback failed', { error: e?.message });
-  }
-  document.body.removeChild(ta);
-  return ok;
-}
-
-export function timestampSlug(date) {
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
-}
-
-export function timeAgo(iso) {
-  const t = new Date(iso).getTime();
-  if (!t) return '';
-  const diff = Math.max(0, Date.now() - t);
-  const sec = Math.floor(diff / 1000);
-  if (sec < 45) return `${sec || 1}s ago`;
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day}d ago`;
-  return new Date(iso).toLocaleDateString();
-}
-
-// ==========================================================================
-// HISTORY (localStorage-backed)
-// ==========================================================================
-
-export const HISTORY_KEY = 'audit-app:history:v1';
-export const HISTORY_MAX = 10;
-
-export function loadHistory() {
-  try {
-    if (typeof localStorage === 'undefined') return [];
-    const raw = localStorage.getItem(HISTORY_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-export function persistHistory(arr) {
-  try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(arr));
-    return true;
-  } catch {
-    // Quota exceeded — try shrinking by half and retry once.
-    if (arr.length > 1) {
-      try {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, Math.floor(arr.length / 2))));
-        return true;
-      } catch (e) {
-        log.debug('history: shrink-and-retry still over quota', { error: e?.message });
-      }
-    }
-    return false;
-  }
-}
-
-export function makeHistoryEntry(results, sourceType) {
-  const bySeverity = results.findings.reduce((a, f) => {
-    a[f.severity] = (a[f.severity] || 0) + 1;
-    return a;
-  }, {});
-  return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    scannedAt:
-      results.scannedAt instanceof Date ? results.scannedAt.toISOString() : results.scannedAt,
-    source: results.source,
-    sourceType,
-    filesScanned: results.filesScanned,
-    score: results.score,
-    bySeverity,
-    findings: results.findings,
-  };
-}
-
-// Compute "what's new / fixed / changed" between the current scan and the most recent prior scan of the same source.
-// Pure function; testable in isolation.
-export function computeDiffAgainstPrior(currentResults, history) {
-  if (!currentResults || !Array.isArray(history)) return null;
-  // Find the most recent prior entry for the same source (skip the entry that represents the current scan).
-  // History is newest-first; skip entries that match BOTH source AND scannedAt of the current scan.
-  const currentTs =
-    currentResults.scannedAt instanceof Date
-      ? currentResults.scannedAt.toISOString()
-      : currentResults.scannedAt;
-  const prior = history.find(
-    (h) => h.source === currentResults.source && h.scannedAt !== currentTs
-  );
-  if (!prior) return null;
-
-  // Use the deterministic stableId where available; fall back to the legacy composite key for
-  // older history entries written before stable IDs existed. New scans always carry stableId
-  // because handleScan calls attachStableIds(); old entries shipped without it.
-  const keyOf = (f) => f.stableId || `legacy|${f.probe}|${f.file}|${f.line}|${f.title}`;
-  const currentSet = new Set(currentResults.findings.map(keyOf));
-  const priorSet = new Set((prior.findings || []).map(keyOf));
-
-  const introduced = currentResults.findings.filter((f) => !priorSet.has(keyOf(f)));
-  const fixed = (prior.findings || []).filter((f) => !currentSet.has(keyOf(f)));
-  const persisted = currentResults.findings.filter((f) => priorSet.has(keyOf(f)));
-
-  const bucket = (arr) =>
-    arr.reduce((a, f) => {
-      a[f.severity] = (a[f.severity] || 0) + 1;
-      return a;
-    }, {});
-  return {
-    priorScannedAt: prior.scannedAt,
-    priorScore: prior.score,
-    deltaScore: currentResults.score - prior.score,
-    introduced: { count: introduced.length, bySeverity: bucket(introduced), items: introduced },
-    fixed: { count: fixed.length, bySeverity: bucket(fixed), items: fixed },
-    persisted: { count: persisted.length, bySeverity: bucket(persisted) },
-  };
-}
-
-export function historyEntryToResults(entry) {
-  return {
-    findings: entry.findings || [],
-    score: entry.score,
-    scannedAt: new Date(entry.scannedAt),
-    filesScanned: entry.filesScanned,
-    source: entry.source,
-  };
-}
+// Definitions of computeScore, riskTier, fetchGitHubRepo, snippet helpers, formatters,
+// clipboard utils, and history utilities used to live in this file. They were extracted
+// to src/lib/* — see the import + re-export block at the top of this file. Tests and
+// historical callers keep importing them from App.jsx unchanged.
 
 // ==========================================================================
 // COMPONENTS
 // ==========================================================================
-
-// Brand fonts (Mid-Atlantic AI brand kit):
-//  - Rubik          → display: titles + headings (Bold)
-//  - Roboto         → body / captions / quotes (Regular + Italic)
-//  - Roboto Condensed → subheadings
-//  - Impact         → section-header / eyebrow labels (all-caps)
-//  - Mono only used for code snapshots and line numbers
-const fontDisplay = "'Rubik', 'Helvetica Neue', Helvetica, Arial, sans-serif";
-const fontUI = "'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif";
-const fontCondensed = "'Roboto Condensed', 'Roboto', 'Helvetica Neue', Arial, sans-serif";
-const fontEyebrow = "'Impact', 'Haettenschweiler', 'Arial Narrow Bold', sans-serif";
-const fontMono = "ui-monospace, 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace";
 
 export function GlobalStyle() {
   return (
