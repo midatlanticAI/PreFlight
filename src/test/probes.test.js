@@ -479,9 +479,41 @@ describe('probeExternalURLs', () => {
   });
 
   it('escalates raw IPs to medium', () => {
-    const f = probeExternalURLs([{ path: 'a.ts', content: 'fetch("http://203.0.113.5/x")' }]);
+    // Use a non-reserved IP: 203.0.113.0/24 is RFC 5737 (documentation) so the probe
+    // now treats it as a placeholder and skips it. 1.2.3.4 is real-looking enough.
+    const f = probeExternalURLs([{ path: 'a.ts', content: 'fetch("http://1.2.3.4/x")' }]);
     expect(f[0].severity).toBe('medium');
     expect(f[0].title).toMatch(/Raw IP/);
+  });
+
+  it('skips RFC 5737 reserved IPs (documentation placeholders)', () => {
+    const f = probeExternalURLs([
+      { path: 'a.ts', content: 'fetch("http://203.0.113.5/x")' },
+      { path: 'b.ts', content: 'fetch("http://192.0.2.10/x")' },
+      { path: 'c.ts', content: 'fetch("http://198.51.100.7/x")' },
+    ]);
+    expect(f.find((x) => /203\.0\.113|192\.0\.2|198\.51\.100/.test(x.title))).toBeUndefined();
+  });
+
+  it('skips placeholder hosts (example.com, yourdomain.com, etc.)', () => {
+    const f = probeExternalURLs([
+      { path: 'docs.md', content: 'See https://example.com or https://yourdomain.com.' },
+    ]);
+    expect(f).toEqual([]);
+  });
+
+  it('skips URLs that live inside a remediation: string literal', () => {
+    const code = `const finding = { remediation: 'Visit https://docs.unrelated-vendor.com/help' };`;
+    const f = probeExternalURLs([{ path: 'src/probe.js', content: code }]);
+    expect(f).toEqual([]);
+  });
+
+  it('skips self-domains derived from package.json#homepage', () => {
+    const f = probeExternalURLs([
+      { path: 'package.json', content: '{ "homepage": "https://myapp.example.io" }' },
+      { path: 'src/foo.js', content: 'fetch("https://myapp.example.io/api")' },
+    ]);
+    expect(f).toEqual([]);
   });
 
   it('flags URL shorteners', () => {

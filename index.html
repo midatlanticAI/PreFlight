@@ -80,11 +80,10 @@
     <meta name="twitter:image:alt" content="Mid-Atlantic AI logo" />
 
     <!-- Brand fonts: preconnect to cut connection-setup latency, then a regular stylesheet
-         link. We used to do the rel=preload + onload="rel=stylesheet" non-blocking trick, but
-         that requires an inline event handler which conflicts with our strict CSP (no inline
-         scripts / handlers). With preconnect already in place + font-display:swap baked into
-         the URL, the perceived render cost is small: fallback text shows immediately, then
-         re-flows when Rubik/Roboto land. -->
+         link. The non-blocking preload-swap pattern requires an inline event handler, which
+         conflicts with our strict CSP. With preconnect already in place plus font-display
+         swap baked into the URL, the perceived render cost is small: fallback text shows
+         immediately, then re-flows when Rubik / Roboto land. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

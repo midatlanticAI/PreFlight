@@ -1,0 +1,93 @@
+# Pre-Flight Audit Tool — repo-local scanner configuration.
+#
+# This file is the canonical example of the `.preflight.yml` workflow: any project
+# can drop one of these in their root to document intentional findings, time-box
+# known debt, and allowlist self-domains for the URL Reputation probe.
+#
+# Schema: https://github.com/midatlanticAI/PreFlight (blob/main/src/lib/preflight-config.js
+#
+# Match strategy per suppress entry:
+#   - `id: <stableId>`           — exact match against the finding's stableId.
+#                                  Use this when you want a specific finding pinned.
+#   - `probe + file + title-pattern` — triple match. File supports `*` (single segment)
+#                                       and `**` (zero+ segments) globs. title-pattern
+#                                       is a substring match unless it contains `*`.
+#
+# Optional fields:
+#   reason:      Free text — why this is intentional / accepted.
+#   disposition: 'false-positive' | 'wont-fix' | 'accepted-risk' (default: 'wont-fix')
+#   expires:     ISO date or `~` for never. Past-expiry rules are ignored.
+
+schema: preflight/v1
+
+self_domains:
+  - audit.midatlantic.ai
+  - midatlantic.ai
+
+suppress:
+  # --- Self-reference: FAQ documentation copy that DESCRIBES what the probes detect ---
+  - probe: Auth Weakness
+    file: src/App.jsx
+    title-pattern: 'algorithm "none"'
+    disposition: false-positive
+    reason: 'FAQ answer literal that documents what the JWT-alg-none probe detects.'
+
+  # --- AI Code Smells: intentional empty catches with documented fallback semantics ---
+  # These all follow a pattern: a localStorage / clipboard / persistence call that we
+  # want to degrade silently if the underlying API is unavailable (private mode,
+  # quota exceeded, no user gesture). The catch IS the recovery — there's nothing to
+  # report. Each module documents the rationale in its source comments.
+  - probe: AI Code Smells
+    file: src/App.jsx
+    title-pattern: 'empty catch'
+    disposition: wont-fix
+    reason: 'Intentional silent fallback for localStorage / clipboard failures.'
+  - probe: AI Code Smells
+    file: src/ErrorBoundary.jsx
+    title-pattern: 'empty catch'
+    disposition: wont-fix
+    reason: 'Best-effort clipboard write in the recovery UI; failure leaves user no worse off.'
+  - probe: AI Code Smells
+    file: src/lib/ai.js
+    title-pattern: 'empty catch'
+    disposition: wont-fix
+    reason: 'localStorage availability check + clearAIConfig no-op-on-failure pattern.'
+  - probe: AI Code Smells
+    file: src/lib/logger.js
+    title-pattern: 'empty catch'
+    disposition: wont-fix
+    reason: 'Subscriber callback errors must not propagate out of notify().'
+
+  # --- Code Quality: async-without-try where the failure mode is benign ---
+  - probe: Code Quality
+    file: src/App.jsx
+    title-pattern: 'no try/catch in body'
+    disposition: wont-fix
+    reason: 'Clipboard / download user-action callbacks. Browser surfaces the rejection in DevTools; UI degrades gracefully.'
+
+  # --- Architecture / Code Quality: known monolith debt, tracked separately ---
+  - probe: Architecture
+    file: 'src/ (root)'
+    title-pattern: 'consider splitting'
+    disposition: wont-fix
+    reason: 'App.jsx (~4100 lines) tracked as known debt — split planned alongside next major feature.'
+    expires: '2026-09-01'
+  - probe: Code Quality
+    file: src/App.jsx
+    title-pattern: 'consider splitting'
+    disposition: wont-fix
+    reason: 'See arch-monolith-split note. Same root cause.'
+    expires: '2026-09-01'
+  - probe: Code Quality
+    file: src/lib/probes.js
+    title-pattern: 'consider splitting'
+    disposition: wont-fix
+    reason: 'Manifest extraction (compromised-packages.json, typosquats.json) is the natural first cut; planned alongside next probe additions.'
+    expires: '2026-09-01'
+
+  # --- Architecture classifier informational ---
+  - probe: Architecture
+    file: project root
+    title-pattern: 'Detected: Monolithic SPA'
+    disposition: accepted-risk
+    reason: 'Architecture classifier output is informational. The split-recommendation finding above already tracks the actionable part.'

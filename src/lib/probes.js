@@ -260,6 +260,12 @@ export const FILE_INCLUDE = [
   /\.config\.[jt]s$/,
   /Dockerfile$/,
   /docker-compose\.ya?ml$/,
+  // SEO / GEO / discoverability files
+  /(^|\/)llms\.txt$/i,
+  /(^|\/)robots\.txt$/i,
+  /(^|\/)sitemap\.xml$/i,
+  // Repo-local Pre-Flight config so the suppression workflow loads on GitHub URL scans
+  /(^|\/)\.preflight\.(ya?ml|json)$/i,
   // 2026 additions: AI tooling configs, MCP servers, CI workflows
   /\.github\/workflows\/.+\.ya?ml$/,
   /(^|\/)\.cursorrules$/,

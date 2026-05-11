@@ -160,6 +160,11 @@ import {
   validateKeyShape,
   explainAndVerify,
 } from './lib/ai.js';
+import {
+  findPreflightConfigFile,
+  parsePreflightConfig,
+  configToSuppressions,
+} from './lib/preflight-config.js';
 
 // ==========================================================================
 // SCORING
@@ -2302,6 +2307,26 @@ export default function App() {
       attachStableIds(allFindings, scanFiles);
       // Probe-level confidence + autofix metadata so the UI can render calibration tags.
       attachProbeMeta(allFindings);
+
+      // .preflight.yml / .preflight.json — repo-local suppression file. If present, parse
+      // and merge its suppression rules with the user's local-storage suppressions. Config-
+      // sourced entries get `source: '.preflight config'` so the UI can label them.
+      const configFile = findPreflightConfigFile(scanFiles);
+      if (configFile) {
+        const cfg = parsePreflightConfig(configFile.path, configFile.content);
+        if (cfg.error) {
+          scanLog.warn('Invalid .preflight config', { file: configFile.path, error: cfg.error });
+        } else {
+          const fromConfig = configToSuppressions(cfg, allFindings);
+          const merged = { ...fromConfig, ...suppressions }; // user's local overrides config
+          setSuppressions(merged);
+          scanLog.info('Loaded .preflight config', {
+            file: configFile.path,
+            applied: Object.keys(fromConfig).length,
+          });
+        }
+      }
+
       const score = computeScore(allFindings);
       const finalResults = {
         findings: allFindings,
