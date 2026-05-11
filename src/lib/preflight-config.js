@@ -7,7 +7,7 @@
 //
 //   schema: preflight/v1
 //   self_domains:
-//     - audit.midatlantic.ai
+//     - preflight.midatlantic.ai
 //     - midatlantic.ai
 //   suppress:
 //     # 1. Match by stableId (exact):

@@ -2,11 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://audit.midatlantic.ai/</loc>
+    <loc>https://preflight.midatlantic.ai/</loc>
     <lastmod>2026-05-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://audit.midatlantic.ai/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://audit.midatlantic.ai/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://preflight.midatlantic.ai/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://preflight.midatlantic.ai/" />
   </url>
 </urlset>

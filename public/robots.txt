@@ -1,5 +1,5 @@
 # Mid-Atlantic AI — Pre-Flight Audit Tool
-# https://audit.midatlantic.ai/
+# https://preflight.midatlantic.ai/
 
 User-agent: *
 Allow: /
@@ -50,4 +50,4 @@ Allow: /
 User-agent: Meta-ExternalAgent
 Allow: /
 
-Sitemap: https://audit.midatlantic.ai/sitemap.xml
+Sitemap: https://preflight.midatlantic.ai/sitemap.xml
