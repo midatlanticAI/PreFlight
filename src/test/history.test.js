@@ -9,10 +9,19 @@ import {
 } from '../App.jsx';
 
 const baseResults = (overrides = {}) => ({
-  findings: [{
-    id: 'a', severity: 'high', category: 'Data Breach', cwe: 'CWE-1',
-    title: 't', file: 'f.js', line: 1, evidence: 'e', remediation: 'r',
-  }],
+  findings: [
+    {
+      id: 'a',
+      severity: 'high',
+      category: 'Data Breach',
+      cwe: 'CWE-1',
+      title: 't',
+      file: 'f.js',
+      line: 1,
+      evidence: 'e',
+      remediation: 'r',
+    },
+  ],
   score: 90,
   scannedAt: new Date('2026-05-10T12:00:00Z'),
   filesScanned: 1,
@@ -21,7 +30,9 @@ const baseResults = (overrides = {}) => ({
 });
 
 describe('loadHistory / persistHistory', () => {
-  beforeEach(() => { localStorage.clear(); });
+  beforeEach(() => {
+    localStorage.clear();
+  });
 
   it('returns [] when no key set', () => {
     expect(loadHistory()).toEqual([]);
@@ -52,8 +63,10 @@ describe('makeHistoryEntry', () => {
   it('computes bySeverity counts', () => {
     const r = baseResults({
       findings: [
-        { severity: 'critical' }, { severity: 'high' },
-        { severity: 'high' }, { severity: 'low' },
+        { severity: 'critical' },
+        { severity: 'high' },
+        { severity: 'high' },
+        { severity: 'low' },
       ],
     });
     const e = makeHistoryEntry(r, 'upload');

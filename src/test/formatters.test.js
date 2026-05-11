@@ -119,12 +119,24 @@ describe('formatPRComment', () => {
 
 describe('computeDiffAgainstPrior', () => {
   const finding = (id, severity, file, title) => ({
-    id, severity, file, line: 1, title, probe: 'X', category: 'Data Breach', cwe: 'CWE-1',
-    evidence: 'e', remediation: 'r',
+    id,
+    severity,
+    file,
+    line: 1,
+    title,
+    probe: 'X',
+    category: 'Data Breach',
+    cwe: 'CWE-1',
+    evidence: 'e',
+    remediation: 'r',
   });
 
   const mkCurrent = (findings, score = 80, source = 'https://github.com/a/b') => ({
-    findings, score, scannedAt: new Date('2026-05-11T10:00:00Z'), filesScanned: 5, source,
+    findings,
+    score,
+    scannedAt: new Date('2026-05-11T10:00:00Z'),
+    filesScanned: 5,
+    source,
   });
 
   it('returns null when there is no prior history', () => {
@@ -134,26 +146,37 @@ describe('computeDiffAgainstPrior', () => {
 
   it('returns null when prior history is for a different source', () => {
     const cur = mkCurrent([], 80, 'https://github.com/a/b');
-    const prior = makeHistoryEntry({
-      findings: [], score: 100, scannedAt: new Date('2026-05-10T10:00:00Z'),
-      filesScanned: 5, source: 'https://github.com/different/repo',
-    }, 'github');
+    const prior = makeHistoryEntry(
+      {
+        findings: [],
+        score: 100,
+        scannedAt: new Date('2026-05-10T10:00:00Z'),
+        filesScanned: 5,
+        source: 'https://github.com/different/repo',
+      },
+      'github'
+    );
     expect(computeDiffAgainstPrior(cur, [prior])).toBeNull();
   });
 
   it('counts introduced, fixed, and persisted findings', () => {
-    const cur = mkCurrent([
-      finding('a', 'critical', 'x.js', 'Persists'),
-      finding('b', 'high', 'y.js', 'New'),
-    ], 65);
-    const priorEntry = makeHistoryEntry({
-      findings: [
-        finding('a2', 'critical', 'x.js', 'Persists'),    // same key → persisted
-        finding('c', 'medium', 'z.js', 'Fixed'),          // gone now → fixed
-      ],
-      score: 80, scannedAt: new Date('2026-05-10T10:00:00Z'),
-      filesScanned: 5, source: 'https://github.com/a/b',
-    }, 'github');
+    const cur = mkCurrent(
+      [finding('a', 'critical', 'x.js', 'Persists'), finding('b', 'high', 'y.js', 'New')],
+      65
+    );
+    const priorEntry = makeHistoryEntry(
+      {
+        findings: [
+          finding('a2', 'critical', 'x.js', 'Persists'), // same key → persisted
+          finding('c', 'medium', 'z.js', 'Fixed'), // gone now → fixed
+        ],
+        score: 80,
+        scannedAt: new Date('2026-05-10T10:00:00Z'),
+        filesScanned: 5,
+        source: 'https://github.com/a/b',
+      },
+      'github'
+    );
     const diff = computeDiffAgainstPrior(cur, [priorEntry]);
     expect(diff.introduced.count).toBe(1);
     expect(diff.fixed.count).toBe(1);
@@ -177,7 +200,9 @@ describe('formatAgentPrompt', () => {
   it('truncates very long finding lists with a note', () => {
     const big = sampleResults();
     big.findings = Array.from({ length: 50 }, (_, i) => ({
-      ...big.findings[0], id: `f${i}`, title: `Finding ${i}`,
+      ...big.findings[0],
+      id: `f${i}`,
+      title: `Finding ${i}`,
     }));
     const p = formatAgentPrompt(big);
     expect(p).toMatch(/\d+ additional findings omitted/);

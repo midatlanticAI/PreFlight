@@ -29,8 +29,9 @@ describe('computeScore', () => {
 
   it('subtracts critical weight per critical finding', () => {
     expect(computeScore([{ severity: 'critical' }])).toBe(100 - SEV_WEIGHT.critical);
-    expect(computeScore([{ severity: 'critical' }, { severity: 'critical' }]))
-      .toBe(100 - 2 * SEV_WEIGHT.critical);
+    expect(computeScore([{ severity: 'critical' }, { severity: 'critical' }])).toBe(
+      100 - 2 * SEV_WEIGHT.critical
+    );
   });
 
   it('clamps to 0', () => {

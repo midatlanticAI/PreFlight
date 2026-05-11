@@ -15,13 +15,11 @@ import {
   probeGitHubActions,
   probeClientAuthStorage,
   probeSSRFOpenRedirect,
-  probeCookieFlags,
   probeAPIRouteAuth,
   probeCompromisedPackages,
   probeSlopsquatting,
   probeMCPSecurity,
   probeTrojanSource,
-  probeAIRulesFiles,
   probeAICodeSmells,
   probeNpmrcHygiene,
   probeExternalURLs,
@@ -40,14 +38,14 @@ const file = (path, content) => ({ path, content });
 describe('PROBES registry', () => {
   it('every probe has a name and a callable fn', () => {
     expect(PROBES.length).toBeGreaterThan(20);
-    PROBES.forEach(p => {
+    PROBES.forEach((p) => {
       expect(typeof p.name).toBe('string');
       expect(typeof p.fn).toBe('function');
     });
   });
 
   it('every probe returns an array on empty input', () => {
-    PROBES.forEach(p => {
+    PROBES.forEach((p) => {
       expect(Array.isArray(p.fn([]))).toBe(true);
     });
   });
@@ -75,22 +73,22 @@ describe('probeSecrets', () => {
 
   it('detects a Stripe live secret key', () => {
     const f = probeSecrets([file('s.js', FAKE_STRIPE_LIVE)]);
-    expect(f.find(x => x.title.includes('Stripe Live'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('Stripe Live'))).toBeDefined();
   });
 
   it('detects an OpenAI API key', () => {
     const f = probeSecrets([file('s.js', `const k = "${FAKE_OPENAI}"`)]);
-    expect(f.find(x => x.title.includes('OpenAI'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('OpenAI'))).toBeDefined();
   });
 
   it('detects an Anthropic API key', () => {
     const f = probeSecrets([file('s.js', FAKE_ANTHROPIC)]);
-    expect(f.find(x => x.title.includes('Anthropic'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('Anthropic'))).toBeDefined();
   });
 
   it('detects a private key block', () => {
     const f = probeSecrets([file('id.pem', FAKE_PEM_HEADER)]);
-    expect(f.find(x => x.title.includes('Private Key'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('Private Key'))).toBeDefined();
   });
 
   it('returns nothing on clean code', () => {
@@ -155,7 +153,7 @@ alter table public.users enable row level security;`;
 alter table public.users enable row level security;
 create policy p on public.users for select using (true);`;
     const f = probeSupabaseRLS([file('migrations/001.sql', sql)]);
-    expect(f.find(x => x.title.includes('Permissive'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('Permissive'))).toBeDefined();
   });
 });
 
@@ -168,7 +166,7 @@ describe('probeFirebaseRules', () => {
 
   it('flags storage rule that only checks auth presence', () => {
     const f = probeFirebaseRules([file('storage.rules', 'allow read: if request.auth != null;')]);
-    expect(f.find(x => x.title.includes('any authenticated'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('any authenticated'))).toBeDefined();
   });
 });
 
@@ -182,13 +180,13 @@ describe('probePackageJson', () => {
   it('flags non-registry git deps', () => {
     const pkg = JSON.stringify({ dependencies: { foo: 'git+https://example.com/foo.git' } });
     const f = probePackageJson([file('package.json', pkg)]);
-    expect(f.find(x => x.title.includes('Non-registry'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('Non-registry'))).toBeDefined();
   });
 
   it('flags floating versions', () => {
     const pkg = JSON.stringify({ dependencies: { foo: '*' } });
     const f = probePackageJson([file('package.json', pkg)]);
-    expect(f.find(x => x.title.includes('Unpinned'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('Unpinned'))).toBeDefined();
   });
 
   it('handles malformed JSON gracefully', () => {
@@ -211,29 +209,29 @@ describe('probeEnvFiles', () => {
 describe('probeAuthWeakness', () => {
   it('flags algorithm: "none"', () => {
     const f = probeAuthWeakness([file('a.js', `jwt.sign({}, "", { algorithm: 'none' })`)]);
-    expect(f.find(x => x.title.includes('algorithm "none"'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('algorithm "none"'))).toBeDefined();
   });
 
   it('flags eval()', () => {
     const f = probeAuthWeakness([file('a.js', `eval("1+1")`)]);
-    expect(f.find(x => x.title.includes('eval()'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('eval()'))).toBeDefined();
   });
 
   // REGRESSION: agent finding — `// TODO: never use eval()` in a comment used to fire.
   it('REGRESSION: ignores eval() inside line comments', () => {
     const f = probeAuthWeakness([file('a.js', `// TODO: never use eval() here`)]);
-    expect(f.find(x => x.title.includes('eval()'))).toBeUndefined();
+    expect(f.find((x) => x.title.includes('eval()'))).toBeUndefined();
   });
 
   it('REGRESSION: ignores eval() inside block comments', () => {
     const f = probeAuthWeakness([file('a.js', `/* eval() is bad */ const x = 1;`)]);
-    expect(f.find(x => x.title.includes('eval()'))).toBeUndefined();
+    expect(f.find((x) => x.title.includes('eval()'))).toBeUndefined();
   });
 
   // REGRESSION: agent finding — unquoted `algorithm: none` used to evade.
   it('REGRESSION: catches unquoted algorithm: none', () => {
     const f = probeAuthWeakness([file('a.js', `jwt.verify(token, key, { algorithm: none })`)]);
-    expect(f.find(x => x.title.includes('algorithm "none"'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('algorithm "none"'))).toBeDefined();
   });
 });
 
@@ -244,20 +242,25 @@ describe('probeAdminRoutes', () => {
   });
 
   it('does not flag admin route with server check', () => {
-    const f = probeAdminRoutes([file('app/admin/page.tsx',
-      'const session = await getServerSession(); const u = useUser();')]);
+    const f = probeAdminRoutes([
+      file('app/admin/page.tsx', 'const session = await getServerSession(); const u = useUser();'),
+    ]);
     expect(f).toEqual([]);
   });
 });
 
 describe('probeMissingHeaders', () => {
   it('flags next.config without headers function', () => {
-    const f = probeMissingHeaders([file('next.config.js', 'export default { reactStrictMode: true }')]);
+    const f = probeMissingHeaders([
+      file('next.config.js', 'export default { reactStrictMode: true }'),
+    ]);
     expect(f).toHaveLength(1);
   });
 
   it('does not flag if headers() is present', () => {
-    const f = probeMissingHeaders([file('next.config.js', 'export default { async headers() { return [] } }')]);
+    const f = probeMissingHeaders([
+      file('next.config.js', 'export default { async headers() { return [] } }'),
+    ]);
     expect(f).toEqual([]);
   });
 });
@@ -275,7 +278,9 @@ describe('probeCORS', () => {
   });
 
   it('does not flag when origin is a real domain', () => {
-    const f = probeCORS([file('h.ts', `res.setHeader("Access-Control-Allow-Origin", "https://example.com");`)]);
+    const f = probeCORS([
+      file('h.ts', `res.setHeader("Access-Control-Allow-Origin", "https://example.com");`),
+    ]);
     expect(f).toEqual([]);
   });
 });
@@ -283,21 +288,26 @@ describe('probeCORS', () => {
 describe('probeLLMSecurity', () => {
   it('flags PythonREPL agent tool', () => {
     const f = probeLLMSecurity([file('agent.ts', 'import { PythonREPL } from "langchain"')]);
-    expect(f.find(x => x.title.includes('PythonREPL'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('PythonREPL'))).toBeDefined();
   });
 
   it('flags client-side OpenAI call', () => {
-    const f = probeLLMSecurity([file('components/Chat.tsx',
-      `'use client'\nawait openai.chat.completions.create({})`)]);
-    expect(f.find(x => x.title.includes('client component'))).toBeDefined();
+    const f = probeLLMSecurity([
+      file('components/Chat.tsx', `'use client'\nawait openai.chat.completions.create({})`),
+    ]);
+    expect(f.find((x) => x.title.includes('client component'))).toBeDefined();
   });
 });
 
 describe('probeWebhookValidation', () => {
   it('flags Stripe webhook without signature verification', () => {
-    const f = probeWebhookValidation([file('app/webhook/stripe/route.ts',
-      `import Stripe from 'stripe'; const body = await req.text();`)]);
-    expect(f.find(x => x.title.includes('Stripe webhook'))).toBeDefined();
+    const f = probeWebhookValidation([
+      file(
+        'app/webhook/stripe/route.ts',
+        `import Stripe from 'stripe'; const body = await req.text();`
+      ),
+    ]);
+    expect(f.find((x) => x.title.includes('Stripe webhook'))).toBeDefined();
   });
 });
 
@@ -311,13 +321,13 @@ jobs:
         with:
           ref: \${{ github.event.pull_request.head.ref }}`;
     const f = probeGitHubActions([file('.github/workflows/ci.yml', yml)]);
-    expect(f.find(x => x.title.includes('pull_request_target'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('pull_request_target'))).toBeDefined();
   });
 
   it('flags actions pinned to floating tags', () => {
     const yml = `jobs:\n  a:\n    steps:\n      - uses: actions/checkout@main`;
     const f = probeGitHubActions([file('.github/workflows/ci.yml', yml)]);
-    expect(f.find(x => x.title.includes('mutable ref'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('mutable ref'))).toBeDefined();
   });
 });
 
@@ -331,47 +341,69 @@ describe('probeClientAuthStorage', () => {
 describe('probeSSRFOpenRedirect', () => {
   it('flags redirect with user input', () => {
     const f = probeSSRFOpenRedirect([file('a.ts', `res.redirect(req.query.next)`)]);
-    expect(f.find(x => x.title.includes('Redirect'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('Redirect'))).toBeDefined();
   });
 
   it('flags fetch with user-controlled URL', () => {
     const f = probeSSRFOpenRedirect([file('a.ts', `fetch(req.body.url)`)]);
-    expect(f.find(x => x.title.includes('Server-side fetch'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('Server-side fetch'))).toBeDefined();
   });
 });
 
 describe('probeAPIRouteAuth', () => {
   it('flags admin API route without auth', () => {
-    const f = probeAPIRouteAuth([file('app/api/admin/users/route.ts',
-      `export async function POST(req) { return Response.json({}); }`)]);
+    const f = probeAPIRouteAuth([
+      file(
+        'app/api/admin/users/route.ts',
+        `export async function POST(req) { return Response.json({}); }`
+      ),
+    ]);
     expect(f.length).toBeGreaterThanOrEqual(1);
   });
 
   it('does not flag if getServerSession is present', () => {
-    const f = probeAPIRouteAuth([file('app/api/admin/users/route.ts',
-      `export async function POST(req) { const s = await getServerSession(); return Response.json({}); }`)]);
+    const f = probeAPIRouteAuth([
+      file(
+        'app/api/admin/users/route.ts',
+        `export async function POST(req) { const s = await getServerSession(); return Response.json({}); }`
+      ),
+    ]);
     expect(f).toEqual([]);
   });
 
   // REGRESSION: agent finding — jwt.verify(token) without a secret used to satisfy hasAuth, suppressing
   // a critical finding while probeAuthWeakness simultaneously flagged the same call as broken.
   it('REGRESSION: jwt.verify(token) without a secret does NOT count as auth', () => {
-    const f = probeAPIRouteAuth([file('app/api/admin/users/route.ts',
-      `export async function DELETE(req) {
+    const f = probeAPIRouteAuth([
+      file(
+        'app/api/admin/users/route.ts',
+        `export async function DELETE(req) {
          const token = req.headers.get('authorization');
          const decoded = jwt.verify(token);  // no secret arg!
          return Response.json({ ok: true });
-       }`)]);
+       }`
+      ),
+    ]);
     expect(f.length).toBeGreaterThanOrEqual(1);
-    expect(f.some(x => x.title.toLowerCase().includes('without auth') || x.title.toLowerCase().includes('destructive'))).toBe(true);
+    expect(
+      f.some(
+        (x) =>
+          x.title.toLowerCase().includes('without auth') ||
+          x.title.toLowerCase().includes('destructive')
+      )
+    ).toBe(true);
   });
 
   it('jwt.verify(token, secret) DOES count as auth', () => {
-    const f = probeAPIRouteAuth([file('app/api/admin/users/route.ts',
-      `export async function DELETE(req) {
+    const f = probeAPIRouteAuth([
+      file(
+        'app/api/admin/users/route.ts',
+        `export async function DELETE(req) {
          const decoded = jwt.verify(token, process.env.JWT_SECRET);
          return Response.json({ ok: true });
-       }`)]);
+       }`
+      ),
+    ]);
     expect(f).toEqual([]);
   });
 });
@@ -399,7 +431,7 @@ describe('probeSlopsquatting', () => {
   it('flags known typosquats', () => {
     const pkg = JSON.stringify({ dependencies: { lodahs: '*' } });
     const f = probeSlopsquatting([file('package.json', pkg)]);
-    expect(f.find(x => x.title.toLowerCase().includes('typosquat'))).toBeDefined();
+    expect(f.find((x) => x.title.toLowerCase().includes('typosquat'))).toBeDefined();
   });
 });
 
@@ -409,7 +441,7 @@ describe('probeMCPSecurity', () => {
       mcpServers: { evil: { command: 'bash', args: ['-c', 'echo hi'] } },
     });
     const f = probeMCPSecurity([file('.mcp.json', cfg)]);
-    expect(f.find(x => x.title.toLowerCase().includes('shell'))).toBeDefined();
+    expect(f.find((x) => x.title.toLowerCase().includes('shell'))).toBeDefined();
   });
 });
 
@@ -423,8 +455,10 @@ describe('probeTrojanSource', () => {
 
 describe('probeAICodeSmells', () => {
   it('counts empty catch blocks', () => {
-    const f = probeAICodeSmells([file('a.ts', 'try { do(); } catch {}\ntry { x(); } catch (e) {}')]);
-    expect(f.find(x => x.title.includes('empty catch'))).toBeDefined();
+    const f = probeAICodeSmells([
+      file('a.ts', 'try { do(); } catch {}\ntry { x(); } catch (e) {}'),
+    ]);
+    expect(f.find((x) => x.title.includes('empty catch'))).toBeDefined();
   });
 });
 
@@ -439,25 +473,19 @@ describe('probeExternalURLs', () => {
   });
 
   it('escalates suspicious TLDs to medium', () => {
-    const f = probeExternalURLs([
-      { path: 'a.ts', content: 'fetch("https://something.tk/x")' },
-    ]);
+    const f = probeExternalURLs([{ path: 'a.ts', content: 'fetch("https://something.tk/x")' }]);
     expect(f[0].severity).toBe('medium');
     expect(f[0].title).toMatch(/Suspicious TLD/);
   });
 
   it('escalates raw IPs to medium', () => {
-    const f = probeExternalURLs([
-      { path: 'a.ts', content: 'fetch("http://203.0.113.5/x")' },
-    ]);
+    const f = probeExternalURLs([{ path: 'a.ts', content: 'fetch("http://203.0.113.5/x")' }]);
     expect(f[0].severity).toBe('medium');
     expect(f[0].title).toMatch(/Raw IP/);
   });
 
   it('flags URL shorteners', () => {
-    const f = probeExternalURLs([
-      { path: 'a.ts', content: 'fetch("https://bit.ly/abc123")' },
-    ]);
+    const f = probeExternalURLs([{ path: 'a.ts', content: 'fetch("https://bit.ly/abc123")' }]);
     expect(f[0].title).toMatch(/shortener/i);
     expect(f[0].severity).toBe('medium');
   });
@@ -501,43 +529,51 @@ describe('probeExternalURLs', () => {
 describe('probeHTML', () => {
   it('flags inline onclick handlers', () => {
     const f = probeHTML([file('index.html', '<button onclick="alert(1)">go</button>')]);
-    expect(f.find(x => x.title.toLowerCase().includes('inline event'))).toBeDefined();
+    expect(f.find((x) => x.title.toLowerCase().includes('inline event'))).toBeDefined();
   });
 
   it('flags target="_blank" without rel="noopener"', () => {
     const f = probeHTML([file('index.html', '<a href="https://x.com" target="_blank">x</a>')]);
-    expect(f.find(x => x.title.includes('noopener'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('noopener'))).toBeDefined();
   });
 
   it('does NOT flag target="_blank" WITH rel="noopener"', () => {
-    const f = probeHTML([file('index.html', '<a href="https://x.com" target="_blank" rel="noopener noreferrer">x</a>')]);
-    expect(f.find(x => x.title.includes('noopener'))).toBeUndefined();
+    const f = probeHTML([
+      file('index.html', '<a href="https://x.com" target="_blank" rel="noopener noreferrer">x</a>'),
+    ]);
+    expect(f.find((x) => x.title.includes('noopener'))).toBeUndefined();
   });
 
   it('flags http:// script srcs (mixed content)', () => {
-    const f = probeHTML([file('index.html', '<script src="http://cdn.example.com/x.js"></script>')]);
-    expect(f.find(x => x.title.includes('mixed-content'))).toBeDefined();
+    const f = probeHTML([
+      file('index.html', '<script src="http://cdn.example.com/x.js"></script>'),
+    ]);
+    expect(f.find((x) => x.title.includes('mixed-content'))).toBeDefined();
   });
 
   it('flags eval() inside <script>', () => {
     const f = probeHTML([file('index.html', '<script>eval(localStorage.x)</script>')]);
-    expect(f.find(x => x.title.includes('eval()'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('eval()'))).toBeDefined();
   });
 
   it('flags form posts over http://', () => {
-    const f = probeHTML([file('index.html', '<form action="http://example.com/submit">...</form>')]);
-    expect(f.find(x => x.title.includes('http:// endpoint'))).toBeDefined();
+    const f = probeHTML([
+      file('index.html', '<form action="http://example.com/submit">...</form>'),
+    ]);
+    expect(f.find((x) => x.title.includes('http:// endpoint'))).toBeDefined();
   });
 
   it('flags inline <script> with no CSP meta tag', () => {
-    const f = probeHTML([file('index.html', '<html><head></head><body><script>console.log(1)</script></body></html>')]);
-    expect(f.find(x => x.title.includes('Content-Security-Policy'))).toBeDefined();
+    const f = probeHTML([
+      file('index.html', '<html><head></head><body><script>console.log(1)</script></body></html>'),
+    ]);
+    expect(f.find((x) => x.title.includes('Content-Security-Policy'))).toBeDefined();
   });
 
   it('does NOT flag inline <script> when CSP meta tag present', () => {
     const html = `<html><head><meta http-equiv="Content-Security-Policy" content="default-src 'self'"></head><body><script>x()</script></body></html>`;
     const f = probeHTML([file('index.html', html)]);
-    expect(f.find(x => x.title.includes('Content-Security-Policy'))).toBeUndefined();
+    expect(f.find((x) => x.title.includes('Content-Security-Policy'))).toBeUndefined();
   });
 
   it('ignores non-HTML files', () => {
@@ -546,55 +582,69 @@ describe('probeHTML', () => {
 });
 
 describe('probeSEOHygiene', () => {
-  const entryHtml = (head, body = '<div id="root"></div>') => file('index.html',
-    `<!doctype html><html lang="en"><head>${head}</head><body>${body}</body></html>`);
+  const entryHtml = (head, body = '<div id="root"></div>') =>
+    file(
+      'index.html',
+      `<!doctype html><html lang="en"><head>${head}</head><body>${body}</body></html>`
+    );
 
   it('flags missing <title>', () => {
-    const f = probeSEOHygiene([entryHtml('<meta name="description" content="a description that is plenty long enough to pass the threshold check easily">')]);
-    expect(f.find(x => x.title.includes('<title>'))).toBeDefined();
+    const f = probeSEOHygiene([
+      entryHtml(
+        '<meta name="description" content="a description that is plenty long enough to pass the threshold check easily">'
+      ),
+    ]);
+    expect(f.find((x) => x.title.includes('<title>'))).toBeDefined();
   });
 
   it('flags missing meta description', () => {
     const f = probeSEOHygiene([entryHtml('<title>Some App</title>')]);
-    expect(f.find(x => x.title.includes('description'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('description'))).toBeDefined();
   });
 
   it('flags missing canonical', () => {
-    const f = probeSEOHygiene([entryHtml(
-      '<title>X</title><meta name="description" content="a description that is plenty long enough to pass the threshold check easily">'
-    )]);
-    expect(f.find(x => x.title.includes('canonical'))).toBeDefined();
+    const f = probeSEOHygiene([
+      entryHtml(
+        '<title>X</title><meta name="description" content="a description that is plenty long enough to pass the threshold check easily">'
+      ),
+    ]);
+    expect(f.find((x) => x.title.includes('canonical'))).toBeDefined();
   });
 
   it('flags <html> without lang', () => {
     const html = `<!doctype html><html><head><title>X</title></head><body><div id="root"></div></body></html>`;
     const f = probeSEOHygiene([file('index.html', html)]);
-    expect(f.find(x => x.title.includes('lang'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('lang'))).toBeDefined();
   });
 
   it('flags robots.txt without Sitemap line', () => {
     const f = probeSEOHygiene([file('robots.txt', 'User-agent: *\nAllow: /')]);
-    expect(f.find(x => x.title.includes('Sitemap'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('Sitemap'))).toBeDefined();
   });
 
   it('does NOT flag robots.txt that has Sitemap line', () => {
-    const f = probeSEOHygiene([file('robots.txt', 'User-agent: *\nAllow: /\nSitemap: https://x.com/sitemap.xml')]);
+    const f = probeSEOHygiene([
+      file('robots.txt', 'User-agent: *\nAllow: /\nSitemap: https://x.com/sitemap.xml'),
+    ]);
     expect(f).toEqual([]);
   });
 
   it('flags a full Disallow: / as critical', () => {
     const f = probeSEOHygiene([file('robots.txt', 'User-agent: *\nDisallow: /')]);
-    expect(f.find(x => x.severity === 'critical')).toBeDefined();
+    expect(f.find((x) => x.severity === 'critical')).toBeDefined();
   });
 });
 
 describe('probeGEOHygiene', () => {
-  const entryHtml = (head) => file('index.html',
-    `<!doctype html><html lang="en"><head>${head}</head><body><div id="root"></div></body></html>`);
+  const entryHtml = (head) =>
+    file(
+      'index.html',
+      `<!doctype html><html lang="en"><head>${head}</head><body><div id="root"></div></body></html>`
+    );
 
   it('flags missing llms.txt when project has HTML', () => {
     const f = probeGEOHygiene([entryHtml('<title>X</title>')]);
-    expect(f.find(x => x.title.includes('llms.txt'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('llms.txt'))).toBeDefined();
   });
 
   it('does NOT flag missing llms.txt when llms.txt is present', () => {
@@ -602,7 +652,7 @@ describe('probeGEOHygiene', () => {
       entryHtml('<title>X</title><time dateTime="2026-05-11">Updated</time>'),
       file('llms.txt', '# Project'),
     ]);
-    expect(f.find(x => x.title.includes('llms.txt'))).toBeUndefined();
+    expect(f.find((x) => x.title.includes('llms.txt'))).toBeUndefined();
   });
 
   it('flags robots.txt that explicitly Disallows an AI crawler', () => {
@@ -612,24 +662,18 @@ describe('probeGEOHygiene', () => {
       file('llms.txt', '# x'),
       entryHtml('<title>X</title>'),
     ]);
-    expect(f.find(x => x.title.includes('GPTBot'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('GPTBot'))).toBeDefined();
   });
 
   it('flags missing freshness signal', () => {
-    const f = probeGEOHygiene([
-      entryHtml('<title>X</title>'),
-      file('llms.txt', '# x'),
-    ]);
-    expect(f.find(x => x.title.toLowerCase().includes('freshness'))).toBeDefined();
+    const f = probeGEOHygiene([entryHtml('<title>X</title>'), file('llms.txt', '# x')]);
+    expect(f.find((x) => x.title.toLowerCase().includes('freshness'))).toBeDefined();
   });
 
   it('does NOT flag freshness when <time datetime> is present', () => {
     const html = `<html lang="en"><head><title>X</title></head><body><div id="root"></div><time dateTime="2026-05-11">Updated</time></body></html>`;
-    const f = probeGEOHygiene([
-      file('index.html', html),
-      file('llms.txt', '# x'),
-    ]);
-    expect(f.find(x => x.title.toLowerCase().includes('freshness'))).toBeUndefined();
+    const f = probeGEOHygiene([file('index.html', html), file('llms.txt', '# x')]);
+    expect(f.find((x) => x.title.toLowerCase().includes('freshness'))).toBeUndefined();
   });
 
   it('flags FAQPage schema with no visible FAQ in DOM', () => {
@@ -637,67 +681,75 @@ describe('probeGEOHygiene', () => {
       <title>X</title>
       <script type="application/ld+json">{"@type":"FAQPage","mainEntity":[]}</script>
     </head><body><div id="root"></div><time dateTime="2026-05-11">x</time></body></html>`;
-    const f = probeGEOHygiene([
-      file('index.html', html),
-      file('llms.txt', '# x'),
-    ]);
-    expect(f.find(x => x.title.toLowerCase().includes('faqpage'))).toBeDefined();
+    const f = probeGEOHygiene([file('index.html', html), file('llms.txt', '# x')]);
+    expect(f.find((x) => x.title.toLowerCase().includes('faqpage'))).toBeDefined();
   });
 });
 
 describe('probeA11yLandmarks', () => {
   it('flags <img> without alt', () => {
     const f = probeA11yLandmarks([file('index.html', '<img src="/x.png">')]);
-    expect(f.find(x => x.title.includes('alt'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('alt'))).toBeDefined();
   });
 
   it('does NOT flag <img alt="">', () => {
     const f = probeA11yLandmarks([file('index.html', '<img src="/x.png" alt="">')]);
-    expect(f.find(x => x.title.includes('alt'))).toBeUndefined();
+    expect(f.find((x) => x.title.includes('alt'))).toBeUndefined();
   });
 
   it('flags <html> without lang', () => {
     const f = probeA11yLandmarks([file('index.html', '<html><body></body></html>')]);
-    expect(f.find(x => x.title.includes('lang'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('lang'))).toBeDefined();
   });
 
   it('flags <input type="text"> without label/aria', () => {
     const f = probeA11yLandmarks([file('index.html', '<input type="text" />')]);
-    expect(f.find(x => x.title.includes('label'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('label'))).toBeDefined();
   });
 
   it('does NOT flag input with associated <label for>', () => {
-    const f = probeA11yLandmarks([file('index.html',
-      '<html lang="en"><body><label for="x">Name</label><input id="x" type="text" /></body></html>')]);
-    expect(f.find(x => x.title.includes('label'))).toBeUndefined();
+    const f = probeA11yLandmarks([
+      file(
+        'index.html',
+        '<html lang="en"><body><label for="x">Name</label><input id="x" type="text" /></body></html>'
+      ),
+    ]);
+    expect(f.find((x) => x.title.includes('label'))).toBeUndefined();
   });
 
   it('does NOT flag input with aria-label', () => {
-    const f = probeA11yLandmarks([file('index.html', '<html lang="en"><body><input type="text" aria-label="Email" /></body></html>')]);
-    expect(f.find(x => x.title.includes('label'))).toBeUndefined();
+    const f = probeA11yLandmarks([
+      file(
+        'index.html',
+        '<html lang="en"><body><input type="text" aria-label="Email" /></body></html>'
+      ),
+    ]);
+    expect(f.find((x) => x.title.includes('label'))).toBeUndefined();
   });
 
   it('flags missing skip-link', () => {
-    const f = probeA11yLandmarks([file('index.html', '<html lang="en"><body><h1>x</h1></body></html>')]);
-    expect(f.find(x => x.title.toLowerCase().includes('skip'))).toBeDefined();
+    const f = probeA11yLandmarks([
+      file('index.html', '<html lang="en"><body><h1>x</h1></body></html>'),
+    ]);
+    expect(f.find((x) => x.title.toLowerCase().includes('skip'))).toBeDefined();
   });
 
   it('flags icon-only React button without aria-label', () => {
     const code = `<button onClick={x}><Trash size={12} /></button>`;
     const f = probeA11yLandmarks([file('Comp.jsx', code)]);
-    expect(f.find(x => x.title.includes('Icon-only'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('Icon-only'))).toBeDefined();
   });
 
   it('does NOT flag icon-only React button WITH aria-label', () => {
     const code = `<button aria-label="Delete" onClick={x}><Trash size={12} /></button>`;
     const f = probeA11yLandmarks([file('Comp.jsx', code)]);
-    expect(f.find(x => x.title.includes('Icon-only'))).toBeUndefined();
+    expect(f.find((x) => x.title.includes('Icon-only'))).toBeUndefined();
   });
 
   it('does NOT flag button with visible text', () => {
     const code = `<button onClick={x}><Trash size={12} /> Delete</button>`;
     const f = probeA11yLandmarks([file('Comp.jsx', code)]);
-    expect(f.find(x => x.title.includes('Icon-only'))).toBeUndefined();
+    expect(f.find((x) => x.title.includes('Icon-only'))).toBeUndefined();
   });
 });
 
@@ -736,12 +788,16 @@ describe('classifyProject + probeArchitecture', () => {
   });
 
   it('classifies a Next.js project as ssr', () => {
-    const k = classifyProject([file('package.json', JSON.stringify({ dependencies: { next: '14', react: '18' } }))]);
+    const k = classifyProject([
+      file('package.json', JSON.stringify({ dependencies: { next: '14', react: '18' } })),
+    ]);
     expect(k.type).toBe('ssr');
   });
 
   it('classifies an Express server (no UI) as backend-api', () => {
-    const k = classifyProject([file('package.json', JSON.stringify({ dependencies: { express: '4' } }))]);
+    const k = classifyProject([
+      file('package.json', JSON.stringify({ dependencies: { express: '4' } })),
+    ]);
     expect(k.type).toBe('backend-api');
   });
 
@@ -752,7 +808,7 @@ describe('classifyProject + probeArchitecture', () => {
 
   it('probeArchitecture always emits a classification info finding', () => {
     const f = probeArchitecture([file('index.html', '<html></html>')]);
-    expect(f.find(x => x.title.toLowerCase().includes('detected'))).toBeDefined();
+    expect(f.find((x) => x.title.toLowerCase().includes('detected'))).toBeDefined();
   });
 
   it('probeArchitecture emits split-recommendation finding for monolithic SPA', () => {
@@ -761,14 +817,14 @@ describe('classifyProject + probeArchitecture', () => {
       file('package.json', JSON.stringify({ dependencies: { react: '18' } })),
       file('src/App.jsx', huge),
     ]);
-    expect(f.find(x => x.title.toLowerCase().includes('consider splitting'))).toBeDefined();
+    expect(f.find((x) => x.title.toLowerCase().includes('consider splitting'))).toBeDefined();
   });
 });
 
 describe('probeCodeQuality', () => {
   it('flags console.log in production source', () => {
     const f = probeCodeQuality([file('src/foo.js', `console.log('hi'); console.warn('warn');`)]);
-    expect(f.find(x => x.title.includes('console.*'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('console.*'))).toBeDefined();
   });
 
   it('skips test files', () => {
@@ -787,29 +843,33 @@ describe('probeCodeQuality', () => {
   it('flags huge files (>= 5000 lines) as medium', () => {
     const huge = Array.from({ length: 5100 }, () => 'const x = 1;').join('\n');
     const f = probeCodeQuality([file('src/big.js', huge)]);
-    expect(f.find(x => x.severity === 'medium' && x.title.includes('extremely large'))).toBeDefined();
+    expect(
+      f.find((x) => x.severity === 'medium' && x.title.includes('extremely large'))
+    ).toBeDefined();
   });
 
   it('flags .then() without .catch()', () => {
     const f = probeCodeQuality([file('src/foo.js', `fetch('/x').then(r => r.json())`)]);
-    expect(f.find(x => x.title.includes('.then()'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('.then()'))).toBeDefined();
   });
 
   it('does NOT flag .then().catch()', () => {
-    const f = probeCodeQuality([file('src/foo.js', `fetch('/x').then(r => r.json()).catch(e => log(e))`)]);
-    expect(f.find(x => x.title.includes('.then()'))).toBeUndefined();
+    const f = probeCodeQuality([
+      file('src/foo.js', `fetch('/x').then(r => r.json()).catch(e => log(e))`),
+    ]);
+    expect(f.find((x) => x.title.includes('.then()'))).toBeUndefined();
   });
 
   it('flags async function with await but no try', () => {
     const code = `async function go(req) { const x = await fetch('/x'); return x; }`;
     const f = probeCodeQuality([file('src/foo.js', code)]);
-    expect(f.find(x => x.title.includes('no try'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('no try'))).toBeDefined();
   });
 
   it('does NOT flag async function with try around await', () => {
     const code = `async function go(req) { try { const x = await fetch('/x'); return x; } catch (e) { return null; } }`;
     const f = probeCodeQuality([file('src/foo.js', code)]);
-    expect(f.find(x => x.title.includes('no try'))).toBeUndefined();
+    expect(f.find((x) => x.title.includes('no try'))).toBeUndefined();
   });
 });
 
@@ -824,10 +884,7 @@ describe('probeNpmrcHygiene', () => {
   });
 
   it('flags .npmrc missing min-release-age', () => {
-    const f = probeNpmrcHygiene([
-      file('package.json', '{}'),
-      file('.npmrc', 'audit-level=high'),
-    ]);
-    expect(f.find(x => x.title.includes('min-release-age'))).toBeDefined();
+    const f = probeNpmrcHygiene([file('package.json', '{}'), file('.npmrc', 'audit-level=high')]);
+    expect(f.find((x) => x.title.includes('min-release-age'))).toBeDefined();
   });
 });

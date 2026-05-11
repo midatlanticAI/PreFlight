@@ -41,6 +41,14 @@ jobs:
         run: npm ci
         timeout-minutes: 3
 
+      - name: Lint (ESLint — no errors, no warnings)
+        run: 'npm run lint -- --max-warnings 0'
+        timeout-minutes: 2
+
+      - name: Format check (Prettier — verify all files match style)
+        run: 'npm run format:check'
+        timeout-minutes: 2
+
       - name: Run unit tests (Vitest)
         run: npm test
         timeout-minutes: 5

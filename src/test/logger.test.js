@@ -23,7 +23,7 @@ describe('logger', () => {
     log.warn('w');
     log.error('e');
     const all = getLogs();
-    expect(all.map(x => x.level)).toEqual(['debug', 'info', 'warn', 'error']);
+    expect(all.map((x) => x.level)).toEqual(['debug', 'info', 'warn', 'error']);
   });
 
   it('respects minLevel filter', () => {
@@ -32,7 +32,7 @@ describe('logger', () => {
     log.info('i');
     log.warn('w');
     log.error('e');
-    expect(getLogs().map(x => x.level)).toEqual(['warn', 'error']);
+    expect(getLogs().map((x) => x.level)).toEqual(['warn', 'error']);
   });
 
   it('attaches scope from createLogger', () => {
@@ -53,12 +53,14 @@ describe('logger', () => {
     const all = getLogs();
     expect(all).toHaveLength(3);
     // Ring keeps the most recent.
-    expect(all.map(x => x.message)).toEqual(['m7', 'm8', 'm9']);
+    expect(all.map((x) => x.message)).toEqual(['m7', 'm8', 'm9']);
   });
 
   it('notifies subscribers on emit', () => {
     let calls = 0;
-    const unsub = subscribe(() => { calls++; });
+    const unsub = subscribe(() => {
+      calls++;
+    });
     log.info('a');
     log.info('b');
     expect(calls).toBe(2);

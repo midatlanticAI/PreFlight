@@ -30,7 +30,11 @@ function safeStringify(v) {
   try {
     return JSON.stringify(v, circularReplacer());
   } catch {
-    try { return String(v); } catch { return '[unserializable]'; }
+    try {
+      return String(v);
+    } catch {
+      return '[unserializable]';
+    }
   }
 }
 
@@ -55,7 +59,9 @@ function circularReplacer() {
 
 function notify() {
   for (const fn of subscribers) {
-    try { fn(buffer); } catch {}
+    try {
+      fn(buffer);
+    } catch {}
   }
 }
 
@@ -77,11 +83,21 @@ function emit(level, scope, message, context) {
   const prefix = `[${entry.scope}]`;
   const consoleArgs = context !== undefined ? [prefix, message, context] : [prefix, message];
   switch (level) {
-    case 'debug': console.debug(...consoleArgs); break;
-    case 'info':  console.info(...consoleArgs);  break;
-    case 'warn':  console.warn(...consoleArgs);  break;
-    case 'error': console.error(...consoleArgs); break;
-    default:      console.log(...consoleArgs);   break; // future-proof against new levels
+    case 'debug':
+      console.debug(...consoleArgs);
+      break;
+    case 'info':
+      console.info(...consoleArgs);
+      break;
+    case 'warn':
+      console.warn(...consoleArgs);
+      break;
+    case 'error':
+      console.error(...consoleArgs);
+      break;
+    default:
+      console.log(...consoleArgs);
+      break; // future-proof against new levels
   }
   notify();
   return entry;
@@ -90,8 +106,8 @@ function emit(level, scope, message, context) {
 export function createLogger(scope) {
   return {
     debug: (msg, ctx) => emit('debug', scope, msg, ctx),
-    info:  (msg, ctx) => emit('info',  scope, msg, ctx),
-    warn:  (msg, ctx) => emit('warn',  scope, msg, ctx),
+    info: (msg, ctx) => emit('info', scope, msg, ctx),
+    warn: (msg, ctx) => emit('warn', scope, msg, ctx),
     error: (msg, ctx) => emit('error', scope, msg, ctx),
     child: (sub) => createLogger(`${scope}:${sub}`),
   };
@@ -136,11 +152,17 @@ export function exportLogs() {
     return JSON.stringify(buffer, circularReplacer(), 2);
   } catch {
     // Last-ditch fallback: emit a minimal payload listing what we tried to dump.
-    return JSON.stringify({
-      error: 'log export failed even with circular replacer',
-      entryCount: buffer.length,
-      lastEntry: buffer.length ? { ts: buffer[buffer.length - 1].ts, level: buffer[buffer.length - 1].level } : null,
-    }, null, 2);
+    return JSON.stringify(
+      {
+        error: 'log export failed even with circular replacer',
+        entryCount: buffer.length,
+        lastEntry: buffer.length
+          ? { ts: buffer[buffer.length - 1].ts, level: buffer[buffer.length - 1].level }
+          : null,
+      },
+      null,
+      2
+    );
   }
 }
 
@@ -170,15 +192,22 @@ if (typeof window !== 'undefined') {
   // close over a stale buffer reference and silently double-log everything.
   const onWinError = (e) => {
     emit('error', 'window.error', e.message || 'Uncaught error', {
-      filename: e.filename, lineno: e.lineno, colno: e.colno,
-      error: e.error ? { name: e.error.name, message: e.error.message, stack: e.error.stack } : null,
+      filename: e.filename,
+      lineno: e.lineno,
+      colno: e.colno,
+      error: e.error
+        ? { name: e.error.name, message: e.error.message, stack: e.error.stack }
+        : null,
     });
   };
   const onUnhandled = (e) => {
     const reason = e.reason;
-    emit('error', 'window.unhandledrejection',
+    emit(
+      'error',
+      'window.unhandledrejection',
       reason instanceof Error ? reason.message : safeStringify(reason),
-      reason instanceof Error ? { name: reason.name, stack: reason.stack } : null);
+      reason instanceof Error ? { name: reason.name, stack: reason.stack } : null
+    );
   };
 
   if (window.__auditLoggerListeners) {

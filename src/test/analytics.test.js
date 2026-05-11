@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  track, timing, startTimer, getSnapshot, getCount, getTotalEvents,
-  reset, exportJson, subscribe,
+  track,
+  timing,
+  startTimer,
+  getSnapshot,
+  getCount,
+  getTotalEvents,
+  reset,
+  exportJson,
+  subscribe,
 } from '../lib/analytics.js';
 
 describe('analytics', () => {
@@ -77,7 +84,9 @@ describe('analytics', () => {
 
   it('subscribers are notified on track and timing', () => {
     let calls = 0;
-    const unsub = subscribe(() => { calls++; });
+    const unsub = subscribe(() => {
+      calls++;
+    });
     track('y');
     timing('z', 5);
     expect(calls).toBe(2);
@@ -91,7 +100,9 @@ describe('analytics', () => {
     track('error_caught');
     const snap = getSnapshot();
     // No way to encode user content into a counter; verify no extra fields exist.
-    expect(Object.keys(snap)).toEqual(expect.arrayContaining(['schema', 'bootedAt', 'counts', 'timings']));
+    expect(Object.keys(snap)).toEqual(
+      expect.arrayContaining(['schema', 'bootedAt', 'counts', 'timings'])
+    );
     expect(Object.keys(snap.counts)).toEqual(['error_caught']);
   });
 });

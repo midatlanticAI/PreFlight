@@ -27,7 +27,7 @@ function emptyState() {
     schema: 'analytics/v1',
     bootedAt: Date.now(),
     counts: {},
-    timings: {},  // name -> { count, sumMs, minMs, maxMs }
+    timings: {}, // name -> { count, sumMs, minMs, maxMs }
   };
 }
 
@@ -63,7 +63,9 @@ function persist() {
 
 function notify() {
   for (const fn of subscribers) {
-    try { fn(state); } catch {}
+    try {
+      fn(state);
+    } catch {}
   }
 }
 

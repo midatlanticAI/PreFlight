@@ -45,7 +45,7 @@ The tool extracts text from selected files or a public GitHub repository and run
 20. **MCP Security** — Model Context Protocol servers spawning shell interpreters (`bash -c`, `sh -e`, `powershell -Command`), `mcp-server-git` versions pre-Dec 2025 (indirect prompt injection via README/issue), MCP servers binding to 0.0.0.0 or `::` (April 2026 OX Security advisory: ~200K MCP servers internet-exposed with command-execution flaws). Traverses `mcpServers`, `servers`, `tools`, and nested `mcp.servers` config keys.
 21. **Trojan Source** — bidirectional Unicode control characters (U+202A-U+202E, U+2066-U+2069; CVE-2021-42574).
 22. **AI Rules Files** — hidden bidi Unicode in `.cursorrules` / `.cursor/rules/*` / `.windsurfrules` / `CLAUDE.md` (the 2026 "rules file backdoor" attacks against Cursor and GitHub Copilot demonstrated by Pillar Security); instruction-override language (`ignore previous instructions`, `disregard system`).
-23. **AI Code Smells** — empty `catch {}` blocks (Veracode 2026 study: AI code introduces OWASP Top 10 issues at 45%), heavy `any` type usage (correlates with missing input validation).
+23. **AI Code Smells** — empty `catch {}` blocks (industry studies: ~45% of AI code samples introduce OWASP Top 10 issues), heavy `any` type usage (correlates with missing input validation).
 24. **Package Manager Hardening** — missing `.npmrc`, missing `min-release-age` cooldown directive (recommended ≥7 days after Shai-Hulud, Axios, and Mini Shai-Hulud worm windows).
 25. **URL Reputation** — extracts external HTTP/HTTPS URLs from source, applies heuristics (raw IP, suspicious TLDs like .tk/.xyz/.gq, URL shorteners, http-only), produces info/low/medium findings with click-through links to VirusTotal, urlhaus.abuse.ch, and whois lookups.
 26. **HTML Hygiene** — inline event handlers (`onclick=`), `target="_blank"` without `rel="noopener"` (tabnabbing), mixed-content `http://` scripts on HTTPS pages, `eval()` / `new Function()` inside `<script>`, forms posting over HTTP, inline `<script>` without a CSP meta tag.
@@ -60,12 +60,12 @@ The tool extracts text from selected files or a public GitHub repository and run
 
 ## Differentiators from other security tools
 
-- **Free, no signup.** Some competitors start at $79/mo with credit budgets and ownership verification flows. This tool has neither.
+- **Free, no signup, no credit card.** Open the page; scan; done.
 - **Privacy by architecture, not by promise.** Everything runs in the browser. There is no server that could leak data.
 - **AI-tooling-specific probes in the free tier.** MCP attack surface, Cursor / Copilot rules-file backdoors, slopsquatted package names, system prompts leaked to client bundles, prompt-injection sinks.
 - **2025–2026 threat intel hard-coded.** Specific versions from named incidents, not generic CVE matching.
 - **Agent-friendly exports.** "Copy Agent Prompt" formats findings for Claude / ChatGPT / Cursor with code snippets and explicit fix-this framing.
-- **Pre-merge, not post-deploy.** Catches the bug before it ships. Complementary to DAST tools like hacker-bot.com.
+- **Pre-merge gate.** A single browser-tab scan you can run before committing — focused on failure modes specific to AI-generated code (Cursor/Copilot rules-file backdoors, MCP misconfig, slopsquatted packages, prompt-injection sinks).
 
 ## Architecture
 

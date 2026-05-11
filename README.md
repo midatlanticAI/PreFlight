@@ -2,7 +2,7 @@
 
 Free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application.
 
-**Live:** [audit.midatlantic.ai](https://audit.midatlantic.ai/) *(when deployed)*
+**Live:** [audit.midatlantic.ai](https://audit.midatlantic.ai/) _(when deployed)_
 
 ## What it does
 

@@ -28,7 +28,7 @@ describe('buildSnippet', () => {
     expect(s.startLine).toBe(1);
     expect(s.endLine).toBe(10);
     expect(s.lines).toHaveLength(10);
-    expect(s.lines.find(l => l.isHit).n).toBe(6);
+    expect(s.lines.find((l) => l.isHit).n).toBe(6);
   });
 
   it('clamps to start of file', () => {
@@ -49,12 +49,12 @@ describe('buildSnippet', () => {
   it('honors custom context size', () => {
     const s = buildSnippet(SAMPLE, 5, 1);
     expect(s.lines).toHaveLength(3);
-    expect(s.lines.map(l => l.n)).toEqual([4, 5, 6]);
+    expect(s.lines.map((l) => l.n)).toEqual([4, 5, 6]);
   });
 
   it('marks exactly one line as the hit', () => {
     const s = buildSnippet(SAMPLE, 7);
-    expect(s.lines.filter(l => l.isHit)).toHaveLength(1);
+    expect(s.lines.filter((l) => l.isHit)).toHaveLength(1);
   });
 });
 

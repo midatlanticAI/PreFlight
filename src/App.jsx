@@ -1,49 +1,76 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
-  Shield, AlertTriangle, FileWarning, Code2, Database, Package,
-  Lock, Eye, Upload, Github, Loader2, ChevronDown, ChevronRight,
-  FileText, X, RefreshCw, AlertCircle, Info, Zap, Folder,
-  ShieldAlert, ShieldCheck, Copy, ExternalLink, Download, Share2,
-  FileJson, MessageSquare, Check, History, Trash2, Clock,
-  Bug, Activity, ChevronLeft, FileCode2, TrendingUp, TrendingDown, Minus
+  AlertTriangle,
+  Eye,
+  Upload,
+  Github,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  X,
+  RefreshCw,
+  AlertCircle,
+  Zap,
+  Folder,
+  ShieldCheck,
+  Copy,
+  Download,
+  FileJson,
+  MessageSquare,
+  Check,
+  History,
+  Trash2,
+  Clock,
+  Bug,
+  Activity,
+  ChevronLeft,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from 'lucide-react';
-import { log, getLogs, clearLogs, subscribe as subscribeLogs, exportLogs, getMinLevel, setMinLevel } from './lib/logger.js';
-import { track, timing, getSnapshot as getAnalytics, getTotalEvents, reset as resetAnalytics, exportJson as exportAnalytics, subscribe as subscribeAnalytics } from './lib/analytics.js';
+import { log, getLogs, clearLogs, subscribe as subscribeLogs, exportLogs } from './lib/logger.js';
+import { track, timing } from './lib/analytics.js';
 
 // ==========================================================================
 // THEME — Mid-Atlantic AI brand: navy ground, orange CTA, mint accent
 // Palette source: official brand kit (navy / white / mint cyan / orange / grays)
 // ==========================================================================
 const T = {
-  bg: '#0a1226',           // deep brand navy (darker than logo navy for AA contrast)
-  bgGrid: 'rgba(159, 229, 221, 0.03)',  // faint mint tint, echoes the eye color
+  bg: '#0a1226', // deep brand navy (darker than logo navy for AA contrast)
+  bgGrid: 'rgba(159, 229, 221, 0.03)', // faint mint tint, echoes the eye color
   panel: '#11192e',
   panelAlt: '#172143',
   panelHover: '#1d294d',
   border: '#1f2a44',
   borderAlt: '#2c3a5e',
-  text: '#f5f7fa',     // contrast 17.7:1 on bg — WCAG AAA
-  textDim: '#a8b1c5',  // contrast 8.94:1 on bg — AAA
-  textMuted: '#8a96b0',// contrast 6.5:1 on bg — AA (was #6b7693 = 4.15:1, failed AA)
-  accent: '#f26b1f',        // brand orange (antenna lights) — 6.18:1 on bg = AA Large
+  text: '#f5f7fa', // contrast 17.7:1 on bg — WCAG AAA
+  textDim: '#a8b1c5', // contrast 8.94:1 on bg — AAA
+  textMuted: '#8a96b0', // contrast 6.5:1 on bg — AA (was #6b7693 = 4.15:1, failed AA)
+  accent: '#f26b1f', // brand orange (antenna lights) — 6.18:1 on bg = AA Large
   accentDim: '#c2541a',
-  accentAlt: '#9fe5dd',     // brand mint (robot eyes) — for friendly highlights
-  navy: '#1b2d52',          // brand navy (logo body) — for chrome accents
-  good: '#9fe5dd',          // success uses the brand mint
+  accentAlt: '#9fe5dd', // brand mint (robot eyes) — for friendly highlights
+  navy: '#1b2d52', // brand navy (logo body) — for chrome accents
+  good: '#9fe5dd', // success uses the brand mint
   sev: {
-    critical: { bg: '#1f0e1a', fg: '#fb7185', border: '#7f1d1d', glow: 'rgba(251, 113, 133, 0.15)' },
-    high:     { bg: '#1f140a', fg: '#f97316', border: '#9a3412', glow: 'rgba(249, 115, 22, 0.15)' },
-    medium:   { bg: '#1f1a0a', fg: '#fbbf24', border: '#854d0e', glow: 'rgba(251, 191, 36, 0.12)' },
-    low:      { bg: '#0e1a30', fg: '#60a5fa', border: '#1e3a8a', glow: 'rgba(96, 165, 250, 0.12)' },
-    info:     { bg: '#0d1d2c', fg: '#9fe5dd', border: '#3b6e69', glow: 'rgba(159, 229, 221, 0.12)' },
+    critical: {
+      bg: '#1f0e1a',
+      fg: '#fb7185',
+      border: '#7f1d1d',
+      glow: 'rgba(251, 113, 133, 0.15)',
+    },
+    high: { bg: '#1f140a', fg: '#f97316', border: '#9a3412', glow: 'rgba(249, 115, 22, 0.15)' },
+    medium: { bg: '#1f1a0a', fg: '#fbbf24', border: '#854d0e', glow: 'rgba(251, 191, 36, 0.12)' },
+    low: { bg: '#0e1a30', fg: '#60a5fa', border: '#1e3a8a', glow: 'rgba(96, 165, 250, 0.12)' },
+    info: { bg: '#0d1d2c', fg: '#9fe5dd', border: '#3b6e69', glow: 'rgba(159, 229, 221, 0.12)' },
   },
   cat: {
-    'Data Breach':       '#f97316',
-    'Code Injection':    '#fbbf24',
-    'Supply Chain':      '#a78bfa',
-    'Auth & Access':     '#fb7185',
-    'AI/LLM Security':   '#9fe5dd',
-    'Misconfiguration':  '#60a5fa',
+    'Data Breach': '#f97316',
+    'Code Injection': '#fbbf24',
+    'Supply Chain': '#a78bfa',
+    'Auth & Access': '#fb7185',
+    'AI/LLM Security': '#9fe5dd',
+    Misconfiguration: '#60a5fa',
   },
 };
 
@@ -105,21 +132,22 @@ export {
 // Bring shouldScanFile into local scope for fetchGitHubRepo and handleFiles below.
 import { shouldScanFile, PROBES } from './lib/probes.js';
 
-
 // ==========================================================================
 // SCORING
 // ==========================================================================
 export function computeScore(findings) {
   let score = 100;
-  findings.forEach(f => { score -= SEV_WEIGHT[f.severity] || 0; });
+  findings.forEach((f) => {
+    score -= SEV_WEIGHT[f.severity] || 0;
+  });
   return Math.max(0, score);
 }
 
 export function riskTier(score) {
-  if (score >= 80) return { label: 'LOW RISK',      color: T.good,            ring: T.good };
-  if (score >= 60) return { label: 'MODERATE RISK', color: T.sev.medium.fg,   ring: T.sev.medium.fg };
-  if (score >= 40) return { label: 'HIGH RISK',     color: T.sev.high.fg,     ring: T.sev.high.fg };
-  return              { label: 'CRITICAL RISK', color: T.sev.critical.fg, ring: T.sev.critical.fg };
+  if (score >= 80) return { label: 'LOW RISK', color: T.good, ring: T.good };
+  if (score >= 60) return { label: 'MODERATE RISK', color: T.sev.medium.fg, ring: T.sev.medium.fg };
+  if (score >= 40) return { label: 'HIGH RISK', color: T.sev.high.fg, ring: T.sev.high.fg };
+  return { label: 'CRITICAL RISK', color: T.sev.critical.fg, ring: T.sev.critical.fg };
 }
 
 // ==========================================================================
@@ -130,7 +158,9 @@ export async function fetchGitHubRepo(url, onProgress) {
 
   if (typeof url !== 'string') {
     ghLog.error('fetchGitHubRepo got non-string url', { typeofArg: typeof url });
-    throw new Error(`We tried to read that GitHub URL but got something that wasn't a string (got ${typeof url}). Refresh the page and try again — if it keeps happening, open the Diagnostics panel and share the log.`);
+    throw new Error(
+      `We tried to read that GitHub URL but got something that wasn't a string (got ${typeof url}). Refresh the page and try again — if it keeps happening, open the Diagnostics panel and share the log.`
+    );
   }
   const trimmed = url.trim();
   if (!trimmed) throw new Error('GitHub URL is empty.');
@@ -153,26 +183,30 @@ export async function fetchGitHubRepo(url, onProgress) {
     ghLog.error('Repo metadata fetch threw', { error: e?.message });
     throw new Error(
       `Network call to api.github.com failed (${e.message || 'unknown'}). ` +
-      `This artifact runs in a sandboxed iframe; some browsers / extensions ` +
-      `block cross-origin fetches. Workaround: use the Files / Folder tab — ` +
-      `download the repo as a zip from GitHub, expand it, and select the folder.`
+        `This artifact runs in a sandboxed iframe; some browsers / extensions ` +
+        `block cross-origin fetches. Workaround: use the Files / Folder tab — ` +
+        `download the repo as a zip from GitHub, expand it, and select the folder.`
     );
   }
 
   ghLog.debug('Repo response', { status: repoResp.status });
 
   if (repoResp.status === 404) {
-    throw new Error('Repository not found, or it is private. Public repos only via URL. Use Files / Folder for private repos.');
+    throw new Error(
+      'Repository not found, or it is private. Public repos only via URL. Use Files / Folder for private repos.'
+    );
   }
   if (repoResp.status === 403) {
     const remaining = repoResp.headers.get('x-ratelimit-remaining');
     const resetUnix = parseInt(repoResp.headers.get('x-ratelimit-reset') || '0', 10);
-    const resetIn = resetUnix ? Math.max(0, Math.ceil((resetUnix * 1000 - Date.now()) / 60000)) : null;
+    const resetIn = resetUnix
+      ? Math.max(0, Math.ceil((resetUnix * 1000 - Date.now()) / 60000))
+      : null;
     ghLog.warn('Rate limit hit', { remaining, resetIn });
     throw new Error(
       `GitHub API rate limit hit (${remaining || 0} remaining)` +
-      (resetIn !== null ? `, resets in ~${resetIn} min` : '') +
-      `. Unauthenticated limit is 60/hour per IP. Use Files / Folder upload as fallback.`
+        (resetIn !== null ? `, resets in ~${resetIn} min` : '') +
+        `. Unauthenticated limit is 60/hour per IP. Use Files / Folder upload as fallback.`
     );
   }
   if (!repoResp.ok) {
@@ -195,7 +229,9 @@ export async function fetchGitHubRepo(url, onProgress) {
   onProgress?.({ stage: `Walking ${branch} tree`, current: 0, total: 1 });
   let treeResp;
   try {
-    treeResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`);
+    treeResp = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
+    );
   } catch (e) {
     ghLog.error('Tree fetch threw', { error: e?.message });
     throw new Error(`Tree fetch failed: ${e.message || 'unknown'}. Try Files / Folder upload.`);
@@ -209,9 +245,14 @@ export async function fetchGitHubRepo(url, onProgress) {
   }
 
   const targets = (treeData.tree || [])
-    .filter(node => node.type === 'blob' && shouldScanFile(node.path) && (node.size || 0) < 200000)
+    .filter(
+      (node) => node.type === 'blob' && shouldScanFile(node.path) && (node.size || 0) < 200000
+    )
     .slice(0, 80);
-  ghLog.info('Targets selected', { totalEntries: treeData.tree?.length, targetCount: targets.length });
+  ghLog.info('Targets selected', {
+    totalEntries: treeData.tree?.length,
+    targetCount: targets.length,
+  });
 
   if (targets.length === 0) {
     throw new Error('No security-relevant files found in this repository tree.');
@@ -223,7 +264,9 @@ export async function fetchGitHubRepo(url, onProgress) {
     const t = targets[i];
     onProgress?.({ stage: `Fetching ${t.path}`, current: i + 1, total: targets.length });
     try {
-      const r = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${t.path}`);
+      const r = await fetch(
+        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${t.path}`
+      );
       if (r.ok) {
         const content = await r.text();
         out.push({ path: t.path, content });
@@ -240,7 +283,9 @@ export async function fetchGitHubRepo(url, onProgress) {
     ghLog.warn('Some blob fetches failed', { fetched: out.length, failed: blobFailures });
   }
   if (out.length === 0) {
-    throw new Error('Tree was readable but no file contents could be fetched. Likely a sandbox restriction. Use Files / Folder upload.');
+    throw new Error(
+      'Tree was readable but no file contents could be fetched. Likely a sandbox restriction. Use Files / Folder upload.'
+    );
   }
   return out;
 }
@@ -269,45 +314,49 @@ export function buildSnippet(content, lineNum, ctx = 5) {
 export function snippetToText(snippet) {
   if (!snippet) return '';
   return snippet.lines
-    .map(l => `${String(l.n).padStart(4)}${l.isHit ? '> ' : ': '}${l.text}`)
+    .map((l) => `${String(l.n).padStart(4)}${l.isHit ? '> ' : ': '}${l.text}`)
     .join('\n');
 }
 
 export function formatJSON(results) {
-  return JSON.stringify({
-    schema: 'midatlantic-audit/v1',
-    scannedAt: results.scannedAt.toISOString(),
-    source: results.source,
-    filesScanned: results.filesScanned,
-    score: results.score,
-    riskTier: riskTier(results.score).label,
-    summary: {
-      total: results.findings.length,
-      bySeverity: results.findings.reduce((a, f) => {
-        a[f.severity] = (a[f.severity] || 0) + 1;
-        return a;
-      }, {}),
+  return JSON.stringify(
+    {
+      schema: 'midatlantic-audit/v1',
+      scannedAt: results.scannedAt.toISOString(),
+      source: results.source,
+      filesScanned: results.filesScanned,
+      score: results.score,
+      riskTier: riskTier(results.score).label,
+      summary: {
+        total: results.findings.length,
+        bySeverity: results.findings.reduce((a, f) => {
+          a[f.severity] = (a[f.severity] || 0) + 1;
+          return a;
+        }, {}),
+      },
+      findings: results.findings.map((f) => ({
+        id: f.id,
+        severity: f.severity,
+        category: f.category,
+        cwe: f.cwe,
+        probe: f.probe,
+        title: f.title,
+        file: f.file,
+        line: f.line,
+        evidence: f.evidence,
+        remediation: f.remediation,
+        snippet: f.snippet
+          ? {
+              startLine: f.snippet.startLine,
+              endLine: f.snippet.endLine,
+              text: snippetToText(f.snippet),
+            }
+          : null,
+      })),
     },
-    findings: results.findings.map(f => ({
-      id: f.id,
-      severity: f.severity,
-      category: f.category,
-      cwe: f.cwe,
-      probe: f.probe,
-      title: f.title,
-      file: f.file,
-      line: f.line,
-      evidence: f.evidence,
-      remediation: f.remediation,
-      snippet: f.snippet
-        ? {
-            startLine: f.snippet.startLine,
-            endLine: f.snippet.endLine,
-            text: snippetToText(f.snippet),
-          }
-        : null,
-    })),
-  }, null, 2);
+    null,
+    2
+  );
 }
 
 export function formatMarkdown(results) {
@@ -316,9 +365,8 @@ export function formatMarkdown(results) {
     a[f.severity] = (a[f.severity] || 0) + 1;
     return a;
   }, {});
-  const sevLine = SEV_ORDER
-    .filter(s => sevCounts[s])
-    .map(s => `${sevCounts[s]} ${s}`)
+  const sevLine = SEV_ORDER.filter((s) => sevCounts[s])
+    .map((s) => `${sevCounts[s]} ${s}`)
     .join(', ');
 
   let md = `# Pre-Flight Security Audit\n\n`;
@@ -352,11 +400,17 @@ export function formatPRComment(results) {
     a[f.severity] = (a[f.severity] || 0) + 1;
     return a;
   }, {});
-  const top = SEV_ORDER.filter(s => sevCounts[s]);
-  const sevSummary = top.length ? top.map(s => `${sevCounts[s]} ${s}`).join(' · ') : 'no findings';
-  const titleEmoji = tier.label.startsWith('CRITICAL') ? '🟥' :
-                     tier.label.startsWith('HIGH')     ? '🟧' :
-                     tier.label.startsWith('MODERATE') ? '🟨' : '🟩';
+  const top = SEV_ORDER.filter((s) => sevCounts[s]);
+  const sevSummary = top.length
+    ? top.map((s) => `${sevCounts[s]} ${s}`).join(' · ')
+    : 'no findings';
+  const titleEmoji = tier.label.startsWith('CRITICAL')
+    ? '🟥'
+    : tier.label.startsWith('HIGH')
+      ? '🟧'
+      : tier.label.startsWith('MODERATE')
+        ? '🟨'
+        : '🟩';
 
   let md = `## ${titleEmoji} Pre-Flight Audit — ${tier.label} (${results.score}/100)\n\n`;
   md += `**${results.findings.length} finding${results.findings.length === 1 ? '' : 's'}** · ${sevSummary} · ${results.filesScanned} file${results.filesScanned === 1 ? '' : 's'} scanned\n\n`;
@@ -367,15 +421,17 @@ export function formatPRComment(results) {
   md += `<details>\n<summary>Click to expand ${results.findings.length} finding${results.findings.length === 1 ? '' : 's'}</summary>\n\n`;
   // Group by file so the comment shows up next to the code review naturally.
   const byFile = new Map();
-  results.findings.forEach(f => {
+  results.findings.forEach((f) => {
     if (!byFile.has(f.file)) byFile.set(f.file, []);
     byFile.get(f.file).push(f);
   });
   for (const [filePath, fs] of byFile) {
     md += `### \`${filePath}\`\n\n`;
     for (const f of fs) {
-      md += `- **[${f.severity.toUpperCase()}]** ${f.title} — ${f.cwe}` +
-            (f.line ? ` _(line ${f.line})_` : '') + `\n`;
+      md +=
+        `- **[${f.severity.toUpperCase()}]** ${f.title} — ${f.cwe}` +
+        (f.line ? ` _(line ${f.line})_` : '') +
+        `\n`;
       md += `  _${f.remediation.replace(/\n+/g, ' ').slice(0, 220)}${f.remediation.length > 220 ? '…' : ''}_\n`;
     }
     md += '\n';
@@ -441,13 +497,15 @@ export async function copyToClipboard(text) {
   document.body.appendChild(ta);
   ta.select();
   let ok = false;
-  try { ok = document.execCommand('copy'); } catch {}
+  try {
+    ok = document.execCommand('copy');
+  } catch {}
   document.body.removeChild(ta);
   return ok;
 }
 
 export function timestampSlug(date) {
-  const pad = n => String(n).padStart(2, '0');
+  const pad = (n) => String(n).padStart(2, '0');
   return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
 }
 
@@ -508,7 +566,8 @@ export function makeHistoryEntry(results, sourceType) {
   }, {});
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    scannedAt: results.scannedAt instanceof Date ? results.scannedAt.toISOString() : results.scannedAt,
+    scannedAt:
+      results.scannedAt instanceof Date ? results.scannedAt.toISOString() : results.scannedAt,
     source: results.source,
     sourceType,
     filesScanned: results.filesScanned,
@@ -524,31 +583,36 @@ export function computeDiffAgainstPrior(currentResults, history) {
   if (!currentResults || !Array.isArray(history)) return null;
   // Find the most recent prior entry for the same source (skip the entry that represents the current scan).
   // History is newest-first; skip entries that match BOTH source AND scannedAt of the current scan.
-  const currentTs = currentResults.scannedAt instanceof Date
-    ? currentResults.scannedAt.toISOString()
-    : currentResults.scannedAt;
-  const prior = history.find(h =>
-    h.source === currentResults.source && h.scannedAt !== currentTs
+  const currentTs =
+    currentResults.scannedAt instanceof Date
+      ? currentResults.scannedAt.toISOString()
+      : currentResults.scannedAt;
+  const prior = history.find(
+    (h) => h.source === currentResults.source && h.scannedAt !== currentTs
   );
   if (!prior) return null;
 
   // Use a stable key per finding so we can diff: probe + file + line + title (id contains random offset, not stable).
-  const keyOf = f => `${f.probe}|${f.file}|${f.line}|${f.title}`;
+  const keyOf = (f) => `${f.probe}|${f.file}|${f.line}|${f.title}`;
   const currentSet = new Set(currentResults.findings.map(keyOf));
   const priorSet = new Set((prior.findings || []).map(keyOf));
 
-  const introduced = currentResults.findings.filter(f => !priorSet.has(keyOf(f)));
-  const fixed = (prior.findings || []).filter(f => !currentSet.has(keyOf(f)));
-  const persisted = currentResults.findings.filter(f => priorSet.has(keyOf(f)));
+  const introduced = currentResults.findings.filter((f) => !priorSet.has(keyOf(f)));
+  const fixed = (prior.findings || []).filter((f) => !currentSet.has(keyOf(f)));
+  const persisted = currentResults.findings.filter((f) => priorSet.has(keyOf(f)));
 
-  const bucket = (arr) => arr.reduce((a, f) => { a[f.severity] = (a[f.severity] || 0) + 1; return a; }, {});
+  const bucket = (arr) =>
+    arr.reduce((a, f) => {
+      a[f.severity] = (a[f.severity] || 0) + 1;
+      return a;
+    }, {});
   return {
     priorScannedAt: prior.scannedAt,
     priorScore: prior.score,
     deltaScore: currentResults.score - prior.score,
     introduced: { count: introduced.length, bySeverity: bucket(introduced), items: introduced },
-    fixed:      { count: fixed.length,      bySeverity: bucket(fixed),      items: fixed },
-    persisted:  { count: persisted.length,  bySeverity: bucket(persisted) },
+    fixed: { count: fixed.length, bySeverity: bucket(fixed), items: fixed },
+    persisted: { count: persisted.length, bySeverity: bucket(persisted) },
   };
 }
 
@@ -573,10 +637,10 @@ export function historyEntryToResults(entry) {
 //  - Impact         → section-header / eyebrow labels (all-caps)
 //  - Mono only used for code snapshots and line numbers
 const fontDisplay = "'Rubik', 'Helvetica Neue', Helvetica, Arial, sans-serif";
-const fontUI      = "'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+const fontUI = "'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 const fontCondensed = "'Roboto Condensed', 'Roboto', 'Helvetica Neue', Arial, sans-serif";
 const fontEyebrow = "'Impact', 'Haettenschweiler', 'Arial Narrow Bold', sans-serif";
-const fontMono    = "ui-monospace, 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace";
+const fontMono = "ui-monospace, 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace";
 
 export function GlobalStyle() {
   return (
@@ -787,22 +851,40 @@ export function ScoreGauge({ score }) {
       aria-label={`Risk score ${score} out of 100, ${tier.label}`}
       style={{ position: 'relative', width: 220, height: 220 }}
     >
-      <svg width="220" height="220" viewBox="0 0 220 220" style={{ transform: 'rotate(-90deg)' }} aria-hidden="true">
+      <svg
+        width="220"
+        height="220"
+        viewBox="0 0 220 220"
+        style={{ transform: 'rotate(-90deg)' }}
+        aria-hidden="true"
+      >
         <circle cx="110" cy="110" r={radius} fill="none" stroke={T.borderAlt} strokeWidth="2" />
         <circle
-          cx="110" cy="110" r={radius} fill="none"
-          stroke={tier.ring} strokeWidth="3"
+          cx="110"
+          cy="110"
+          r={radius}
+          fill="none"
+          stroke={tier.ring}
+          strokeWidth="3"
           strokeDasharray={`${filled} ${circ}`}
           strokeLinecap="butt"
           style={{ transition: 'stroke-dasharray 0.8s ease-out, stroke 0.4s ease' }}
         />
       </svg>
-      <div style={{
-        position: 'absolute', inset: 0, display: 'flex',
-        flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <div className="ap-eyebrow" style={{ marginBottom: 4 }}>SCORE</div>
-        <div className="ap-display" style={{ fontSize: 84, lineHeight: 1, color: tier.color, }}>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div className="ap-eyebrow" style={{ marginBottom: 4 }}>
+          SCORE
+        </div>
+        <div className="ap-display" style={{ fontSize: 84, lineHeight: 1, color: tier.color }}>
           {score}
         </div>
         <div className="ap-mono" style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
@@ -818,16 +900,25 @@ export function CategoryBar({ name, count, max, color }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span className="ap-mono" style={{ fontSize: 12, color: T.text }}>{name}</span>
-        <span className="ap-mono" style={{ fontSize: 12, color: T.textDim }}>{count}</span>
+        <span className="ap-mono" style={{ fontSize: 12, color: T.text }}>
+          {name}
+        </span>
+        <span className="ap-mono" style={{ fontSize: 12, color: T.textDim }}>
+          {count}
+        </span>
       </div>
       <div style={{ height: 4, background: T.border, position: 'relative' }}>
-        <div style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0,
-          width: `${pct}%`,
-          background: color,
-          transition: 'width 0.6s ease-out',
-        }} />
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: `${pct}%`,
+            background: color,
+            transition: 'width 0.6s ease-out',
+          }}
+        />
       </div>
     </div>
   );
@@ -836,25 +927,35 @@ export function CategoryBar({ name, count, max, color }) {
 export function SeverityChip({ severity }) {
   const c = T.sev[severity];
   return (
-    <span className="ap-mono" style={{
-      fontSize: 10,
-      letterSpacing: '0.12em',
-      textTransform: 'uppercase',
-      color: c.fg,
-      background: c.bg,
-      border: `1px solid ${c.border}`,
-      padding: '3px 8px',
-      fontWeight: 600,
-    }}>{severity}</span>
+    <span
+      className="ap-mono"
+      style={{
+        fontSize: 10,
+        letterSpacing: '0.12em',
+        textTransform: 'uppercase',
+        color: c.fg,
+        background: c.bg,
+        border: `1px solid ${c.border}`,
+        padding: '3px 8px',
+        fontWeight: 600,
+      }}
+    >
+      {severity}
+    </span>
   );
 }
 
 export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
   const all = getLogs();
   const RANK = { debug: 0, info: 1, warn: 2, error: 3 };
-  const visible = all.filter(e => RANK[e.level] >= RANK[filter]);
-  const counts = all.reduce((a, e) => { a[e.level] = (a[e.level] || 0) + 1; return a; }, {});
-  const handleCopy = async () => { await copyToClipboard(exportLogs()); };
+  const visible = all.filter((e) => RANK[e.level] >= RANK[filter]);
+  const counts = all.reduce((a, e) => {
+    a[e.level] = (a[e.level] || 0) + 1;
+    return a;
+  }, {});
+  const handleCopy = async () => {
+    await copyToClipboard(exportLogs());
+  };
   const handleDownload = () => {
     downloadFile(exportLogs(), `audit-logs-${timestampSlug(new Date())}.json`, 'application/json');
   };
@@ -869,7 +970,11 @@ export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
     // Defer to next tick so the close button is in the DOM and focusable.
     const t = setTimeout(() => closeBtnRef.current?.focus(), 0);
     const onKey = (e) => {
-      if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
       if (e.key !== 'Tab') return;
       const focusable = drawerRef.current?.querySelectorAll(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -877,8 +982,13 @@ export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
       if (!focusable || focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
     return () => {
@@ -886,7 +996,9 @@ export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
       document.removeEventListener('keydown', onKey);
       // Restore focus to whatever element opened the drawer.
       if (lastFocusRef.current && lastFocusRef.current.focus) {
-        try { lastFocusRef.current.focus(); } catch {}
+        try {
+          lastFocusRef.current.focus();
+        } catch {}
       }
     };
   }, [open, onClose]);
@@ -898,8 +1010,10 @@ export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
           onClick={onClose}
           aria-hidden="true"
           style={{
-            position: 'fixed', inset: 0,
-            background: 'rgba(0,0,0,0.4)', zIndex: 50,
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            zIndex: 50,
           }}
         />
       )}
@@ -911,32 +1025,44 @@ export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
         aria-hidden={!open}
         style={{
           position: 'fixed',
-          left: 0, right: 0, bottom: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           maxHeight: '60vh',
           background: T.panel,
           borderTop: `2px solid ${T.accent}`,
           transform: open ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 0.25s ease-out',
           zIndex: 60,
-          display: 'flex', flexDirection: 'column',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        <div style={{
-          padding: '12px 18px',
-          borderBottom: `1px solid ${T.border}`,
-          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-        }}>
+        <div
+          style={{
+            padding: '12px 18px',
+            borderBottom: `1px solid ${T.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}
+        >
           <Activity size={14} color={T.accent} />
-          <span className="ap-eyebrow" style={{ color: T.text }}>DIAGNOSTICS · {visible.length} / {all.length}</span>
+          <span className="ap-eyebrow" style={{ color: T.text }}>
+            DIAGNOSTICS · {visible.length} / {all.length}
+          </span>
           <div style={{ display: 'flex', gap: 4 }}>
-            {['debug', 'info', 'warn', 'error'].map(lvl => (
+            {['debug', 'info', 'warn', 'error'].map((lvl) => (
               <button
                 key={lvl}
                 onClick={() => setFilter(lvl)}
                 className="ap-mono"
                 style={{
-                  fontSize: 10, padding: '4px 8px',
-                  letterSpacing: '0.1em', textTransform: 'uppercase',
+                  fontSize: 10,
+                  padding: '4px 8px',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
                   background: filter === lvl ? T.accent : 'transparent',
                   color: filter === lvl ? T.bg : T.textDim,
                   border: `1px solid ${filter === lvl ? T.accent : T.border}`,
@@ -948,37 +1074,53 @@ export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
             ))}
           </div>
           <div style={{ flex: 1 }} />
-          <button onClick={handleCopy}
+          <button
+            onClick={handleCopy}
             className="ap-btn ap-btn-ghost"
             style={{ padding: '6px 12px', fontSize: 10 }}
             title="Copy all logs as JSON"
           >
-            <Copy size={11} style={{ display: 'inline-block', marginRight: 5, verticalAlign: '-1px' }} />
+            <Copy
+              size={11}
+              style={{ display: 'inline-block', marginRight: 5, verticalAlign: '-1px' }}
+            />
             Copy
           </button>
-          <button onClick={handleDownload}
+          <button
+            onClick={handleDownload}
             className="ap-btn ap-btn-ghost"
             style={{ padding: '6px 12px', fontSize: 10 }}
             title="Download log buffer as JSON"
           >
-            <Download size={11} style={{ display: 'inline-block', marginRight: 5, verticalAlign: '-1px' }} />
+            <Download
+              size={11}
+              style={{ display: 'inline-block', marginRight: 5, verticalAlign: '-1px' }}
+            />
             Save
           </button>
-          <button onClick={() => clearLogs()}
+          <button
+            onClick={() => clearLogs()}
             className="ap-btn ap-btn-ghost"
             style={{ padding: '6px 12px', fontSize: 10 }}
             title="Clear log buffer"
           >
-            <Trash2 size={11} style={{ display: 'inline-block', marginRight: 5, verticalAlign: '-1px' }} />
+            <Trash2
+              size={11}
+              style={{ display: 'inline-block', marginRight: 5, verticalAlign: '-1px' }}
+            />
             Clear
           </button>
-          <button onClick={onClose}
+          <button
+            onClick={onClose}
             ref={closeBtnRef}
             aria-label="Close diagnostics"
             type="button"
             style={{
-              background: 'transparent', border: `1px solid ${T.border}`,
-              color: T.textDim, cursor: 'pointer', padding: '6px 8px',
+              background: 'transparent',
+              border: `1px solid ${T.border}`,
+              color: T.textDim,
+              cursor: 'pointer',
+              padding: '6px 8px',
             }}
           >
             <X size={12} aria-hidden="true" />
@@ -990,47 +1132,67 @@ export function DiagnosticsDrawer({ open, onClose, filter, setFilter }) {
               No log entries at this filter level.
             </div>
           ) : (
-            visible.slice().reverse().map(e => {
-              const colorMap = {
-                debug: T.textMuted,
-                info:  T.text,
-                warn:  T.sev.medium.fg,
-                error: T.sev.critical.fg,
-              };
-              return (
-                <div
-                  key={e.id}
-                  style={{
-                    padding: '6px 0',
-                    borderBottom: `1px solid ${T.border}`,
-                    fontFamily: fontMono, fontSize: 11,
-                    display: 'grid', gridTemplateColumns: '90px 60px 1fr', gap: 12,
-                    alignItems: 'baseline',
-                  }}
-                >
-                  <span style={{ color: T.textMuted }}>
-                    {new Date(e.ts).toLocaleTimeString(undefined, { hour12: false })}
-                  </span>
-                  <span style={{
-                    color: colorMap[e.level], fontWeight: 600,
-                    textTransform: 'uppercase', letterSpacing: '0.05em',
-                  }}>
-                    {e.level}
-                  </span>
-                  <div style={{ color: colorMap[e.level], wordBreak: 'break-word' }}>
-                    <span style={{ color: T.accent }}>[{e.scope}]</span> {e.message}
-                    {e.context && (
-                      <pre style={{
-                        margin: '4px 0 0', padding: '6px 8px',
-                        background: T.bg, border: `1px solid ${T.border}`,
-                        color: T.textDim, fontSize: 10,
-                        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                      }}>{typeof e.context === 'string' ? e.context : JSON.stringify(e.context, null, 2)}</pre>
-                    )}
+            visible
+              .slice()
+              .reverse()
+              .map((e) => {
+                const colorMap = {
+                  debug: T.textMuted,
+                  info: T.text,
+                  warn: T.sev.medium.fg,
+                  error: T.sev.critical.fg,
+                };
+                return (
+                  <div
+                    key={e.id}
+                    style={{
+                      padding: '6px 0',
+                      borderBottom: `1px solid ${T.border}`,
+                      fontFamily: fontMono,
+                      fontSize: 11,
+                      display: 'grid',
+                      gridTemplateColumns: '90px 60px 1fr',
+                      gap: 12,
+                      alignItems: 'baseline',
+                    }}
+                  >
+                    <span style={{ color: T.textMuted }}>
+                      {new Date(e.ts).toLocaleTimeString(undefined, { hour12: false })}
+                    </span>
+                    <span
+                      style={{
+                        color: colorMap[e.level],
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                      }}
+                    >
+                      {e.level}
+                    </span>
+                    <div style={{ color: colorMap[e.level], wordBreak: 'break-word' }}>
+                      <span style={{ color: T.accent }}>[{e.scope}]</span> {e.message}
+                      {e.context && (
+                        <pre
+                          style={{
+                            margin: '4px 0 0',
+                            padding: '6px 8px',
+                            background: T.bg,
+                            border: `1px solid ${T.border}`,
+                            color: T.textDim,
+                            fontSize: 10,
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {typeof e.context === 'string'
+                            ? e.context
+                            : JSON.stringify(e.context, null, 2)}
+                        </pre>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })
+                );
+              })
           )}
         </div>
       </div>
@@ -1045,46 +1207,103 @@ export function FindingCard({ finding, expanded, onToggle }) {
       <button
         onClick={onToggle}
         style={{
-          width: '100%', background: 'transparent', border: 'none', cursor: 'pointer',
-          padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12,
-          textAlign: 'left', color: T.text, fontFamily: fontMono,
-        }}>
+          width: '100%',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '14px 16px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 12,
+          textAlign: 'left',
+          color: T.text,
+          fontFamily: fontMono,
+        }}
+      >
         <div style={{ marginTop: 2, color: T.textMuted }}>
           {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              marginBottom: 6,
+            }}
+          >
             <SeverityChip severity={finding.severity} />
-            <span className="ap-mono" style={{
-              fontSize: 10, color: T.cat[finding.category],
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-            }}>{finding.category}</span>
-            <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>{finding.cwe}</span>
+            <span
+              className="ap-mono"
+              style={{
+                fontSize: 10,
+                color: T.cat[finding.category],
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {finding.category}
+            </span>
+            <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>
+              {finding.cwe}
+            </span>
           </div>
           <div style={{ fontSize: 13, color: T.text, marginBottom: 4, fontWeight: 500 }}>
             {finding.title}
           </div>
-          <div className="ap-mono" style={{ fontSize: 11, color: T.textMuted, wordBreak: 'break-all' }}>
-            {finding.file}{finding.line ? `:${finding.line}` : ''}
+          <div
+            className="ap-mono"
+            style={{ fontSize: 11, color: T.textMuted, wordBreak: 'break-all' }}
+          >
+            {finding.file}
+            {finding.line ? `:${finding.line}` : ''}
           </div>
         </div>
       </button>
       {expanded && (
-        <div className="ap-fade-in" style={{
-          padding: '0 16px 16px 42px',
-          borderTop: `1px solid ${T.border}`, marginTop: 4, paddingTop: 14,
-        }}>
-          <div className="ap-eyebrow" style={{ marginBottom: 6 }}>EVIDENCE</div>
-          <pre style={{
-            margin: 0, padding: 12,
-            background: T.bg, border: `1px solid ${T.border}`,
-            fontSize: 12, color: T.textDim, overflowX: 'auto',
-            fontFamily: fontMono, whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-          }}>{finding.evidence || '(no snippet captured)'}</pre>
+        <div
+          className="ap-fade-in"
+          style={{
+            padding: '0 16px 16px 42px',
+            borderTop: `1px solid ${T.border}`,
+            marginTop: 4,
+            paddingTop: 14,
+          }}
+        >
+          <div className="ap-eyebrow" style={{ marginBottom: 6 }}>
+            EVIDENCE
+          </div>
+          <pre
+            style={{
+              margin: 0,
+              padding: 12,
+              background: T.bg,
+              border: `1px solid ${T.border}`,
+              fontSize: 12,
+              color: T.textDim,
+              overflowX: 'auto',
+              fontFamily: fontMono,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all',
+            }}
+          >
+            {finding.evidence || '(no snippet captured)'}
+          </pre>
           {finding.snippet && (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, marginBottom: 6 }}>
-                <div className="ap-eyebrow">CODE SNAPSHOT (lines {finding.snippet.startLine}–{finding.snippet.endLine})</div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: 14,
+                  marginBottom: 6,
+                }}
+              >
+                <div className="ap-eyebrow">
+                  CODE SNAPSHOT (lines {finding.snippet.startLine}–{finding.snippet.endLine})
+                </div>
                 <button
                   onClick={async () => {
                     const ok = await copyToClipboard(snippetToText(finding.snippet));
@@ -1094,24 +1313,38 @@ export function FindingCard({ finding, expanded, onToggle }) {
                   }}
                   className="ap-mono"
                   style={{
-                    background: 'transparent', border: `1px solid ${T.border}`,
-                    color: T.textMuted, cursor: 'pointer', fontSize: 10,
-                    padding: '3px 8px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                    background: 'transparent',
+                    border: `1px solid ${T.border}`,
+                    color: T.textMuted,
+                    cursor: 'pointer',
+                    fontSize: 10,
+                    padding: '3px 8px',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
                   }}
                   title="Copy snippet"
                 >
-                  <Copy size={10} style={{ display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }} />
+                  <Copy
+                    size={10}
+                    style={{ display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }}
+                  />
                   copy
                 </button>
               </div>
-              <pre style={{
-                margin: 0, padding: 12,
-                background: T.bg, border: `1px solid ${T.border}`,
-                fontSize: 12, overflowX: 'auto',
-                fontFamily: fontMono, whiteSpace: 'pre',
-                lineHeight: 1.5,
-              }}>
-                {finding.snippet.lines.map(l => (
+              <pre
+                style={{
+                  margin: 0,
+                  padding: 12,
+                  background: T.bg,
+                  border: `1px solid ${T.border}`,
+                  fontSize: 12,
+                  overflowX: 'auto',
+                  fontFamily: fontMono,
+                  whiteSpace: 'pre',
+                  lineHeight: 1.5,
+                }}
+              >
+                {finding.snippet.lines.map((l) => (
                   <div
                     key={l.n}
                     aria-label={l.isHit ? `Offending line ${l.n}` : undefined}
@@ -1120,29 +1353,46 @@ export function FindingCard({ finding, expanded, onToggle }) {
                       // Stronger hit-line distinction: solid panelAlt background (was severity.bg ~ 1.13:1)
                       // plus a thicker 4px left border in the severity color.
                       background: l.isHit ? T.panelAlt : 'transparent',
-                      borderLeft: l.isHit ? `4px solid ${T.sev[finding.severity].fg}` : '4px solid transparent',
+                      borderLeft: l.isHit
+                        ? `4px solid ${T.sev[finding.severity].fg}`
+                        : '4px solid transparent',
                       paddingLeft: 6,
                       fontWeight: l.isHit ? 600 : 400,
                     }}
                   >
                     {/* Non-color marker for screen-reader / accessibility — a visible chevron pointing at the hit line. */}
-                    <span aria-hidden="true" style={{
-                      width: 14, flexShrink: 0,
-                      color: l.isHit ? T.sev[finding.severity].fg : 'transparent',
-                      fontWeight: 700,
-                    }}>{l.isHit ? '▶' : ' '}</span>
-                    <span style={{
-                      color: l.isHit ? T.sev[finding.severity].fg : T.textMuted,
-                      width: 36, flexShrink: 0, textAlign: 'right', paddingRight: 10,
-                      userSelect: 'none',
-                    }}>{l.n}</span>
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: 14,
+                        flexShrink: 0,
+                        color: l.isHit ? T.sev[finding.severity].fg : 'transparent',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {l.isHit ? '▶' : ' '}
+                    </span>
+                    <span
+                      style={{
+                        color: l.isHit ? T.sev[finding.severity].fg : T.textMuted,
+                        width: 36,
+                        flexShrink: 0,
+                        textAlign: 'right',
+                        paddingRight: 10,
+                        userSelect: 'none',
+                      }}
+                    >
+                      {l.n}
+                    </span>
                     <span style={{ color: l.isHit ? T.text : T.textDim }}>{l.text || ' '}</span>
                   </div>
                 ))}
               </pre>
             </>
           )}
-          <div className="ap-eyebrow" style={{ marginTop: 14, marginBottom: 6 }}>REMEDIATION</div>
+          <div className="ap-eyebrow" style={{ marginTop: 14, marginBottom: 6 }}>
+            REMEDIATION
+          </div>
           <div style={{ fontSize: 13, color: T.textDim, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
             {finding.remediation}
           </div>
@@ -1178,7 +1428,9 @@ export default function App() {
   const [probeErrors, setProbeErrors] = useState([]);
   const [diagOpen, setDiagOpen] = useState(false);
   const [diagFilter, setDiagFilter] = useState('debug');
-  const [logsTick, setLogsTick] = useState(0);
+  // logsTick exists only as a re-render trigger when the logger emits new entries.
+  // The value itself is unread — we just bump it from the subscriber callback.
+  const [, setLogsTick] = useState(0);
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
   // React 18 silently no-ops setState on unmounted components, so we don't need a
@@ -1193,7 +1445,7 @@ export default function App() {
   const safeSetHistory = setHistory;
 
   // Subscribe to logger updates so the Diagnostics panel re-renders live.
-  useEffect(() => subscribeLogs(() => setLogsTick(t => t + 1)), []);
+  useEffect(() => subscribeLogs(() => setLogsTick((t) => t + 1)), []);
 
   // Persist history whenever it changes (cheap; entries are bounded). If it fails (quota exceeded),
   // surface a visible warning instead of silently dropping the new entry on reload.
@@ -1202,7 +1454,13 @@ export default function App() {
     const ok = persistHistory(history);
     if (!ok) {
       log.warn('History persistence failed — likely localStorage quota');
-      setError('Could not save this scan to history (browser storage is full). Older entries are kept in memory but will be lost on reload. Clear history or other site data to fix.');
+      // Defer the setState out of the effect tick — React 18+ flags synchronous setState in
+      // effects as a re-render trigger. queueMicrotask runs after the current batch.
+      queueMicrotask(() => {
+        setError(
+          'Could not save this scan to history (browser storage is full). Older entries are kept in memory but will be lost on reload. Clear history or other site data to fix.'
+        );
+      });
     }
   }, [history]);
 
@@ -1216,7 +1474,7 @@ export default function App() {
       out.push(h.source);
     }
     const q = githubUrl.trim().toLowerCase();
-    return q ? out.filter(u => u.toLowerCase().includes(q) && u.toLowerCase() !== q) : out;
+    return q ? out.filter((u) => u.toLowerCase().includes(q) && u.toLowerCase() !== q) : out;
   }, [history, githubUrl]);
 
   const loadFromHistory = useCallback((entry) => {
@@ -1228,45 +1486,52 @@ export default function App() {
   }, []);
 
   const removeHistoryEntry = useCallback((id) => {
-    setHistory(prev => prev.filter(e => e.id !== id));
+    setHistory((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
   const clearHistory = useCallback(() => {
-    if (typeof window !== 'undefined' && !window.confirm('Clear all scan history? This cannot be undone.')) return;
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm('Clear all scan history? This cannot be undone.')
+    )
+      return;
     setHistory([]);
   }, []);
 
   const flashCopy = useCallback((label) => {
     setCopied(label);
-    setTimeout(() => setCopied(c => (c === label ? null : c)), 1500);
+    setTimeout(() => setCopied((c) => (c === label ? null : c)), 1500);
   }, []);
 
-  const handleExport = useCallback(async (kind) => {
-    if (!results) return;
-    const stamp = timestampSlug(results.scannedAt);
-    if (kind === 'json-dl') {
-      downloadFile(formatJSON(results), `audit-${stamp}.json`, 'application/json');
-    } else if (kind === 'md-dl') {
-      downloadFile(formatMarkdown(results), `audit-${stamp}.md`, 'text/markdown');
-    } else if (kind === 'json-copy') {
-      const ok = await copyToClipboard(formatJSON(results));
-      if (ok) flashCopy('json-copy');
-    } else if (kind === 'md-copy') {
-      const ok = await copyToClipboard(formatMarkdown(results));
-      if (ok) flashCopy('md-copy');
-    } else if (kind === 'agent-copy') {
-      const ok = await copyToClipboard(formatAgentPrompt(results));
-      if (ok) flashCopy('agent-copy');
-      track('export.agent_prompt');
-    } else if (kind === 'pr-copy') {
-      const ok = await copyToClipboard(formatPRComment(results));
-      if (ok) flashCopy('pr-copy');
-      track('export.pr_comment');
-    } else if (kind === 'pr-dl') {
-      downloadFile(formatPRComment(results), `pr-comment-${stamp}.md`, 'text/markdown');
-      track('export.pr_comment');
-    }
-  }, [results, flashCopy]);
+  const handleExport = useCallback(
+    async (kind) => {
+      if (!results) return;
+      const stamp = timestampSlug(results.scannedAt);
+      if (kind === 'json-dl') {
+        downloadFile(formatJSON(results), `audit-${stamp}.json`, 'application/json');
+      } else if (kind === 'md-dl') {
+        downloadFile(formatMarkdown(results), `audit-${stamp}.md`, 'text/markdown');
+      } else if (kind === 'json-copy') {
+        const ok = await copyToClipboard(formatJSON(results));
+        if (ok) flashCopy('json-copy');
+      } else if (kind === 'md-copy') {
+        const ok = await copyToClipboard(formatMarkdown(results));
+        if (ok) flashCopy('md-copy');
+      } else if (kind === 'agent-copy') {
+        const ok = await copyToClipboard(formatAgentPrompt(results));
+        if (ok) flashCopy('agent-copy');
+        track('export.agent_prompt');
+      } else if (kind === 'pr-copy') {
+        const ok = await copyToClipboard(formatPRComment(results));
+        if (ok) flashCopy('pr-copy');
+        track('export.pr_comment');
+      } else if (kind === 'pr-dl') {
+        downloadFile(formatPRComment(results), `pr-comment-${stamp}.md`, 'text/markdown');
+        track('export.pr_comment');
+      }
+    },
+    [results, flashCopy]
+  );
 
   const handleFiles = useCallback(async (fileList) => {
     setError(null);
@@ -1275,20 +1540,25 @@ export default function App() {
       const arr = Array.from(fileList || []);
       fileLog.info('handleFiles received list', { totalFiles: arr.length });
       // Sample first few paths so we can see WHY filtering rejects, without leaking too much.
-      const samplePaths = arr.slice(0, 8).map(f => ({
+      const samplePaths = arr.slice(0, 8).map((f) => ({
         path: f.webkitRelativePath || f.name,
         sizeKb: Math.round((f.size || 0) / 1024),
       }));
       fileLog.debug('handleFiles sample paths', { samplePaths });
-      const filtered = arr.filter(f => {
+      const filtered = arr.filter((f) => {
         const path = f.webkitRelativePath || f.name;
         const matchesPattern = shouldScanFile(path);
         const okSize = f.size < 500000;
         return matchesPattern && okSize;
       });
-      fileLog.info('handleFiles after filter', { kept: filtered.length, dropped: arr.length - filtered.length });
+      fileLog.info('handleFiles after filter', {
+        kept: filtered.length,
+        dropped: arr.length - filtered.length,
+      });
       if (filtered.length === 0) {
-        fileLog.warn('No security-relevant files after filtering — folder may not contain code, or every match exceeded 500KB');
+        fileLog.warn(
+          'No security-relevant files after filtering — folder may not contain code, or every match exceeded 500KB'
+        );
         setError(
           arr.length === 0
             ? 'No files were attached. The folder may have been empty, or the browser blocked access.'
@@ -1297,22 +1567,34 @@ export default function App() {
         return;
       }
       // Settle individually so one bad blob doesn't lose every other file.
-      const settled = await Promise.allSettled(filtered.map(async f => ({
-        path: f.webkitRelativePath || f.name,
-        content: await f.text(),
-      })));
+      const settled = await Promise.allSettled(
+        filtered.map(async (f) => ({
+          path: f.webkitRelativePath || f.name,
+          content: await f.text(),
+        }))
+      );
       const out = [];
       let dropped = 0;
       settled.forEach((r, i) => {
         if (r.status === 'fulfilled') out.push(r.value);
-        else { dropped++; log.warn('handleFiles: file read failed', { name: filtered[i]?.name, error: r.reason?.message }); }
+        else {
+          dropped++;
+          log.warn('handleFiles: file read failed', {
+            name: filtered[i]?.name,
+            error: r.reason?.message,
+          });
+        }
       });
       if (out.length === 0) {
-        setError(`Could not read any of the ${filtered.length} selected files (all reads failed). Try a different selection.`);
+        setError(
+          `Could not read any of the ${filtered.length} selected files (all reads failed). Try a different selection.`
+        );
         return;
       }
       if (dropped > 0) {
-        setError(`${dropped} of ${filtered.length} files could not be read and were skipped. The rest will be scanned.`);
+        setError(
+          `${dropped} of ${filtered.length} files could not be read and were skipped. The rest will be scanned.`
+        );
       }
       setFiles(out);
     } catch (e) {
@@ -1332,7 +1614,9 @@ export default function App() {
     try {
       // Defensive: caller may have wired this directly to onClick. Strip event-shaped args.
       if (urlOverride && typeof urlOverride !== 'string') {
-        log.warn('handleScan called with non-string urlOverride; ignoring', { typeofArg: typeof urlOverride });
+        log.warn('handleScan called with non-string urlOverride; ignoring', {
+          typeofArg: typeof urlOverride,
+        });
         urlOverride = undefined;
       }
       safeSetScanning(true);
@@ -1344,8 +1628,15 @@ export default function App() {
       targetUrl = urlOverride || githubUrl;
       scanLog = log.child('scan');
       t0 = performance.now();
-      try { track(`scan_started.${effectiveMode}`); } catch (te) { log.warn('analytics track failed', { error: te?.message }); }
-      scanLog.info('Scan started', { mode: effectiveMode, source: effectiveMode === 'github' ? targetUrl : `${files.length} files` });
+      try {
+        track(`scan_started.${effectiveMode}`);
+      } catch (te) {
+        log.warn('analytics track failed', { error: te?.message });
+      }
+      scanLog.info('Scan started', {
+        mode: effectiveMode,
+        source: effectiveMode === 'github' ? targetUrl : `${files.length} files`,
+      });
     } catch (preflight) {
       // Pre-try-block crashed (TypeError, ReferenceError, etc). Surface it.
       const msg = preflight?.message || String(preflight);
@@ -1389,21 +1680,25 @@ export default function App() {
             ms: Math.round(performance.now() - tProbe),
           });
         }
-        await new Promise(r => setTimeout(r, 60));
+        await new Promise((r) => setTimeout(r, 60));
       }
       safeSetProbeErrors(probeFailures);
 
       allFindings.sort((a, b) => SEV_ORDER.indexOf(a.severity) - SEV_ORDER.indexOf(b.severity));
       // Attach a code snapshot (±5 lines) to each finding so reports + agent prompts have context.
-      const fileMap = new Map(scanFiles.map(f => [f.path, f.content]));
-      allFindings.forEach(f => {
+      const fileMap = new Map(scanFiles.map((f) => [f.path, f.content]));
+      allFindings.forEach((f) => {
         try {
           const content = fileMap.get(f.file);
           if (content && f.line) {
             f.snippet = buildSnippet(content, f.line, 5);
           }
         } catch (snipErr) {
-          scanLog.warn('Snippet build failed', { file: f.file, line: f.line, error: snipErr?.message });
+          scanLog.warn('Snippet build failed', {
+            file: f.file,
+            line: f.line,
+            error: snipErr?.message,
+          });
         }
       });
       const score = computeScore(allFindings);
@@ -1415,12 +1710,14 @@ export default function App() {
         source: effectiveMode === 'github' ? targetUrl : `${scanFiles.length} local files`,
       };
       safeSetResults(finalResults);
-      safeSetHistory(prev => [makeHistoryEntry(finalResults, effectiveMode), ...prev].slice(0, HISTORY_MAX));
+      safeSetHistory((prev) =>
+        [makeHistoryEntry(finalResults, effectiveMode), ...prev].slice(0, HISTORY_MAX)
+      );
       const totalMs = Math.round(performance.now() - t0);
       track('scan_completed');
       timing('scan.total', totalMs);
       // Record severity distribution as count buckets (no finding details).
-      allFindings.forEach(f => track(`finding_emitted.${f.severity}`));
+      allFindings.forEach((f) => track(`finding_emitted.${f.severity}`));
       scanLog.info('Scan complete', {
         score,
         findings: allFindings.length,
@@ -1437,14 +1734,16 @@ export default function App() {
     }
   };
 
-  const rerunFromHistory = useCallback((entry) => {
+  // Not memoized — handleScan is recreated each render so memoizing here would still recreate.
+  // The function is cheap to allocate and only one button can call it at a time.
+  const rerunFromHistory = (entry) => {
     if (entry.sourceType !== 'github') return; // upload entries can't be re-run (file contents not stored)
     setMode('github');
     setGithubUrl(entry.source);
     setUrlOpen(false);
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
     handleScan(entry.source);
-  }, [files, mode]);
+  };
 
   const reset = () => {
     setFiles([]);
@@ -1457,21 +1756,27 @@ export default function App() {
   const filteredFindings = useMemo(() => {
     if (!results) return [];
     if (filter === 'all') return results.findings;
-    return results.findings.filter(f => f.severity === filter || f.category === filter);
+    return results.findings.filter((f) => f.severity === filter || f.category === filter);
   }, [results, filter]);
 
   const sevCounts = useMemo(() => {
     if (!results) return {};
     const c = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-    results.findings.forEach(f => { c[f.severity] = (c[f.severity] || 0) + 1; });
+    results.findings.forEach((f) => {
+      c[f.severity] = (c[f.severity] || 0) + 1;
+    });
     return c;
   }, [results]);
 
   const catCounts = useMemo(() => {
     if (!results) return {};
     const c = {};
-    Object.keys(T.cat).forEach(k => { c[k] = 0; });
-    results.findings.forEach(f => { c[f.category] = (c[f.category] || 0) + 1; });
+    Object.keys(T.cat).forEach((k) => {
+      c[k] = 0;
+    });
+    results.findings.forEach((f) => {
+      c[f.category] = (c[f.category] || 0) + 1;
+    });
     return c;
   }, [results]);
 
@@ -1486,46 +1791,75 @@ export default function App() {
     <div className="ap-app">
       <GlobalStyle />
       <main id="main" style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 24px 80px' }}>
-
         {/* HEADER */}
-        <header style={{ marginBottom: 40, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24 }}>
+        <header
+          style={{
+            marginBottom: 40,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 24,
+          }}
+        >
           <div style={{ flex: '1 1 480px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
               <img
                 src="/maai-logo.svg"
                 alt="Mid-Atlantic AI"
                 style={{
-                  height: 96, width: 'auto',
+                  height: 96,
+                  width: 'auto',
                   display: 'block',
                 }}
               />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span className="ap-eyebrow" style={{ color: T.accent, fontSize: 13 }}>MID-ATLANTIC AI</span>
-                <span className="ap-eyebrow" style={{ color: T.textMuted, fontSize: 11 }}>PRE-FLIGHT AUDIT TOOL</span>
+                <span className="ap-eyebrow" style={{ color: T.accent, fontSize: 13 }}>
+                  MID-ATLANTIC AI
+                </span>
+                <span className="ap-eyebrow" style={{ color: T.textMuted, fontSize: 11 }}>
+                  PRE-FLIGHT AUDIT TOOL
+                </span>
               </div>
             </div>
-            <h1 className="ap-display" style={{
-              margin: 0, fontSize: 56, 
-              fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1,
-              color: T.text,
-            }}>
+            <h1
+              className="ap-display"
+              style={{
+                margin: 0,
+                fontSize: 56,
+                fontWeight: 400,
+                letterSpacing: '-0.02em',
+                lineHeight: 1,
+                color: T.text,
+              }}
+            >
               Pre-Flight <span style={{ color: T.accent }}>audit</span>
               <br />
               for vibe-coded apps.
             </h1>
-            <p style={{
-              maxWidth: 580, marginTop: 16, fontSize: 13,
-              color: T.textDim, lineHeight: 1.7,
-            }}>
+            <p
+              style={{
+                maxWidth: 580,
+                marginTop: 16,
+                fontSize: 13,
+                color: T.textDim,
+                lineHeight: 1.7,
+              }}
+            >
               A friendly second set of eyes for projects shipped through Lovable, Cursor, Bolt,
               Replit, Claude Code, or any AI tool. Catches the secrets, misconfigured RLS, exposed
               admin routes, and supply-chain hooks that the polish layer hides. All scanning runs
               locally in this tab.
             </p>
-            <p style={{
-              marginTop: 12, fontSize: 11, color: T.textMuted,
-            }}>
-              <time dateTime="2026-05-11">Updated 2026-05-11</time> · 26 probes · v0.3 · Free, no signup
+            <p
+              style={{
+                marginTop: 12,
+                fontSize: 11,
+                color: T.textMuted,
+              }}
+            >
+              <time dateTime="2026-05-11">Updated 2026-05-11</time> · 26 probes · v0.3 · Free, no
+              signup
             </p>
           </div>
         </header>
@@ -1538,14 +1872,20 @@ export default function App() {
                 className={`ap-tab ${mode === 'upload' ? 'ap-tab-active' : ''}`}
                 onClick={() => setMode('upload')}
               >
-                <Upload size={12} style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }} />
+                <Upload
+                  size={12}
+                  style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }}
+                />
                 Files / Folder
               </button>
               <button
                 className={`ap-tab ${mode === 'github' ? 'ap-tab-active' : ''}`}
                 onClick={() => setMode('github')}
               >
-                <Github size={12} style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }} />
+                <Github
+                  size={12}
+                  style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }}
+                />
                 GitHub URL
               </button>
             </div>
@@ -1553,18 +1893,35 @@ export default function App() {
             <div style={{ padding: 28 }}>
               {mode === 'upload' && (
                 <div>
-                  <div className="ap-eyebrow" style={{ marginBottom: 14 }}>UPLOAD SOURCE</div>
+                  <div className="ap-eyebrow" style={{ marginBottom: 14 }}>
+                    UPLOAD SOURCE
+                  </div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-                    <button className="ap-btn ap-btn-ghost" onClick={() => fileInputRef.current?.click()}>
-                      <FileText size={14} style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-2px' }} />
+                    <button
+                      className="ap-btn ap-btn-ghost"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <FileText
+                        size={14}
+                        style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-2px' }}
+                      />
                       Select Files
                     </button>
-                    <button className="ap-btn ap-btn-ghost" onClick={() => folderInputRef.current?.click()}>
-                      <Folder size={14} style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-2px' }} />
+                    <button
+                      className="ap-btn ap-btn-ghost"
+                      onClick={() => folderInputRef.current?.click()}
+                    >
+                      <Folder
+                        size={14}
+                        style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-2px' }}
+                      />
                       Select Folder
                     </button>
                     <input
-                      ref={fileInputRef} type="file" multiple style={{ display: 'none' }}
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      style={{ display: 'none' }}
                       onChange={(e) => {
                         log.info('file input change fired', {
                           filesAttached: e.target.files?.length || 0,
@@ -1576,11 +1933,11 @@ export default function App() {
                       ref={folderInputRef}
                       type="file"
                       multiple
-                      // React passes through unknown DOM attrs as lowercase, but webkitdirectory
-                      // is camelCased on the React side. Spread an extra DOM attr too for safety.
+                      // webkitdirectory is the only universally-implemented folder-picker attr
+                      // (Chrome, Edge, Safari). Firefox does not support folder upload via
+                      // <input>, so the obsolete `directory` / `mozdirectory` attrs would
+                      // only add unknown-prop warnings, not gain coverage.
                       webkitdirectory=""
-                      directory=""
-                      mozdirectory=""
                       style={{ display: 'none' }}
                       onChange={(e) => {
                         log.info('folder input change fired', {
@@ -1591,25 +1948,50 @@ export default function App() {
                     />
                   </div>
                   <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
-                    Scans .env files, package.json, source files (.ts/.tsx/.js/.jsx), Supabase migrations,
-                    Firebase rules, next.config, vercel.json. node_modules and build outputs are skipped automatically.
-                    Files stay in this tab — nothing uploads.
+                    Scans .env files, package.json, source files (.ts/.tsx/.js/.jsx), Supabase
+                    migrations, Firebase rules, next.config, vercel.json. node_modules and build
+                    outputs are skipped automatically. Files stay in this tab — nothing uploads.
                   </div>
                   {files.length > 0 && (
-                    <div style={{
-                      marginTop: 16, padding: 12, background: T.bg,
-                      border: `1px solid ${T.border}`, fontSize: 12, color: T.textDim,
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div
+                      style={{
+                        marginTop: 16,
+                        padding: 12,
+                        background: T.bg,
+                        border: `1px solid ${T.border}`,
+                        fontSize: 12,
+                        color: T.textDim,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginBottom: 8,
+                        }}
+                      >
                         <span className="ap-eyebrow">{files.length} FILES STAGED</span>
-                        <button onClick={() => setFiles([])} style={{
-                          background: 'transparent', border: 'none', color: T.textMuted,
-                          cursor: 'pointer', fontFamily: fontMono, fontSize: 11,
-                        }}>clear</button>
+                        <button
+                          onClick={() => setFiles([])}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: T.textMuted,
+                            cursor: 'pointer',
+                            fontFamily: fontMono,
+                            fontSize: 11,
+                          }}
+                        >
+                          clear
+                        </button>
                       </div>
                       <div style={{ maxHeight: 120, overflowY: 'auto' }}>
-                        {files.slice(0, 10).map(f => (
-                          <div key={f.path} className="ap-mono" style={{ fontSize: 11, padding: '2px 0', wordBreak: 'break-all' }}>
+                        {files.slice(0, 10).map((f) => (
+                          <div
+                            key={f.path}
+                            className="ap-mono"
+                            style={{ fontSize: 11, padding: '2px 0', wordBreak: 'break-all' }}
+                          >
                             {f.path}
                           </div>
                         ))}
@@ -1626,7 +2008,11 @@ export default function App() {
 
               {mode === 'github' && (
                 <div>
-                  <label htmlFor="gh-url-input" className="ap-eyebrow" style={{ display: 'block', marginBottom: 14 }}>
+                  <label
+                    htmlFor="gh-url-input"
+                    className="ap-eyebrow"
+                    style={{ display: 'block', marginBottom: 14 }}
+                  >
                     PUBLIC REPOSITORY URL
                   </label>
                   <div style={{ position: 'relative' }}>
@@ -1641,24 +2027,30 @@ export default function App() {
                       aria-expanded={urlOpen && urlSuggestions.length > 0}
                       aria-controls="url-suggestion-listbox"
                       aria-activedescendant={urlIndex >= 0 ? `url-sugg-${urlIndex}` : undefined}
-                      onChange={(e) => { setGithubUrl(e.target.value); setUrlOpen(true); setUrlIndex(-1); }}
+                      onChange={(e) => {
+                        setGithubUrl(e.target.value);
+                        setUrlOpen(true);
+                        setUrlIndex(-1);
+                      }}
                       onFocus={() => setUrlOpen(true)}
                       onBlur={() => setTimeout(() => setUrlOpen(false), 150)}
                       onKeyDown={(e) => {
                         if (e.key === 'Escape') {
                           if (urlOpen) e.stopPropagation();
-                          setUrlOpen(false); setUrlIndex(-1); return;
+                          setUrlOpen(false);
+                          setUrlIndex(-1);
+                          return;
                         }
                         if (e.key === 'ArrowDown') {
                           // Always open the dropdown on ArrowDown if there are suggestions, even when closed.
                           if (urlSuggestions.length) {
                             e.preventDefault();
                             setUrlOpen(true);
-                            setUrlIndex(i => Math.min(i + 1, urlSuggestions.length - 1));
+                            setUrlIndex((i) => Math.min(i + 1, urlSuggestions.length - 1));
                           }
                         } else if (e.key === 'ArrowUp' && urlSuggestions.length) {
                           e.preventDefault();
-                          setUrlIndex(i => Math.max(i - 1, -1));
+                          setUrlIndex((i) => Math.max(i - 1, -1));
                         } else if (e.key === 'Enter' && urlIndex >= 0 && urlSuggestions.length) {
                           e.preventDefault();
                           setGithubUrl(urlSuggestions[urlIndex]);
@@ -1666,9 +2058,11 @@ export default function App() {
                           setUrlIndex(-1);
                           track('url_autocomplete_used');
                         } else if (e.key === 'Home' && urlSuggestions.length) {
-                          e.preventDefault(); setUrlIndex(0);
+                          e.preventDefault();
+                          setUrlIndex(0);
                         } else if (e.key === 'End' && urlSuggestions.length) {
-                          e.preventDefault(); setUrlIndex(urlSuggestions.length - 1);
+                          e.preventDefault();
+                          setUrlIndex(urlSuggestions.length - 1);
                         }
                       }}
                     />
@@ -1679,16 +2073,25 @@ export default function App() {
                         aria-label="GitHub URLs from scan history"
                         className="ap-fade-in"
                         style={{
-                          position: 'absolute', top: '100%', left: 0, right: 0,
-                          marginTop: 4, background: T.panel,
-                          border: `1px solid ${T.borderAlt}`, zIndex: 20,
-                          maxHeight: 240, overflowY: 'auto',
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          marginTop: 4,
+                          background: T.panel,
+                          border: `1px solid ${T.borderAlt}`,
+                          zIndex: 20,
+                          maxHeight: 240,
+                          overflowY: 'auto',
                           boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
                         }}
                         onMouseDown={(e) => e.preventDefault()}
                       >
                         <div style={{ padding: '6px 12px', borderBottom: `1px solid ${T.border}` }}>
-                          <span className="ap-eyebrow">FROM HISTORY · {urlSuggestions.length} match{urlSuggestions.length === 1 ? '' : 'es'}</span>
+                          <span className="ap-eyebrow">
+                            FROM HISTORY · {urlSuggestions.length} match
+                            {urlSuggestions.length === 1 ? '' : 'es'}
+                          </span>
                         </div>
                         {urlSuggestions.map((u, i) => (
                           <button
@@ -1710,20 +2113,29 @@ export default function App() {
                               padding: '10px 12px',
                               // Stronger active highlight (was panelHover ~1.5:1; now adds left border).
                               background: i === urlIndex ? T.panelAlt : 'transparent',
-                              borderLeft: i === urlIndex ? `3px solid ${T.accent}` : '3px solid transparent',
+                              borderLeft:
+                                i === urlIndex ? `3px solid ${T.accent}` : '3px solid transparent',
                               color: T.text,
                               borderTop: 'none',
                               borderRight: 'none',
-                              borderBottom: i < urlSuggestions.length - 1 ? `1px solid ${T.border}` : 'none',
+                              borderBottom:
+                                i < urlSuggestions.length - 1 ? `1px solid ${T.border}` : 'none',
                               cursor: 'pointer',
                               fontFamily: fontMono,
                               fontSize: 12,
                               fontWeight: i === urlIndex ? 600 : 400,
                               wordBreak: 'break-all',
-                              display: 'flex', alignItems: 'center', gap: 8,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
                             }}
                           >
-                            <Github size={12} color={T.textMuted} aria-hidden="true" style={{ flexShrink: 0 }} />
+                            <Github
+                              size={12}
+                              color={T.textMuted}
+                              aria-hidden="true"
+                              style={{ flexShrink: 0 }}
+                            />
                             <span>{u}</span>
                           </button>
                         ))}
@@ -1731,9 +2143,10 @@ export default function App() {
                     )}
                   </div>
                   <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.6, marginTop: 12 }}>
-                    Public repos only. Reads up to 80 security-relevant files via the unauthenticated GitHub API
-                    (60 requests per hour limit per IP). If the fetch fails — sandboxed iframes sometimes block cross-origin
-                    requests — download the repo as a zip from GitHub, expand it, and use the Files / Folder tab instead.
+                    Public repos only. Reads up to 80 security-relevant files via the
+                    unauthenticated GitHub API (60 requests per hour limit per IP). If the fetch
+                    fails — sandboxed iframes sometimes block cross-origin requests — download the
+                    repo as a zip from GitHub, expand it, and use the Files / Folder tab instead.
                     Start typing to autocomplete from prior scans.
                   </div>
                 </div>
@@ -1743,14 +2156,29 @@ export default function App() {
                 <button
                   className="ap-btn"
                   onClick={() => handleScan()}
-                  disabled={scanning || (mode === 'upload' && files.length === 0) || (mode === 'github' && !githubUrl)}
+                  disabled={
+                    scanning ||
+                    (mode === 'upload' && files.length === 0) ||
+                    (mode === 'github' && !githubUrl)
+                  }
                 >
                   {scanning ? (
-                    <><Loader2 size={12} className="ap-spin" style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }} />
-                    Scanning</>
+                    <>
+                      <Loader2
+                        size={12}
+                        className="ap-spin"
+                        style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }}
+                      />
+                      Scanning
+                    </>
                   ) : (
-                    <><Zap size={12} style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }} />
-                    Run Audit</>
+                    <>
+                      <Zap
+                        size={12}
+                        style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }}
+                      />
+                      Run Audit
+                    </>
                   )}
                 </button>
                 {scanning && progress.stage && (
@@ -1782,13 +2210,19 @@ export default function App() {
                   aria-live="assertive"
                   aria-atomic="true"
                   style={{
-                    marginTop: 16, padding: 12,
+                    marginTop: 16,
+                    padding: 12,
                     background: T.sev.critical.bg,
                     border: `1px solid ${T.sev.critical.border}`,
-                    color: T.sev.critical.fg, fontSize: 12,
+                    color: T.sev.critical.fg,
+                    fontSize: 12,
                   }}
                 >
-                  <AlertCircle size={14} aria-hidden="true" style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-2px' }} />
+                  <AlertCircle
+                    size={14}
+                    aria-hidden="true"
+                    style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-2px' }}
+                  />
                   {error}
                 </div>
               )}
@@ -1799,24 +2233,37 @@ export default function App() {
         {/* RESULTS */}
         {results && tier && (
           <div className="ap-fade-in">
-
             {/* TOP NAV: clear way back to the input screen */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              marginBottom: 16, gap: 12, flexWrap: 'wrap',
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 16,
+                gap: 12,
+                flexWrap: 'wrap',
+              }}
+            >
               <button
-                onClick={() => { reset(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                onClick={() => {
+                  reset();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 className="ap-btn ap-btn-ghost"
                 style={{ padding: '8px 14px', fontSize: 11 }}
                 title="Go back to the input screen"
                 type="button"
               >
-                <ChevronLeft size={12} style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }} aria-hidden="true" />
+                <ChevronLeft
+                  size={12}
+                  style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }}
+                  aria-hidden="true"
+                />
                 Back to Home · New Scan
               </button>
               <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
-                Source: <span style={{ color: T.textDim, wordBreak: 'break-all' }}>{results.source}</span>
+                Source:{' '}
+                <span style={{ color: T.textDim, wordBreak: 'break-all' }}>{results.source}</span>
               </span>
             </div>
 
@@ -1824,51 +2271,119 @@ export default function App() {
             {diff && (
               <div className="ap-card" style={{ padding: 16, marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <span className="ap-eyebrow">DELTA SINCE {timeAgo(diff.priorScannedAt).toUpperCase()}</span>
+                  <span className="ap-eyebrow">
+                    DELTA SINCE {timeAgo(diff.priorScannedAt).toUpperCase()}
+                  </span>
                   <span className="ap-mono" style={{ fontSize: 12, color: T.textDim }}>
                     Prior score: {diff.priorScore} → {results.score}
                     {diff.deltaScore !== 0 && (
-                      <span style={{
-                        marginLeft: 8,
-                        color: diff.deltaScore > 0 ? T.good : T.sev.critical.fg,
-                        fontWeight: 600,
-                      }}>
-                        {diff.deltaScore > 0 ? <TrendingUp size={11} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-1px', marginRight: 2 }} /> :
-                         diff.deltaScore < 0 ? <TrendingDown size={11} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-1px', marginRight: 2 }} /> :
-                                                <Minus size={11} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-1px', marginRight: 2 }} />}
-                        {diff.deltaScore > 0 ? '+' : ''}{diff.deltaScore}
+                      <span
+                        style={{
+                          marginLeft: 8,
+                          color: diff.deltaScore > 0 ? T.good : T.sev.critical.fg,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {diff.deltaScore > 0 ? (
+                          <TrendingUp
+                            size={11}
+                            aria-hidden="true"
+                            style={{
+                              display: 'inline-block',
+                              verticalAlign: '-1px',
+                              marginRight: 2,
+                            }}
+                          />
+                        ) : diff.deltaScore < 0 ? (
+                          <TrendingDown
+                            size={11}
+                            aria-hidden="true"
+                            style={{
+                              display: 'inline-block',
+                              verticalAlign: '-1px',
+                              marginRight: 2,
+                            }}
+                          />
+                        ) : (
+                          <Minus
+                            size={11}
+                            aria-hidden="true"
+                            style={{
+                              display: 'inline-block',
+                              verticalAlign: '-1px',
+                              marginRight: 2,
+                            }}
+                          />
+                        )}
+                        {diff.deltaScore > 0 ? '+' : ''}
+                        {diff.deltaScore}
                       </span>
                     )}
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 18, marginTop: 10, flexWrap: 'wrap' }}>
                   <div>
-                    <span className="ap-mono" style={{ fontSize: 11, color: T.sev.critical.fg }}>NEW:</span>
-                    <span className="ap-mono" style={{ fontSize: 12, color: T.text, marginLeft: 6 }}>
+                    <span className="ap-mono" style={{ fontSize: 11, color: T.sev.critical.fg }}>
+                      NEW:
+                    </span>
+                    <span
+                      className="ap-mono"
+                      style={{ fontSize: 12, color: T.text, marginLeft: 6 }}
+                    >
                       {diff.introduced.count}
                     </span>
-                    {SEV_ORDER.filter(s => diff.introduced.bySeverity[s]).map(s => (
-                      <span key={s} className="ap-mono" style={{
-                        marginLeft: 6, fontSize: 10, padding: '1px 5px',
-                        color: T.sev[s].fg, background: T.sev[s].bg, border: `1px solid ${T.sev[s].border}`,
-                      }}>{diff.introduced.bySeverity[s]} {s}</span>
+                    {SEV_ORDER.filter((s) => diff.introduced.bySeverity[s]).map((s) => (
+                      <span
+                        key={s}
+                        className="ap-mono"
+                        style={{
+                          marginLeft: 6,
+                          fontSize: 10,
+                          padding: '1px 5px',
+                          color: T.sev[s].fg,
+                          background: T.sev[s].bg,
+                          border: `1px solid ${T.sev[s].border}`,
+                        }}
+                      >
+                        {diff.introduced.bySeverity[s]} {s}
+                      </span>
                     ))}
                   </div>
                   <div>
-                    <span className="ap-mono" style={{ fontSize: 11, color: T.good }}>FIXED:</span>
-                    <span className="ap-mono" style={{ fontSize: 12, color: T.text, marginLeft: 6 }}>
+                    <span className="ap-mono" style={{ fontSize: 11, color: T.good }}>
+                      FIXED:
+                    </span>
+                    <span
+                      className="ap-mono"
+                      style={{ fontSize: 12, color: T.text, marginLeft: 6 }}
+                    >
                       {diff.fixed.count}
                     </span>
-                    {SEV_ORDER.filter(s => diff.fixed.bySeverity[s]).map(s => (
-                      <span key={s} className="ap-mono" style={{
-                        marginLeft: 6, fontSize: 10, padding: '1px 5px',
-                        color: T.sev[s].fg, background: T.sev[s].bg, border: `1px solid ${T.sev[s].border}`,
-                      }}>{diff.fixed.bySeverity[s]} {s}</span>
+                    {SEV_ORDER.filter((s) => diff.fixed.bySeverity[s]).map((s) => (
+                      <span
+                        key={s}
+                        className="ap-mono"
+                        style={{
+                          marginLeft: 6,
+                          fontSize: 10,
+                          padding: '1px 5px',
+                          color: T.sev[s].fg,
+                          background: T.sev[s].bg,
+                          border: `1px solid ${T.sev[s].border}`,
+                        }}
+                      >
+                        {diff.fixed.bySeverity[s]} {s}
+                      </span>
                     ))}
                   </div>
                   <div>
-                    <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>STILL OPEN:</span>
-                    <span className="ap-mono" style={{ fontSize: 12, color: T.text, marginLeft: 6 }}>
+                    <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
+                      STILL OPEN:
+                    </span>
+                    <span
+                      className="ap-mono"
+                      style={{ fontSize: 12, color: T.text, marginLeft: 6 }}
+                    >
                       {diff.persisted.count}
                     </span>
                   </div>
@@ -1877,25 +2392,47 @@ export default function App() {
             )}
 
             {/* RISK HEADER */}
-            <div className="ap-card" style={{
-              padding: 28, marginBottom: 16,
-              borderColor: tier.ring,
-              background: `linear-gradient(135deg, ${T.panel} 0%, ${T.bg} 100%)`,
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 24 }}>
+            <div
+              className="ap-card"
+              style={{
+                padding: 28,
+                marginBottom: 16,
+                borderColor: tier.ring,
+                background: `linear-gradient(135deg, ${T.panel} 0%, ${T.bg} 100%)`,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  flexWrap: 'wrap',
+                  gap: 24,
+                }}
+              >
                 <div style={{ flex: '1 1 320px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
                     <AlertTriangle size={22} color={tier.color} strokeWidth={1.5} />
-                    <span className="ap-display" style={{
-                      fontSize: 36,  color: tier.color,
-                    }}>{tier.label}</span>
-                    <span className="ap-mono" style={{
-                      fontSize: 11, color: tier.color,
-                      background: 'rgba(0,0,0,0.3)',
-                      border: `1px solid ${tier.ring}`,
-                      padding: '4px 10px',
-                      letterSpacing: '0.1em',
-                    }}>
+                    <span
+                      className="ap-display"
+                      style={{
+                        fontSize: 36,
+                        color: tier.color,
+                      }}
+                    >
+                      {tier.label}
+                    </span>
+                    <span
+                      className="ap-mono"
+                      style={{
+                        fontSize: 11,
+                        color: tier.color,
+                        background: 'rgba(0,0,0,0.3)',
+                        border: `1px solid ${tier.ring}`,
+                        padding: '4px 10px',
+                        letterSpacing: '0.1em',
+                      }}
+                    >
                       {results.findings.length} OPEN
                     </span>
                   </div>
@@ -1906,20 +2443,43 @@ export default function App() {
                         WHAT ATTACKERS CAN DO RIGHT NOW
                       </div>
                       <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                        {topFindings.map((f, i) => (
-                          <li key={f.id} style={{
-                            fontSize: 14, color: T.text, padding: '4px 0',
-                            paddingLeft: 18, position: 'relative',
-                          }}>
-                            <span aria-hidden="true" style={{
-                              position: 'absolute', left: 0, top: 10, width: 6, height: 6,
-                              background: T.sev[f.severity].fg, borderRadius: '50%',
-                            }} />
+                        {topFindings.map((f) => (
+                          <li
+                            key={f.id}
+                            style={{
+                              fontSize: 14,
+                              color: T.text,
+                              padding: '4px 0',
+                              paddingLeft: 18,
+                              position: 'relative',
+                            }}
+                          >
+                            <span
+                              aria-hidden="true"
+                              style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 10,
+                                width: 6,
+                                height: 6,
+                                background: T.sev[f.severity].fg,
+                                borderRadius: '50%',
+                              }}
+                            />
                             <span className="ap-sr-only">{f.severity}: </span>
-                            <span className="ap-mono" style={{
-                              fontSize: 10, color: T.sev[f.severity].fg, marginRight: 8,
-                              textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600,
-                            }}>{f.severity}</span>
+                            <span
+                              className="ap-mono"
+                              style={{
+                                fontSize: 10,
+                                color: T.sev[f.severity].fg,
+                                marginRight: 8,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.1em',
+                                fontWeight: 600,
+                              }}
+                            >
+                              {f.severity}
+                            </span>
                             {f.title}
                           </li>
                         ))}
@@ -1929,22 +2489,39 @@ export default function App() {
 
                   {results.findings.length === 0 && results.filesScanned > 0 && (
                     <div style={{ fontSize: 14, color: T.good, marginTop: 8 }}>
-                      <ShieldCheck size={16} aria-hidden="true" style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-3px' }} />
-                      No findings from this probe set across {results.filesScanned} file{results.filesScanned === 1 ? '' : 's'}.
-                      This does not mean the app is fully secure; manual IDOR testing and runtime probing remain out of scope.
+                      <ShieldCheck
+                        size={16}
+                        aria-hidden="true"
+                        style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-3px' }}
+                      />
+                      No findings from this probe set across {results.filesScanned} file
+                      {results.filesScanned === 1 ? '' : 's'}. This does not mean the app is fully
+                      secure; manual IDOR testing and runtime probing remain out of scope.
                     </div>
                   )}
                   {results.filesScanned === 0 && (
-                    <div role="alert" style={{
-                      fontSize: 14, color: T.sev.high.fg, marginTop: 8,
-                      padding: 12,
-                      background: T.sev.high.bg,
-                      border: `1px solid ${T.sev.high.border}`,
-                    }}>
-                      <AlertTriangle size={16} aria-hidden="true" style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-3px' }} />
-                      <strong>0 files were scanned</strong> — the score of {results.score}/100 is not real. The project may not contain any files matching our include patterns
-                      (.env, package.json, .ts/.tsx/.js/.jsx, .html, .py, .sql, firestore.rules, next.config.*, GitHub workflows, MCP configs).
-                      If this is an HTML-only or static project, the new HTML Hygiene probe should still find things — check that .html files were actually selected.
+                    <div
+                      role="alert"
+                      style={{
+                        fontSize: 14,
+                        color: T.sev.high.fg,
+                        marginTop: 8,
+                        padding: 12,
+                        background: T.sev.high.bg,
+                        border: `1px solid ${T.sev.high.border}`,
+                      }}
+                    >
+                      <AlertTriangle
+                        size={16}
+                        aria-hidden="true"
+                        style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-3px' }}
+                      />
+                      <strong>0 files were scanned</strong> — the score of {results.score}/100 is
+                      not real. The project may not contain any files matching our include patterns
+                      (.env, package.json, .ts/.tsx/.js/.jsx, .html, .py, .sql, firestore.rules,
+                      next.config.*, GitHub workflows, MCP configs). If this is an HTML-only or
+                      static project, the new HTML Hygiene probe should still find things — check
+                      that .html files were actually selected.
                     </div>
                   )}
                 </div>
@@ -1953,10 +2530,19 @@ export default function App() {
             </div>
 
             {/* META + CATEGORIES */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: 16,
+                marginBottom: 24,
+              }}
+            >
               <div className="ap-card" style={{ padding: 20 }}>
-                <div className="ap-eyebrow" style={{ marginBottom: 16 }}>RISK BY CATEGORY</div>
-                {Object.keys(T.cat).map(cat => (
+                <div className="ap-eyebrow" style={{ marginBottom: 16 }}>
+                  RISK BY CATEGORY
+                </div>
+                {Object.keys(T.cat).map((cat) => (
                   <CategoryBar
                     key={cat}
                     name={cat}
@@ -1967,33 +2553,77 @@ export default function App() {
                 ))}
               </div>
               <div className="ap-card" style={{ padding: 20 }}>
-                <div className="ap-eyebrow" style={{ marginBottom: 16 }}>SEVERITY DISTRIBUTION</div>
-                {SEV_ORDER.map(s => (
-                  <div key={s} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>
+                <div className="ap-eyebrow" style={{ marginBottom: 16 }}>
+                  SEVERITY DISTRIBUTION
+                </div>
+                {SEV_ORDER.map((s) => (
+                  <div
+                    key={s}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '8px 0',
+                      borderBottom: `1px solid ${T.border}`,
+                    }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ width: 8, height: 8, background: T.sev[s].fg, display: 'inline-block' }} />
-                      <span className="ap-mono" style={{ fontSize: 12, textTransform: 'uppercase', color: T.text }}>{s}</span>
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          background: T.sev[s].fg,
+                          display: 'inline-block',
+                        }}
+                      />
+                      <span
+                        className="ap-mono"
+                        style={{ fontSize: 12, textTransform: 'uppercase', color: T.text }}
+                      >
+                        {s}
+                      </span>
                     </div>
-                    <span className="ap-mono" style={{ fontSize: 13, color: sevCounts[s] ? T.sev[s].fg : T.textMuted }}>
+                    <span
+                      className="ap-mono"
+                      style={{ fontSize: 13, color: sevCounts[s] ? T.sev[s].fg : T.textMuted }}
+                    >
                       {sevCounts[s] || 0}
                     </span>
                   </div>
                 ))}
               </div>
               <div className="ap-card" style={{ padding: 20 }}>
-                <div className="ap-eyebrow" style={{ marginBottom: 16 }}>SCAN META</div>
+                <div className="ap-eyebrow" style={{ marginBottom: 16 }}>
+                  SCAN META
+                </div>
                 <div style={{ fontSize: 12, color: T.textDim, lineHeight: 2 }}>
-                  <div><span style={{ color: T.textMuted }}>Source: </span><span className="ap-mono" style={{ wordBreak: 'break-all' }}>{results.source}</span></div>
-                  <div><span style={{ color: T.textMuted }}>Files: </span>{results.filesScanned}</div>
-                  <div><span style={{ color: T.textMuted }}>Probes: </span>{PROBES.length}</div>
-                  <div><span style={{ color: T.textMuted }}>Time: </span>{results.scannedAt.toLocaleString()}</div>
+                  <div>
+                    <span style={{ color: T.textMuted }}>Source: </span>
+                    <span className="ap-mono" style={{ wordBreak: 'break-all' }}>
+                      {results.source}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ color: T.textMuted }}>Files: </span>
+                    {results.filesScanned}
+                  </div>
+                  <div>
+                    <span style={{ color: T.textMuted }}>Probes: </span>
+                    {PROBES.length}
+                  </div>
+                  <div>
+                    <span style={{ color: T.textMuted }}>Time: </span>
+                    {results.scannedAt.toLocaleString()}
+                  </div>
                 </div>
                 <button
                   className="ap-btn ap-btn-ghost"
                   onClick={reset}
                   style={{ marginTop: 14, width: '100%' }}
                 >
-                  <RefreshCw size={12} style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }} />
+                  <RefreshCw
+                    size={12}
+                    style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }}
+                  />
                   New Scan
                 </button>
               </div>
@@ -2004,7 +2634,8 @@ export default function App() {
               <div
                 role="alert"
                 style={{
-                  padding: 14, marginBottom: 16,
+                  padding: 14,
+                  marginBottom: 16,
                   background: T.sev.medium.bg,
                   border: `1px solid ${T.sev.medium.border}`,
                   borderLeft: `3px solid ${T.sev.medium.fg}`,
@@ -2013,16 +2644,23 @@ export default function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <AlertTriangle size={14} color={T.sev.medium.fg} />
                   <span className="ap-eyebrow" style={{ color: T.sev.medium.fg }}>
-                    {probeErrors.length} probe{probeErrors.length === 1 ? '' : 's'} hit a snag · results may be incomplete
+                    {probeErrors.length} probe{probeErrors.length === 1 ? '' : 's'} hit a snag ·
+                    results may be incomplete
                   </span>
                 </div>
                 <div style={{ fontSize: 12, color: T.textDim, lineHeight: 1.6 }}>
-                  The remaining probes ran successfully. Open the Diagnostics panel for stack traces.
+                  The remaining probes ran successfully. Open the Diagnostics panel for stack
+                  traces.
                 </div>
                 <ul style={{ margin: '8px 0 0', padding: 0, listStyle: 'none' }}>
                   {probeErrors.map((p, i) => (
-                    <li key={i} className="ap-mono" style={{ fontSize: 11, color: T.textDim, padding: '2px 0' }}>
-                      <span style={{ color: T.sev.medium.fg }}>·</span> <strong>{p.probe}</strong>: {p.error}
+                    <li
+                      key={i}
+                      className="ap-mono"
+                      style={{ fontSize: 11, color: T.textDim, padding: '2px 0' }}
+                    >
+                      <span style={{ color: T.sev.medium.fg }}>·</span> <strong>{p.probe}</strong>:{' '}
+                      {p.error}
                     </li>
                   ))}
                 </ul>
@@ -2032,11 +2670,22 @@ export default function App() {
             {/* EXPORT / SHARE TOOLBAR */}
             {results.findings.length > 0 && (
               <div className="ap-card" style={{ padding: 16, marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
+                >
                   <div>
-                    <div className="ap-eyebrow" style={{ marginBottom: 4 }}>EXPORT / SHARE</div>
+                    <div className="ap-eyebrow" style={{ marginBottom: 4 }}>
+                      EXPORT / SHARE
+                    </div>
                     <div style={{ fontSize: 12, color: T.textMuted }}>
-                      Each export includes a ±5-line code snapshot per finding so an agent or dev has enough context to fix.
+                      Each export includes a ±5-line code snapshot per finding so an agent or dev
+                      has enough context to fix.
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -2045,7 +2694,10 @@ export default function App() {
                       onClick={() => handleExport('json-dl')}
                       title="Download a machine-readable JSON report"
                     >
-                      <Download size={12} style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }} />
+                      <Download
+                        size={12}
+                        style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }}
+                      />
                       JSON
                     </button>
                     <button
@@ -2053,7 +2705,10 @@ export default function App() {
                       onClick={() => handleExport('md-dl')}
                       title="Download a human-readable Markdown report"
                     >
-                      <Download size={12} style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }} />
+                      <Download
+                        size={12}
+                        style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }}
+                      />
                       Markdown
                     </button>
                     <button
@@ -2061,9 +2716,24 @@ export default function App() {
                       onClick={() => handleExport('pr-copy')}
                       title="Copy a Markdown block formatted for a GitHub PR comment (collapsible <details>)"
                     >
-                      {copied === 'pr-copy'
-                        ? <Check size={12} aria-hidden="true" style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px', color: T.good }} />
-                        : <Github size={12} aria-hidden="true" style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }} />}
+                      {copied === 'pr-copy' ? (
+                        <Check
+                          size={12}
+                          aria-hidden="true"
+                          style={{
+                            display: 'inline-block',
+                            marginRight: 6,
+                            verticalAlign: '-1px',
+                            color: T.good,
+                          }}
+                        />
+                      ) : (
+                        <Github
+                          size={12}
+                          aria-hidden="true"
+                          style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }}
+                        />
+                      )}
                       {copied === 'pr-copy' ? 'Copied' : 'Copy PR Comment'}
                     </button>
                     <button
@@ -2071,9 +2741,22 @@ export default function App() {
                       onClick={() => handleExport('agent-copy')}
                       title="Copy a fix-this prompt formatted for Claude / GPT / Cursor"
                     >
-                      {copied === 'agent-copy'
-                        ? <Check size={12} style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px', color: T.good }} />
-                        : <MessageSquare size={12} style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }} />}
+                      {copied === 'agent-copy' ? (
+                        <Check
+                          size={12}
+                          style={{
+                            display: 'inline-block',
+                            marginRight: 6,
+                            verticalAlign: '-1px',
+                            color: T.good,
+                          }}
+                        />
+                      ) : (
+                        <MessageSquare
+                          size={12}
+                          style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }}
+                        />
+                      )}
                       {copied === 'agent-copy' ? 'Copied' : 'Copy Agent Prompt'}
                     </button>
                     <button
@@ -2081,9 +2764,22 @@ export default function App() {
                       onClick={() => handleExport('md-copy')}
                       title="Copy the Markdown report to clipboard"
                     >
-                      {copied === 'md-copy'
-                        ? <Check size={12} style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px', color: T.good }} />
-                        : <Copy size={12} style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }} />}
+                      {copied === 'md-copy' ? (
+                        <Check
+                          size={12}
+                          style={{
+                            display: 'inline-block',
+                            marginRight: 6,
+                            verticalAlign: '-1px',
+                            color: T.good,
+                          }}
+                        />
+                      ) : (
+                        <Copy
+                          size={12}
+                          style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }}
+                        />
+                      )}
                       {copied === 'md-copy' ? 'Copied' : 'Copy MD'}
                     </button>
                     <button
@@ -2091,9 +2787,22 @@ export default function App() {
                       onClick={() => handleExport('json-copy')}
                       title="Copy raw JSON to clipboard"
                     >
-                      {copied === 'json-copy'
-                        ? <Check size={12} style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px', color: T.good }} />
-                        : <FileJson size={12} style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }} />}
+                      {copied === 'json-copy' ? (
+                        <Check
+                          size={12}
+                          style={{
+                            display: 'inline-block',
+                            marginRight: 6,
+                            verticalAlign: '-1px',
+                            color: T.good,
+                          }}
+                        />
+                      ) : (
+                        <FileJson
+                          size={12}
+                          style={{ display: 'inline-block', marginRight: 6, verticalAlign: '-1px' }}
+                        />
+                      )}
                       {copied === 'json-copy' ? 'Copied' : 'Copy JSON'}
                     </button>
                   </div>
@@ -2104,18 +2813,29 @@ export default function App() {
             {/* FINDINGS */}
             {results.findings.length > 0 && (
               <>
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  marginBottom: 14, flexWrap: 'wrap', gap: 12,
-                }}>
-                  <h2 className="ap-display" style={{
-                    margin: 0, fontSize: 32, 
-                    fontWeight: 400, color: T.text,
-                  }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 14,
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
+                >
+                  <h2
+                    className="ap-display"
+                    style={{
+                      margin: 0,
+                      fontSize: 32,
+                      fontWeight: 400,
+                      color: T.text,
+                    }}
+                  >
                     Findings
                   </h2>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {['all', ...SEV_ORDER].map(s => (
+                    {['all', ...SEV_ORDER].map((s) => (
                       <button
                         key={s}
                         onClick={() => setFilter(s)}
@@ -2139,7 +2859,7 @@ export default function App() {
                 </div>
 
                 <div>
-                  {filteredFindings.map(f => (
+                  {filteredFindings.map((f) => (
                     <FindingCard
                       key={f.id}
                       finding={f}
@@ -2152,7 +2872,9 @@ export default function App() {
                     />
                   ))}
                   {filteredFindings.length === 0 && (
-                    <div style={{ padding: 32, textAlign: 'center', color: T.textMuted, fontSize: 13 }}>
+                    <div
+                      style={{ padding: 32, textAlign: 'center', color: T.textMuted, fontSize: 13 }}
+                    >
                       No findings match the current filter.
                     </div>
                   )}
@@ -2165,21 +2887,36 @@ export default function App() {
         {/* SCAN HISTORY (always shown when not viewing results — empty state if needed) */}
         {!results && (
           <div className="ap-card ap-fade-in" style={{ padding: 24, marginBottom: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 14,
+                flexWrap: 'wrap',
+                gap: 8,
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <History size={14} color={T.accent} />
-                <span className="ap-eyebrow">SCAN HISTORY · {history.length} / {HISTORY_MAX}</span>
+                <span className="ap-eyebrow">
+                  SCAN HISTORY · {history.length} / {HISTORY_MAX}
+                </span>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {history.length > 5 && (
                   <button
-                    onClick={() => setShowAllHistory(s => !s)}
+                    onClick={() => setShowAllHistory((s) => !s)}
                     className="ap-mono"
                     style={{
-                      background: 'transparent', border: `1px solid ${T.border}`,
-                      color: T.textDim, cursor: 'pointer',
-                      fontSize: 10, padding: '4px 10px',
-                      letterSpacing: '0.1em', textTransform: 'uppercase',
+                      background: 'transparent',
+                      border: `1px solid ${T.border}`,
+                      color: T.textDim,
+                      cursor: 'pointer',
+                      fontSize: 10,
+                      padding: '4px 10px',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
                     }}
                   >
                     {showAllHistory ? 'Show recent' : `Show all (${history.length})`}
@@ -2189,86 +2926,137 @@ export default function App() {
                   onClick={clearHistory}
                   className="ap-mono"
                   style={{
-                    background: 'transparent', border: `1px solid ${T.border}`,
-                    color: T.textDim, cursor: 'pointer',
-                    fontSize: 10, padding: '4px 10px',
-                    letterSpacing: '0.1em', textTransform: 'uppercase',
+                    background: 'transparent',
+                    border: `1px solid ${T.border}`,
+                    color: T.textDim,
+                    cursor: 'pointer',
+                    fontSize: 10,
+                    padding: '4px 10px',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
                   }}
                 >
-                  <Trash2 size={10} style={{ display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }} />
+                  <Trash2
+                    size={10}
+                    style={{ display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }}
+                  />
                   Clear
                 </button>
               </div>
             </div>
             {history.length === 0 && (
-              <div style={{
-                padding: '24px 16px',
-                textAlign: 'center',
-                background: T.bg,
-                border: `1px dashed ${T.border}`,
-                color: T.textDim,
-                fontSize: 13, lineHeight: 1.7,
-              }}>
-                <Clock size={20} color={T.textMuted} aria-hidden="true" style={{ marginBottom: 8 }} />
+              <div
+                style={{
+                  padding: '24px 16px',
+                  textAlign: 'center',
+                  background: T.bg,
+                  border: `1px dashed ${T.border}`,
+                  color: T.textDim,
+                  fontSize: 13,
+                  lineHeight: 1.7,
+                }}
+              >
+                <Clock
+                  size={20}
+                  color={T.textMuted}
+                  aria-hidden="true"
+                  style={{ marginBottom: 8 }}
+                />
                 <div style={{ marginBottom: 4 }}>No scans yet.</div>
                 <div style={{ fontSize: 12, color: T.textMuted }}>
-                  Run an audit above and the result lands here. Up to {HISTORY_MAX} scans are kept locally so you can re-view or re-run them without retyping the URL.
+                  Run an audit above and the result lands here. Up to {HISTORY_MAX} scans are kept
+                  locally so you can re-view or re-run them without retyping the URL.
                 </div>
               </div>
             )}
             <div>
-              {(showAllHistory ? history : history.slice(0, 5)).map(entry => {
+              {(showAllHistory ? history : history.slice(0, 5)).map((entry) => {
                 const tier = riskTier(entry.score);
                 return (
                   <div
                     key={entry.id}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '10px 12px', marginBottom: 6,
-                      background: T.bg, border: `1px solid ${T.border}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '10px 12px',
+                      marginBottom: 6,
+                      background: T.bg,
+                      border: `1px solid ${T.border}`,
                       borderLeft: `3px solid ${tier.ring}`,
                     }}
                   >
                     {/* Score chip */}
-                    <div style={{
-                      flexShrink: 0,
-                      width: 44, height: 44,
-                      display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center',
-                      background: T.panel, border: `1px solid ${T.border}`,
-                    }}>
-                      <span className="ap-display" style={{ fontSize: 18,  color: tier.color, lineHeight: 1 }}>
+                    <div
+                      style={{
+                        flexShrink: 0,
+                        width: 44,
+                        height: 44,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: T.panel,
+                        border: `1px solid ${T.border}`,
+                      }}
+                    >
+                      <span
+                        className="ap-display"
+                        style={{ fontSize: 18, color: tier.color, lineHeight: 1 }}
+                      >
                         {entry.score}
                       </span>
                     </div>
                     {/* Source + meta */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        {entry.sourceType === 'github'
-                          ? <Github size={11} color={T.textMuted} style={{ flexShrink: 0 }} />
-                          : <Folder size={11} color={T.textMuted} style={{ flexShrink: 0 }} />}
-                        <span className="ap-mono" style={{
-                          fontSize: 12, color: T.text,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>{entry.source}</span>
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}
+                      >
+                        {entry.sourceType === 'github' ? (
+                          <Github size={11} color={T.textMuted} style={{ flexShrink: 0 }} />
+                        ) : (
+                          <Folder size={11} color={T.textMuted} style={{ flexShrink: 0 }} />
+                        )}
+                        <span
+                          className="ap-mono"
+                          style={{
+                            fontSize: 12,
+                            color: T.text,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {entry.source}
+                        </span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}
+                      >
                         <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>
-                          <Clock size={9} style={{ display: 'inline-block', marginRight: 3, verticalAlign: '-1px' }} />
+                          <Clock
+                            size={9}
+                            style={{
+                              display: 'inline-block',
+                              marginRight: 3,
+                              verticalAlign: '-1px',
+                            }}
+                          />
                           {timeAgo(entry.scannedAt)}
                         </span>
                         <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>
                           {entry.filesScanned} files
                         </span>
                         <span style={{ display: 'flex', gap: 4 }}>
-                          {SEV_ORDER.filter(s => entry.bySeverity?.[s]).map(s => (
+                          {SEV_ORDER.filter((s) => entry.bySeverity?.[s]).map((s) => (
                             <span
                               key={s}
                               className="ap-mono"
                               title={`${entry.bySeverity[s]} ${s}`}
                               aria-label={`${entry.bySeverity[s]} ${s}`}
                               style={{
-                                fontSize: 10, padding: '1px 5px',
+                                fontSize: 10,
+                                padding: '1px 5px',
                                 color: T.sev[s].fg,
                                 background: T.sev[s].bg,
                                 border: `1px solid ${T.sev[s].border}`,
@@ -2292,14 +3080,21 @@ export default function App() {
                         className="ap-mono"
                         title="Load cached findings (no rescan)"
                         style={{
-                          background: 'transparent', border: `1px solid ${T.borderAlt}`,
-                          color: T.accent, cursor: 'pointer',
-                          fontSize: 10, padding: '5px 10px',
-                          letterSpacing: '0.1em', textTransform: 'uppercase',
+                          background: 'transparent',
+                          border: `1px solid ${T.borderAlt}`,
+                          color: T.accent,
+                          cursor: 'pointer',
+                          fontSize: 10,
+                          padding: '5px 10px',
+                          letterSpacing: '0.1em',
+                          textTransform: 'uppercase',
                           fontWeight: 600,
                         }}
                       >
-                        <Eye size={10} style={{ display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }} />
+                        <Eye
+                          size={10}
+                          style={{ display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }}
+                        />
                         View
                       </button>
                       <button
@@ -2313,16 +3108,23 @@ export default function App() {
                         }
                         style={{
                           // Use explicit color blend for disabled (avoid opacity to keep WCAG 3:1).
-                          background: scanning || entry.sourceType !== 'github' ? T.panelAlt : 'transparent',
+                          background:
+                            scanning || entry.sourceType !== 'github' ? T.panelAlt : 'transparent',
                           border: `1px solid ${T.borderAlt}`,
                           color: scanning || entry.sourceType !== 'github' ? T.textDim : T.good,
-                          cursor: scanning || entry.sourceType !== 'github' ? 'not-allowed' : 'pointer',
-                          fontSize: 10, padding: '5px 10px',
-                          letterSpacing: '0.1em', textTransform: 'uppercase',
+                          cursor:
+                            scanning || entry.sourceType !== 'github' ? 'not-allowed' : 'pointer',
+                          fontSize: 10,
+                          padding: '5px 10px',
+                          letterSpacing: '0.1em',
+                          textTransform: 'uppercase',
                           fontWeight: 600,
                         }}
                       >
-                        <RefreshCw size={10} style={{ display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }} />
+                        <RefreshCw
+                          size={10}
+                          style={{ display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }}
+                        />
                         Re-run
                       </button>
                       <button
@@ -2330,8 +3132,10 @@ export default function App() {
                         title="Remove from history"
                         aria-label={`Remove scan of ${entry.source} from history`}
                         style={{
-                          background: 'transparent', border: `1px solid ${T.border}`,
-                          color: T.textMuted, cursor: 'pointer',
+                          background: 'transparent',
+                          border: `1px solid ${T.border}`,
+                          color: T.textMuted,
+                          cursor: 'pointer',
                           padding: '5px 8px',
                         }}
                       >
@@ -2343,8 +3147,9 @@ export default function App() {
               })}
             </div>
             <div style={{ marginTop: 10, fontSize: 11, color: T.textMuted }}>
-              Stored locally in your browser (localStorage). Capped at {HISTORY_MAX} entries; oldest is dropped automatically.
-              GitHub URLs from history autocomplete in the URL input above.
+              Stored locally in your browser (localStorage). Capped at {HISTORY_MAX} entries; oldest
+              is dropped automatically. GitHub URLs from history autocomplete in the URL input
+              above.
             </div>
           </div>
         )}
@@ -2352,28 +3157,43 @@ export default function App() {
         {/* PROBE LEGEND (shown only before scan) */}
         {!results && (
           <div className="ap-card" style={{ padding: 24 }}>
-            <div className="ap-eyebrow" style={{ marginBottom: 16 }}>ACTIVE PROBES</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-              {PROBES.map(p => (
-                <div key={p.name} style={{
-                  padding: 12,
-                  background: T.bg,
-                  border: `1px solid ${T.border}`,
-                  fontSize: 12,
-                  color: T.textDim,
-                }}>
-                  <div className="ap-mono" style={{ color: T.text, fontWeight: 500, marginBottom: 2 }}>
+            <div className="ap-eyebrow" style={{ marginBottom: 16 }}>
+              ACTIVE PROBES
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: 12,
+              }}
+            >
+              {PROBES.map((p) => (
+                <div
+                  key={p.name}
+                  style={{
+                    padding: 12,
+                    background: T.bg,
+                    border: `1px solid ${T.border}`,
+                    fontSize: 12,
+                    color: T.textDim,
+                  }}
+                >
+                  <div
+                    className="ap-mono"
+                    style={{ color: T.text, fontWeight: 500, marginBottom: 2 }}
+                  >
                     {p.name}
                   </div>
                 </div>
               ))}
             </div>
             <div style={{ marginTop: 18, fontSize: 11, color: T.textMuted, lineHeight: 1.6 }}>
-              v0.2 prototype. Static analysis only. 24 probes covering OWASP Top 10 2025 + OWASP LLM Top 10 2025
-              + 2026 supply-chain incidents (Shai-Hulud, Axios/Sapphire Sleet, Mini Shai-Hulud) + MCP attack surface
-              + AI-tooling rules-file injection. Does not perform live endpoint probing, IDOR testing, or runtime
-              authentication checks. Findings are evidence-backed but should be verified manually before treating as
-              confirmed vulnerabilities.
+              v0.2 prototype. Static analysis only. 24 probes covering OWASP Top 10 2025 + OWASP LLM
+              Top 10 2025 + 2026 supply-chain incidents (Shai-Hulud, Axios/Sapphire Sleet, Mini
+              Shai-Hulud) + MCP attack surface + AI-tooling rules-file injection. Does not perform
+              live endpoint probing, IDOR testing, or runtime authentication checks. Findings are
+              evidence-backed but should be verified manually before treating as confirmed
+              vulnerabilities.
             </div>
           </div>
         )}
@@ -2381,19 +3201,32 @@ export default function App() {
         {/* VISIBLE FAQ — mirrors JSON-LD FAQPage schema (Google 2026 anti-schema-drift guidance).
             Shown only on the home view (not over results) to keep the input surface uncluttered. */}
         {!results && (
-          <section aria-labelledby="faq-heading" className="ap-card" style={{
-            padding: 28, marginTop: 32, marginBottom: 24,
-          }}>
-            <h2 id="faq-heading" className="ap-display" style={{
-              margin: '0 0 18px', fontSize: 28, fontWeight: 700, color: T.text,
-            }}>
+          <section
+            aria-labelledby="faq-heading"
+            className="ap-card"
+            style={{
+              padding: 28,
+              marginTop: 32,
+              marginBottom: 24,
+            }}
+          >
+            <h2
+              id="faq-heading"
+              className="ap-display"
+              style={{
+                margin: '0 0 18px',
+                fontSize: 28,
+                fontWeight: 700,
+                color: T.text,
+              }}
+            >
               Frequently asked questions
             </h2>
             <dl style={{ margin: 0, padding: 0 }}>
               {[
                 {
                   q: 'Does the Pre-Flight Audit Tool send my source code to a server?',
-                  a: 'No. All scanning happens in your browser tab. When you select files or a folder, contents are read locally with the File API and never uploaded. When you scan a public GitHub URL, the tool fetches raw blobs from raw.githubusercontent.com directly from your browser — the tool\'s origin never sees them. No analytics beacons, no remote storage.',
+                  a: "No. All scanning happens in your browser tab. When you select files or a folder, contents are read locally with the File API and never uploaded. When you scan a public GitHub URL, the tool fetches raw blobs from raw.githubusercontent.com directly from your browser — the tool's origin never sees them. No analytics beacons, no remote storage.",
                 },
                 {
                   q: 'What does the Pre-Flight Audit Tool check?',
@@ -2404,8 +3237,8 @@ export default function App() {
                   a: 'Yes. No signup, no credit card, no usage limits. Free forever for the browser tool itself.',
                 },
                 {
-                  q: 'How does this compare to a tool like hacker-bot.com?',
-                  a: 'We are static analysis pre-merge. Hacker-bot is dynamic black-box DAST post-deploy. We find what\'s about to be merged. Hacker-bot finds what\'s broken in production. The two are complementary, not competing — use both.',
+                  q: 'What kind of tool is this — and what is it NOT?',
+                  a: 'This is a free, in-browser static security audit. You drop in a folder or paste a GitHub URL; you get a report. It focuses on the failure modes specific to AI-generated code — prompt-injection sinks, MCP server misconfig, Cursor/Copilot rules-file backdoors, slopsquatted packages, system prompts leaked to client bundles — plus 2025-2026 supply-chain incidents (Shai-Hulud, Axios / Sapphire Sleet, Mini Shai-Hulud) by exact version. It is NOT a continuously-running enterprise AppSec platform with seat counts, dashboards, ticket integrations, and runtime protection. It is a free pre-merge gate you can run before you commit, with no signup and no data leaving your tab.',
                 },
                 {
                   q: 'Can the tool catch supply-chain attacks from 2025-2026?',
@@ -2416,10 +3249,14 @@ export default function App() {
                   a: 'Yes. Most probes are framework-agnostic and apply to any JavaScript, TypeScript, Python, Go, Ruby, HTML, or SQL project. The branding emphasizes "vibe-coded apps" because that cohort has the highest density of the specific vulnerabilities we catch.',
                 },
               ].map((item, i) => (
-                <div key={i} style={{
-                  paddingBottom: 14, marginBottom: 14,
-                  borderBottom: i < 5 ? `1px solid ${T.border}` : 'none',
-                }}>
+                <div
+                  key={i}
+                  style={{
+                    paddingBottom: 14,
+                    marginBottom: 14,
+                    borderBottom: i < 5 ? `1px solid ${T.border}` : 'none',
+                  }}
+                >
                   <dt style={{ fontWeight: 600, color: T.text, marginBottom: 6, fontSize: 14 }}>
                     {item.q}
                   </dt>
@@ -2430,63 +3267,99 @@ export default function App() {
               ))}
             </dl>
             <p style={{ fontSize: 11, color: T.textMuted, marginTop: 12, marginBottom: 0 }}>
-              Last updated 2026-05-11 · machine-readable index at <a href="/llms.txt" style={{ color: T.textMuted }}>llms.txt</a>
+              Last updated 2026-05-11 · machine-readable index at{' '}
+              <a href="/llms.txt" style={{ color: T.textMuted }}>
+                llms.txt
+              </a>
             </p>
           </section>
         )}
 
         {/* FOOTER */}
-        <footer style={{
-          marginTop: 64,
-          paddingTop: 24,
-          borderTop: `1px solid ${T.border}`,
-          fontSize: 12,
-          color: T.textMuted,
-          lineHeight: 1.7,
-          display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'space-between',
-        }}>
+        <footer
+          style={{
+            marginTop: 64,
+            paddingTop: 24,
+            borderTop: `1px solid ${T.border}`,
+            fontSize: 12,
+            color: T.textMuted,
+            lineHeight: 1.7,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 24,
+            justifyContent: 'space-between',
+          }}
+        >
           <div>
             <strong style={{ color: T.textDim }}>Mid-Atlantic AI · Pre-Flight Audit Tool</strong>
             <br />
-            Static security review for vibe-coded apps. All scanning runs in your browser — no upload, no signup.
+            Static security review for vibe-coded apps. All scanning runs in your browser — no
+            upload, no signup.
           </div>
           <nav aria-label="Footer links" style={{ display: 'flex', gap: 18 }}>
-            <a href="mailto:John@midatlantic.ai" style={{ color: T.textDim, textDecoration: 'none' }}>Contact</a>
-            <a href="https://midatlantic.ai" style={{ color: T.textDim, textDecoration: 'none' }} rel="noopener noreferrer">Mid-Atlantic AI</a>
-            <a href="/llms.txt" style={{ color: T.textDim, textDecoration: 'none' }}>llms.txt</a>
+            <a
+              href="mailto:John@midatlantic.ai"
+              style={{ color: T.textDim, textDecoration: 'none' }}
+            >
+              Contact
+            </a>
+            <a
+              href="https://midatlantic.ai"
+              style={{ color: T.textDim, textDecoration: 'none' }}
+              rel="noopener noreferrer"
+            >
+              Mid-Atlantic AI
+            </a>
+            <a href="/llms.txt" style={{ color: T.textDim, textDecoration: 'none' }}>
+              llms.txt
+            </a>
           </nav>
         </footer>
-
       </main>
 
       {/* DIAGNOSTICS: floating toggle + drawer */}
       <button
-        onClick={() => setDiagOpen(o => !o)}
+        onClick={() => setDiagOpen((o) => !o)}
         aria-label="Toggle diagnostics panel"
         title="Diagnostics & logs"
         style={{
           position: 'fixed',
-          right: 18, bottom: 18,
-          background: T.panel, color: T.accent,
+          right: 18,
+          bottom: 18,
+          background: T.panel,
+          color: T.accent,
           border: `1px solid ${T.borderAlt}`,
           padding: '10px 14px',
-          fontFamily: fontMono, fontSize: 11, fontWeight: 600,
-          letterSpacing: '0.1em', textTransform: 'uppercase',
-          cursor: 'pointer', zIndex: 40,
-          display: 'flex', alignItems: 'center', gap: 8,
+          fontFamily: fontMono,
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          cursor: 'pointer',
+          zIndex: 40,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
           boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
         }}
       >
         <Bug size={12} />
         Diagnostics
         {(() => {
-          const errs = getLogs().filter(e => e.level === 'error').length;
+          const errs = getLogs().filter((e) => e.level === 'error').length;
           if (!errs) return null;
           return (
-            <span style={{
-              background: T.sev.critical.fg, color: T.bg,
-              padding: '0 6px', fontSize: 10, fontWeight: 700,
-            }}>{errs}</span>
+            <span
+              style={{
+                background: T.sev.critical.fg,
+                color: T.bg,
+                padding: '0 6px',
+                fontSize: 10,
+                fontWeight: 700,
+              }}
+            >
+              {errs}
+            </span>
           );
         })()}
       </button>
