@@ -1,6 +1,6 @@
 # Pre-Flight Audit Tool
 
-> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 26 probes covering OWASP Top 10 2025, OWASP LLM Top 10, 2025–2026 supply-chain incidents, MCP security, AI-tooling rules-file backdoors, and conventional SAST checks. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
+> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 32 probes covering OWASP Top 10 2025, OWASP LLM Top 10, 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, and conventional SAST checks. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
 
 The Pre-Flight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai). Contact: John@midatlantic.ai. License: free for individual and team use.
 
@@ -21,7 +21,7 @@ The tool extracts text from selected files or a public GitHub repository and run
 - Baseline diff vs. prior scan of the same source (introduced / fixed / persisted findings, score delta).
 - Diagnostics drawer with structured logs (debug / info / warn / error filterable, copy / save / clear).
 
-## The 26 probes
+## The 32 probes
 
 1. **Secret Scanner** — AWS keys, Stripe keys (live + test), OpenAI, Anthropic, Google, GitHub PAT, Slack tokens, SendGrid, Hugging Face, Replicate, Groq, Perplexity, generic hardcoded secrets, database connection URLs with credentials, private key blocks.
 2. **NEXT_PUBLIC_ Misuse** — server secrets exposed via `NEXT_PUBLIC_` prefix in Next.js apps.
