@@ -20,6 +20,7 @@ import {
   probeSlopsquatting,
   probeMCPSecurity,
   probeTrojanSource,
+  probeMaliciousArtifacts,
   probeAICodeSmells,
   probeNpmrcHygiene,
   probeExternalURLs,
@@ -424,6 +425,129 @@ describe('probeCompromisedPackages', () => {
   it('does not flag clean axios', () => {
     const pkg = JSON.stringify({ dependencies: { axios: '1.7.2' } });
     expect(probeCompromisedPackages([file('package.json', pkg)])).toEqual([]);
+  });
+
+  // Mini Shai-Hulud TanStack (May 11, 2026)
+  it('flags @tanstack/react-router@1.169.5 (Mini Shai-Hulud)', () => {
+    const pkg = JSON.stringify({ dependencies: { '@tanstack/react-router': '1.169.5' } });
+    const f = probeCompromisedPackages([file('package.json', pkg)]);
+    expect(f).toHaveLength(1);
+    expect(f[0].severity).toBe('critical');
+    expect(f[0].evidence).toMatch(/Mini Shai-Hulud/i);
+  });
+
+  it('flags @tanstack/react-router@1.169.8 (second poisoned version)', () => {
+    const pkg = JSON.stringify({ dependencies: { '@tanstack/react-router': '1.169.8' } });
+    expect(probeCompromisedPackages([file('package.json', pkg)])).toHaveLength(1);
+  });
+
+  it('does not flag clean @tanstack/react-router (post-rotation version)', () => {
+    const pkg = JSON.stringify({ dependencies: { '@tanstack/react-router': '1.169.9' } });
+    expect(probeCompromisedPackages([file('package.json', pkg)])).toEqual([]);
+  });
+
+  it('flags @mistralai/mistralai@2.2.4 (Mini Shai-Hulud cross-scope)', () => {
+    const pkg = JSON.stringify({ dependencies: { '@mistralai/mistralai': '2.2.4' } });
+    const f = probeCompromisedPackages([file('package.json', pkg)]);
+    expect(f).toHaveLength(1);
+    expect(f[0].severity).toBe('critical');
+  });
+
+  it('flags @opensearch-project/opensearch@3.5.3', () => {
+    const pkg = JSON.stringify({
+      dependencies: { '@opensearch-project/opensearch': '3.5.3' },
+    });
+    expect(probeCompromisedPackages([file('package.json', pkg)])).toHaveLength(1);
+  });
+});
+
+describe('probeMaliciousArtifacts', () => {
+  // File-path indicators: presence alone is critical
+  it('flags .claude/router_runtime.js drop-file', () => {
+    const f = probeMaliciousArtifacts([file('.claude/router_runtime.js', '// auto-generated\n')]);
+    expect(f).toHaveLength(1);
+    expect(f[0].severity).toBe('critical');
+    expect(f[0].title).toMatch(/router_runtime\.js/);
+  });
+
+  it('flags .claude/setup.mjs drop-file', () => {
+    const f = probeMaliciousArtifacts([file('.claude/setup.mjs', '')]);
+    expect(f).toHaveLength(1);
+    expect(f[0].severity).toBe('critical');
+  });
+
+  it('flags .vscode/setup.mjs drop-file', () => {
+    const f = probeMaliciousArtifacts([file('.vscode/setup.mjs', '')]);
+    expect(f).toHaveLength(1);
+  });
+
+  it('flags tanstack_runner.js at any depth', () => {
+    const f = probeMaliciousArtifacts([file('src/lib/tanstack_runner.js', '')]);
+    expect(f).toHaveLength(1);
+  });
+
+  it('flags router_init.js at package root', () => {
+    const f = probeMaliciousArtifacts([file('router_init.js', '')]);
+    expect(f).toHaveLength(1);
+  });
+
+  // String IOCs: any one is suggestive
+  it('flags __DAEMONIZED guard string in any file', () => {
+    const f = probeMaliciousArtifacts([
+      file('src/app.js', 'if (process.env.__DAEMONIZED) { /* ... */ }'),
+    ]);
+    expect(f).toHaveLength(1);
+    expect(f[0].evidence).toMatch(/__DAEMONIZED/);
+  });
+
+  it('flags filev2.getsession.org exfil endpoint', () => {
+    const f = probeMaliciousArtifacts([
+      file('payload.js', 'fetch("https://filev2.getsession.org/upload")'),
+    ]);
+    expect(f).toHaveLength(1);
+  });
+
+  it('flags gh-token-monitor LaunchAgent label in plist content', () => {
+    const plist = `<key>Label</key><string>com.user.gh-token-monitor</string>`;
+    const f = probeMaliciousArtifacts([file('Library/LaunchAgents/gh-token-monitor.plist', plist)]);
+    expect(f.length).toBeGreaterThanOrEqual(1);
+    expect(f[0].evidence).toMatch(/gh-token-monitor/i);
+  });
+
+  it('flags malicious @tanstack/setup commit pin', () => {
+    const f = probeMaliciousArtifacts([
+      file(
+        'package.json',
+        JSON.stringify({
+          optionalDependencies: {
+            '@tanstack/setup': 'github:tanstack/router#79ac49eedf774dd4b0cfa308722bc463cfe5885c',
+          },
+        })
+      ),
+    ]);
+    expect(f).toHaveLength(1);
+  });
+
+  it('flags spoofed Claude commit author', () => {
+    const f = probeMaliciousArtifacts([
+      file('CHANGELOG.md', 'Authored-by: claude@users.noreply.github.com'),
+    ]);
+    expect(f).toHaveLength(1);
+  });
+
+  it('does not fire on clean files', () => {
+    const f = probeMaliciousArtifacts([
+      file('src/app.js', 'const x = 1;'),
+      file('package.json', JSON.stringify({ dependencies: { react: '^18.0.0' } })),
+    ]);
+    expect(f).toEqual([]);
+  });
+
+  it('skips test files (which contain IOC strings on purpose)', () => {
+    const f = probeMaliciousArtifacts([
+      file('src/test/probes.test.js', "expect('__DAEMONIZED').toMatch(/.+/)"),
+    ]);
+    expect(f).toEqual([]);
   });
 });
 

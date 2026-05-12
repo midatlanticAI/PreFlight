@@ -136,6 +136,7 @@ export {
   probeMCPSecurity,
   probeTrojanSource,
   probeAIRulesFiles,
+  probeMaliciousArtifacts,
   probeAICodeSmells,
   probeNpmrcHygiene,
   probeExternalURLs,
@@ -3479,7 +3480,7 @@ export default function App() {
                 },
                 {
                   q: 'What does the Pre-Flight Audit Tool check?',
-                  a: '26 probes covering hardcoded secrets (AWS, Stripe, OpenAI, Anthropic, GitHub, etc.), NEXT_PUBLIC_ leak of server secrets, Supabase Row-Level-Security misconfigurations, Firebase permissive rules, JWT alg-none unsigned tokens, package.json supply-chain hooks, known-compromised package versions, typosquatted and LLM-hallucinated package names, MCP server command-injection patterns, Cursor / Copilot rules-file backdoors, Trojan Source Unicode, prompt-injection sinks, system-prompt leakage to client bundles, missing security headers, CORS wildcards, SSRF and open-redirect patterns, and HTML hygiene.',
+                  a: '27 probes covering hardcoded secrets (AWS, Stripe, OpenAI, Anthropic, GitHub, etc.), NEXT_PUBLIC_ leak of server secrets, Supabase Row-Level-Security misconfigurations, Firebase permissive rules, JWT alg-none unsigned tokens, package.json supply-chain hooks, 170+ known-compromised package versions including the May 11, 2026 Mini Shai-Hulud TanStack worm by TeamPCP (42 @tanstack/* packages plus @mistralai, @opensearch-project, @uipath, @squawk and others), post-infection IOCs the same worm drops on disk (.claude/router_runtime.js, .vscode/setup.mjs, gh-token-monitor dead-man switch, __DAEMONIZED guard, Session-messenger exfil endpoints), typosquatted and LLM-hallucinated package names, MCP server command-injection patterns, Cursor / Copilot rules-file backdoors, Trojan Source Unicode, prompt-injection sinks, system-prompt leakage to client bundles, missing security headers, CORS wildcards, SSRF and open-redirect patterns, and HTML hygiene.',
                 },
                 {
                   q: 'Is the Pre-Flight Audit Tool free?',

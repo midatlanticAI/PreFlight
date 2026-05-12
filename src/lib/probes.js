@@ -5,6 +5,8 @@
 // This module is pure: every export is a plain function or data structure. No React,
 // no DOM, no localStorage. The audit-app App component imports from here.
 
+import compromisedPackagesManifest from '../data/compromised-packages.json';
+
 // ==========================================================================
 // DETECTION PATTERNS
 // ==========================================================================
@@ -147,31 +149,13 @@ const NEXT_PUBLIC_DANGER_VALUES = /^sk_live_|^sk_test_|^sk-ant-|^sk-proj-|servic
 // 2026 THREAT INTEL: known-compromised package versions
 // Sources: CISA, GTIG/Mandiant, Socket, Wiz, Unit 42, OX Security, OWASP
 // ==========================================================================
-export const COMPROMISED_PACKAGES = {
-  // Sapphire Sleet (DPRK) Axios compromise — March 31, 2026
-  axios: {
-    versions: ['1.14.1', '0.30.4'],
-    note: 'Sapphire Sleet RAT injection via plain-crypto-js dep (CISA, GTIG)',
-  },
-  'plain-crypto-js': {
-    versions: ['*'],
-    note: 'Malicious dep injected into axios; do not install any version',
-  },
-  // Bitwarden CLI compromise — April 22, 2026
-  '@bitwarden/cli': { versions: ['2026.4.0'], note: 'Hunted Claude/Cursor/Codex credentials' },
-  // Mini Shai-Hulud SAP campaign — April 29, 2026
-  'intercom-client': { versions: ['7.0.4', '7.0.5'], note: 'Mini Shai-Hulud credential stealer' },
-  '@cap-js/sqlite': {
-    versions: ['*'],
-    note: 'SAP CAP toolchain; Mini Shai-Hulud — review version against Socket advisory',
-  },
-  '@cap-js/db-service': {
-    versions: ['*'],
-    note: 'SAP CAP toolchain; Mini Shai-Hulud — review version against Socket advisory',
-  },
-  // PyPI Mini Shai-Hulud
-  lightning: { versions: ['2.6.2', '2.6.3'], note: 'PyPI Mini Shai-Hulud variant' },
-};
+// Compromised npm/PyPI packages — sourced from src/data/compromised-packages.json.
+// The JSON file is the single source of truth; this re-export strips the `_schema`/`_note`/
+// `_lastReviewed` meta keys so probe code can iterate it as a flat `{ name: { versions, note } }`
+// map without having to filter sentinels. Update the JSON, not this object.
+export const COMPROMISED_PACKAGES = Object.fromEntries(
+  Object.entries(compromisedPackagesManifest).filter(([k]) => !k.startsWith('_'))
+);
 
 // Common typosquats targeting popular packages
 export const TYPOSQUATS = {
@@ -291,6 +275,15 @@ export const FILE_INCLUDE = [
   /claude_desktop_config\.json$/,
   /(^|\/)\.mcp\.json$/,
   /(^|\/)mcp\.json$/,
+  // Mini Shai-Hulud post-infection artifacts (May 11, 2026 TanStack campaign):
+  // the worm writes itself into .claude/* and .vscode/* to survive npm uninstall.
+  /(^|\/)\.claude\/settings\.json$/,
+  /(^|\/)\.claude\/setup\.mjs$/,
+  /(^|\/)\.claude\/router_runtime\.js$/,
+  /(^|\/)\.vscode\/tasks\.json$/,
+  /(^|\/)\.vscode\/setup\.mjs$/,
+  /(^|\/)tanstack_runner\.js$/,
+  /(^|\/)router_init\.js$/,
 ];
 
 export const FILE_EXCLUDE = [
@@ -1456,6 +1449,112 @@ export function probeAIRulesFiles(files) {
       });
     }
   });
+  return findings;
+}
+
+// --- 2026: Malicious post-infection artifacts (Mini Shai-Hulud TanStack campaign) ---
+//
+// The May 11, 2026 npm worm by TeamPCP infects @tanstack/* / @mistralai/* / @uipath/* /
+// @opensearch-project/* / @squawk/* etc. via the `prepare` lifecycle script of a
+// poisoned `optionalDependencies` entry. After install it survives `npm uninstall` by
+// writing itself into developer-tooling config files and dropping helper scripts at
+// well-known paths. If a scanned project contains those files / strings, the host that
+// installed the package is already compromised — credentials it could read have been
+// exfiltrated, and the dead-man's-switch handler will `rm -rf ~/` if its stolen GitHub
+// token gets revoked.
+//
+// Confirmed IOCs (Aikido, Snyk, Socket, Wiz, StepSecurity, TanStack postmortem):
+//   • Files dropped on disk:
+//       .claude/router_runtime.js   .claude/setup.mjs   .vscode/setup.mjs
+//       tanstack_runner.js          router_init.js  (committed at package root)
+//   • Config-file payload paths the worm hijacks:
+//       .claude/settings.json   .vscode/tasks.json
+//   • Persistence script that polls api.github.com/user:
+//       ~/.local/bin/gh-token-monitor.sh   (Linux systemd user service)
+//       com.user.gh-token-monitor          (macOS LaunchAgent label)
+//   • Distinctive in-payload strings:
+//       __DAEMONIZED   tanstack_runner   filev2.getsession.org
+//   • Spoofed commit author:
+//       claude@users.noreply.github.com
+//   • optionalDependencies pin:
+//       "@tanstack/setup": "github:tanstack/router#79ac49eedf774dd4b0cfa308722bc463cfe5885c"
+export function probeMaliciousArtifacts(files) {
+  const findings = [];
+
+  // Drop-file paths whose mere presence is a high-confidence indicator of infection.
+  const ARTIFACT_PATHS = [
+    {
+      re: /(^|\/)\.claude\/router_runtime\.js$/,
+      label: '.claude/router_runtime.js',
+    },
+    { re: /(^|\/)\.claude\/setup\.mjs$/, label: '.claude/setup.mjs' },
+    { re: /(^|\/)\.vscode\/setup\.mjs$/, label: '.vscode/setup.mjs' },
+    { re: /(^|\/)tanstack_runner\.js$/, label: 'tanstack_runner.js' },
+    { re: /(^|\/)router_init\.js$/, label: 'router_init.js' },
+  ];
+
+  // Distinctive strings inside the payload. Any one is suggestive; multiple together
+  // make false positives extremely unlikely in a static scan of normal source.
+  const IOC_STRINGS = [
+    { re: /\b__DAEMONIZED\b/, label: '__DAEMONIZED guard variable' },
+    { re: /\btanstack_runner\b/i, label: 'tanstack_runner reference' },
+    { re: /filev2\.getsession\.org/i, label: 'Session messenger exfil endpoint' },
+    { re: /seed[123]\.getsession\.org/i, label: 'Session seed-node exfil endpoint' },
+    { re: /gh-token-monitor/i, label: 'gh-token-monitor persistence handler' },
+    { re: /com\.user\.gh-token-monitor/i, label: 'gh-token-monitor LaunchAgent label' },
+    { re: /claude@users\.noreply\.github\.com/i, label: 'spoofed Claude commit author' },
+    {
+      re: /tanstack\/router#79ac49eedf774dd4b0cfa308722bc463cfe5885c/i,
+      label: 'malicious @tanstack/setup commit pin',
+    },
+  ];
+
+  files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
+    if (isMetaDocFile(file.path)) return;
+
+    // 1. File-path indicators — presence alone is critical.
+    for (const a of ARTIFACT_PATHS) {
+      if (a.re.test(file.path)) {
+        findings.push({
+          id: `mal-artifact-path-${file.path}`,
+          probe: 'Malicious Artifacts',
+          title: `Post-infection artifact: ${a.label}`,
+          severity: 'critical',
+          category: 'Supply Chain',
+          cwe: 'CWE-506',
+          file: file.path,
+          line: 1,
+          evidence: `File path matches known Mini Shai-Hulud (TanStack, May 11, 2026) drop-file`,
+          remediation: `This file is dropped by the Mini Shai-Hulud npm worm to survive \`npm uninstall\`. If it exists, the host that ran \`npm install\` is compromised — assume every credential the build process touched has been exfiltrated (npm tokens, GitHub tokens, OIDC tokens, cloud creds, crypto wallets, browser session cookies). Steps: 1) DO NOT revoke your GitHub token yet — the worm runs \`rm -rf ~/\` when its stolen token returns 40x. First disconnect the machine from the network. 2) Pull a known-good system. 3) Rotate every credential offline. 4) Audit CI for the malicious GitHub Actions workflows the worm tries to inject. Public IOC tracking: Aikido, Snyk, Socket, Wiz, StepSecurity (May 2026).`,
+        });
+        return; // one path-based finding per file is enough; don't also string-scan it
+      }
+    }
+
+    // 2. String indicators inside content — applicable to ANY scanned file, not just JS.
+    const content = file.content || '';
+    if (!content || content.length > 5_000_000) return; // skip very large blobs (memory)
+    const hits = [];
+    for (const ioc of IOC_STRINGS) {
+      if (ioc.re.test(content)) hits.push(ioc.label);
+    }
+    if (hits.length > 0) {
+      findings.push({
+        id: `mal-ioc-${file.path}`,
+        probe: 'Malicious Artifacts',
+        title: `Mini Shai-Hulud IOC string in ${file.path}`,
+        severity: 'critical',
+        category: 'Supply Chain',
+        cwe: 'CWE-506',
+        file: file.path,
+        line: 1,
+        evidence: `Matched ${hits.length} IOC(s): ${hits.slice(0, 4).join(' · ')}`,
+        remediation: `One or more strings from the Mini Shai-Hulud (TanStack, May 11, 2026) payload appear in this file. If you didn't put them there, your repo or your dev machine is compromised. See remediation in the per-file-path finding for incident response steps. Do NOT revoke the GitHub token before disconnecting the machine — the worm wipes \`~\` on 40x responses.`,
+      });
+    }
+  });
+
   return findings;
 }
 
@@ -3030,6 +3129,7 @@ export const PROBE_META = {
   'Secret Scanner': { confidence: 'high', autofix: 'review-needed' },
   'NEXT_PUBLIC_ Misuse': { confidence: 'high', autofix: 'review-needed' },
   'Compromised Packages': { confidence: 'high', autofix: 'review-needed' },
+  'Malicious Artifacts': { confidence: 'high', autofix: 'manual' },
 
   // Pattern matches: regex + light context
   CORS: { confidence: 'medium', autofix: 'mechanical' },
@@ -3166,6 +3266,7 @@ export const PROBES = [
   { name: 'MCP Security', fn: probeMCPSecurity },
   { name: 'Trojan Source', fn: probeTrojanSource },
   { name: 'AI Rules Files', fn: probeAIRulesFiles },
+  { name: 'Malicious Artifacts', fn: probeMaliciousArtifacts },
   { name: 'AI Code Smells', fn: probeAICodeSmells },
   { name: 'URL Reputation', fn: probeExternalURLs },
   { name: 'HTML Hygiene', fn: probeHTML },
