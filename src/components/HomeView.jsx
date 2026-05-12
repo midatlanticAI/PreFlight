@@ -324,12 +324,12 @@ export function HomeView({
             ))}
           </div>
           <div style={{ marginTop: 18, fontSize: 11, color: T.textMuted, lineHeight: 1.6 }}>
-            v0.4 release. Static analysis only. 32 probes covering OWASP Top 10 2025 + OWASP LLM
-            Top 10 2025 + 2026 supply-chain incidents (Shai-Hulud, Axios/Sapphire Sleet, Mini
-            Shai-Hulud TanStack) + MCP attack surface + AI-tooling rules-file injection +
-            post-infection malicious-artifact detection. Does not perform live endpoint probing,
-            IDOR testing, or runtime authentication checks. Findings are evidence-backed but
-            should be verified manually before treating as confirmed vulnerabilities.
+            v0.4 release. Static analysis only. 32 probes covering OWASP Top 10 2025 + OWASP LLM Top
+            10 2025 + 2026 supply-chain incidents (Shai-Hulud, Axios/Sapphire Sleet, Mini Shai-Hulud
+            TanStack) + MCP attack surface + AI-tooling rules-file injection + post-infection
+            malicious-artifact detection. Does not perform live endpoint probing, IDOR testing, or
+            runtime authentication checks. Findings are evidence-backed but should be verified
+            manually before treating as confirmed vulnerabilities.
           </div>
         </div>
       )}
