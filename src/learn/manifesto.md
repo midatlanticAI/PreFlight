@@ -56,6 +56,6 @@ If we ever build a backend, the day we build it is the day we stop being able to
 
 If you use this and it catches something real, tell us. If it flags something that isn't real, tell us harder. If a finding is right but the explanation is opaque, that's the finding we want to know about most, because the explanation is the whole point.
 
-Pre-Flight is built by Mid-Atlantic AI. The code is MIT. The threat-intel manifest is CC-BY-4.0. Take what's useful. Build something better if you can.
+Pre-Flight is built by Mid-Atlantic AI. The code is MIT. The threat-intel manifest is CC-BY-4.0. Take it, fork it, integrate it, run it inside whatever you're building. The work is the contribution. Whatever you do with it after is up to you.
 
 Just make sure your pre-flight check happens before takeoff.
