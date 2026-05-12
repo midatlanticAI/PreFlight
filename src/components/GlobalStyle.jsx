@@ -57,7 +57,7 @@ export function GlobalStyle() {
         color: ${T.bg};
         padding: 10px 16px;
         font-family: ${fontUI};
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 600;
         text-decoration: none;
         z-index: 1000;
@@ -100,7 +100,7 @@ export function GlobalStyle() {
         background-size: 48px 48px;
         color: ${T.text};
         font-family: ${fontUI};
-        font-size: 13px;
+        font-size: 14px;
         line-height: 1.55;
         min-height: 100vh;
         letter-spacing: 0.01em;
@@ -111,7 +111,7 @@ export function GlobalStyle() {
       .ap-app *::-webkit-scrollbar-thumb:hover { background: ${T.borderAlt}; }
       .ap-btn {
         font-family: ${fontMono};
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 600;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -146,7 +146,7 @@ export function GlobalStyle() {
       }
       .ap-input {
         font-family: ${fontMono};
-        font-size: 13px;
+        font-size: 14px;
         background: ${T.bg};
         color: ${T.text};
         border: 1px solid ${T.border};
@@ -158,7 +158,7 @@ export function GlobalStyle() {
       .ap-input:focus { border-color: ${T.accent}; }
       .ap-tab {
         font-family: ${fontMono};
-        font-size: 11px;
+        font-size: 12px;
         letter-spacing: 0.12em;
         text-transform: uppercase;
         padding: 14px 24px;
@@ -193,7 +193,7 @@ export function GlobalStyle() {
       @keyframes ap-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
       .ap-eyebrow {
         font-family: ${fontEyebrow};
-        font-size: 11px;
+        font-size: 12px;
         letter-spacing: 0.18em;
         text-transform: uppercase;
         color: ${T.textMuted};
@@ -214,7 +214,7 @@ export function GlobalStyle() {
         }
         .ap-eyebrow {
           /* prevent the long brand+tagline line from forcing a horizontal scroll */
-          font-size: 11px;
+          font-size: 12px;
           letter-spacing: 0.14em;
         }
       }

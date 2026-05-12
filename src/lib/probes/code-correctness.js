@@ -341,6 +341,12 @@ function isReferenceUse(node, parent) {
     case 'MemberExpression':
       // obj.prop — `prop` is a property name not a reference (unless computed)
       return parent.computed || parent.object === node;
+    case 'MetaProperty':
+      // `import.meta` and `new.target` are language-level meta-properties.
+      // Both children are syntactic markers, NOT identifier references.
+      // Without this case, the AST walker would flag `import` and `meta` as
+      // undeclared globals when it sees `import.meta.url`.
+      return false;
     case 'Property':
       // { key: value } — key isn't a reference (unless computed), value is
       return parent.computed || parent.value === node;

@@ -32,7 +32,7 @@ export function SettingsPage() {
           className="ap-display"
           style={{
             margin: '0 0 8px',
-            fontSize: 32,
+            fontSize: 35,
             fontWeight: 700,
             color: T.text,
             letterSpacing: '-0.01em',
@@ -40,7 +40,7 @@ export function SettingsPage() {
         >
           Configure Pre-Flight.
         </h1>
-        <p style={{ fontSize: 13, color: T.textDim, lineHeight: 1.7, margin: 0, maxWidth: 720 }}>
+        <p style={{ fontSize: 14, color: T.textDim, lineHeight: 1.7, margin: 0, maxWidth: 720 }}>
           Everything Pre-Flight knows about you lives in this browser tab. These panels are the one
           place to wire up optional features (AI Explain &amp; Verify, private GitHub repos),
           inspect the live log buffer, or wipe the slate.
@@ -82,7 +82,7 @@ export function SettingsPage() {
                 background: isActive ? T.accent : 'transparent',
                 border: 'none',
                 fontFamily: fontUI,
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 600,
                 cursor: 'pointer',
                 textDecoration: 'none',
@@ -114,7 +114,7 @@ export function SettingsPage() {
           .ap-settings-tab {
             white-space: nowrap;
             padding: 10px 12px !important;
-            font-size: 13px !important;
+            font-size: 14px !important;
           }
         }
       `}</style>

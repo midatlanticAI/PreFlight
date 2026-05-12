@@ -185,6 +185,27 @@ describe('probeCodeCorrectness', () => {
     expect(f).toEqual([]);
   });
 
+  it('does NOT flag `import` or `meta` inside `import.meta.url` (MetaProperty node)', () => {
+    // Regression: this is a real production hit reported during dogfood.
+    // `import.meta` is an AST MetaProperty, not an identifier reference.
+    const f = probeCodeCorrectness([
+      file(
+        'scripts/x.mjs',
+        `const __dirname = dirname(fileURLToPath(import.meta.url));\nexport { __dirname };`
+      ),
+    ]);
+    expect(f.find((x) => /\bimport\b/.test(x.title))).toBeUndefined();
+    expect(f.find((x) => /\bmeta\b/.test(x.title))).toBeUndefined();
+  });
+
+  it('does NOT flag `new` or `target` inside `new.target` (MetaProperty node)', () => {
+    const f = probeCodeCorrectness([
+      file('src/a.js', `function Foo() { if (new.target) { /* ... */ } }`),
+    ]);
+    expect(f.find((x) => /\bnew\b/.test(x.title))).toBeUndefined();
+    expect(f.find((x) => /\btarget\b/.test(x.title))).toBeUndefined();
+  });
+
   it('does NOT flag React when JSX runtime makes it global (modern build)', () => {
     // React is in the GLOBALS allowlist for the modern JSX automatic runtime
     const f = probeCodeCorrectness([

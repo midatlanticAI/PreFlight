@@ -162,7 +162,7 @@ export function ExplainVerifyTab() {
 
   return (
     <section>
-      <h2 className="ap-display" style={{ margin: '0 0 14px', fontSize: 22, color: T.text }}>
+      <h2 className="ap-display" style={{ margin: '0 0 14px', fontSize: 24, color: T.text }}>
         Explain &amp; Verify
       </h2>
 
@@ -181,7 +181,7 @@ export function ExplainVerifyTab() {
         <p
           style={{
             margin: 0,
-            fontSize: 13,
+            fontSize: 14,
             color: T.textDim,
             lineHeight: 1.7,
             whiteSpace: 'pre-line',
@@ -192,7 +192,7 @@ export function ExplainVerifyTab() {
       </div>
 
       <div className="ap-card" style={{ padding: 18, marginBottom: 14 }}>
-        <h3 className="ap-eyebrow" style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted }}>
+        <h3 className="ap-eyebrow" style={{ margin: '0 0 10px', fontSize: 12, color: T.textMuted }}>
           PROVIDER
         </h3>
         <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
@@ -209,7 +209,7 @@ export function ExplainVerifyTab() {
                 color: provider === p ? T.bg : T.textDim,
                 cursor: 'pointer',
                 fontFamily: fontMono,
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 600,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
@@ -234,7 +234,7 @@ export function ExplainVerifyTab() {
             <label
               htmlFor="ai-key"
               className="ap-eyebrow"
-              style={{ display: 'block', marginBottom: 8, fontSize: 11, color: T.textMuted }}
+              style={{ display: 'block', marginBottom: 8, fontSize: 12, color: T.textMuted }}
             >
               API KEY
             </label>
@@ -267,7 +267,7 @@ export function ExplainVerifyTab() {
                   border: `1px solid ${T.border}`,
                   color: T.textDim,
                   cursor: 'pointer',
-                  fontSize: 10,
+                  fontSize: 11,
                   padding: '4px 8px',
                   minHeight: 24,
                 }}
@@ -284,7 +284,7 @@ export function ExplainVerifyTab() {
             <label
               htmlFor="ai-model"
               className="ap-eyebrow"
-              style={{ display: 'block', marginBottom: 8, fontSize: 11, color: T.textMuted }}
+              style={{ display: 'block', marginBottom: 8, fontSize: 12, color: T.textMuted }}
             >
               MODEL
             </label>
@@ -313,7 +313,7 @@ export function ExplainVerifyTab() {
                 alignItems: 'center',
                 gap: 4,
                 color: T.accent,
-                fontSize: 12,
+                fontSize: 13,
                 marginBottom: 14,
               }}
             >
@@ -330,7 +330,7 @@ export function ExplainVerifyTab() {
             style={{
               padding: 10,
               marginBottom: 12,
-              fontSize: 12,
+              fontSize: 13,
               background:
                 status.kind === 'ok'
                   ? T.sev.info.bg
@@ -361,7 +361,7 @@ export function ExplainVerifyTab() {
             onClick={handleSave}
             className="ap-btn"
             type="button"
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 13 }}
             disabled={testing}
           >
             <Check
@@ -376,7 +376,7 @@ export function ExplainVerifyTab() {
               onClick={handleTest}
               className="ap-btn ap-btn-ghost"
               type="button"
-              style={{ fontSize: 12 }}
+              style={{ fontSize: 13 }}
               disabled={testing}
             >
               <Wifi
@@ -391,7 +391,7 @@ export function ExplainVerifyTab() {
             onClick={handleClear}
             className="ap-btn ap-btn-ghost"
             type="button"
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 13 }}
             disabled={testing}
           >
             <Trash2

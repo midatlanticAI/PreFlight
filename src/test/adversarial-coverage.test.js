@@ -621,6 +621,15 @@ const FIXTURES = {
           ),
         ],
       },
+      {
+        // Regression: an adversarial test fixture for THIS probe living inside
+        // a test file should not itself trigger the probe. Probe must skip
+        // test paths via isTestFile().
+        desc: 'auth cookie pattern inside a test file (probe must skip test paths)',
+        files: [
+          file('src/test/foo.test.js', 'res.cookie("auth", token);'),
+        ],
+      },
     ],
   },
 

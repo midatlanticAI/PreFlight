@@ -225,14 +225,14 @@ function NotFoundView() {
     <div className="ap-card" style={{ padding: 28 }}>
       <h2
         className="ap-display"
-        style={{ margin: '0 0 8px', fontSize: 22, color: T.text, fontWeight: 700 }}
+        style={{ margin: '0 0 8px', fontSize: 24, color: T.text, fontWeight: 700 }}
       >
         Nothing here.
       </h2>
-      <p style={{ margin: '0 0 14px', fontSize: 13, color: T.textDim, lineHeight: 1.7 }}>
+      <p style={{ margin: '0 0 14px', fontSize: 14, color: T.textDim, lineHeight: 1.7 }}>
         The URL you opened doesn&apos;t match any Pre-Flight route.
       </p>
-      <Link to="/" style={{ color: T.accent, fontFamily: fontMono, fontSize: 12 }}>
+      <Link to="/" style={{ color: T.accent, fontFamily: fontMono, fontSize: 13 }}>
         Back to Audit →
       </Link>
     </div>
@@ -797,7 +797,7 @@ export default function App() {
               <span
                 className="ap-display"
                 style={{
-                  fontSize: 18,
+                  fontSize: 19,
                   fontWeight: 700,
                   fontStyle: 'italic',
                   color: T.accent,
@@ -808,7 +808,7 @@ export default function App() {
               </span>
               <span
                 className="ap-eyebrow"
-                style={{ fontSize: 9, color: T.textMuted, marginTop: 3 }}
+                style={{ fontSize: 10, color: T.textMuted, marginTop: 3 }}
               >
                 BY MID-ATLANTIC AI
               </span>
@@ -821,7 +821,7 @@ export default function App() {
           fallback={
             <div
               className="ap-card"
-              style={{ padding: 28, color: T.textDim, fontSize: 13, textAlign: 'center' }}
+              style={{ padding: 28, color: T.textDim, fontSize: 14, textAlign: 'center' }}
             >
               Loading…
             </div>

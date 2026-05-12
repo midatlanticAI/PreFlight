@@ -104,7 +104,7 @@ export default class ErrorBoundary extends React.Component {
         >
           <div
             style={{
-              fontSize: 11,
+              fontSize: 12,
               letterSpacing: '0.18em',
               textTransform: 'uppercase',
               color: '#fb7185',
@@ -118,14 +118,14 @@ export default class ErrorBoundary extends React.Component {
               margin: '0 0 16px',
               fontFamily: "'Instrument Serif', Georgia, serif",
               fontStyle: 'italic',
-              fontSize: 36,
+              fontSize: 39,
               fontWeight: 400,
               color: '#f5f7fa',
             }}
           >
             Something broke while drawing the UI.
           </h1>
-          <p style={{ color: '#a8b1c5', fontSize: 13, lineHeight: 1.7, marginBottom: 16 }}>
+          <p style={{ color: '#a8b1c5', fontSize: 14, lineHeight: 1.7, marginBottom: 16 }}>
             The error and a copy of the recent log buffer are below. The "Copy Diagnostics" button
             grabs everything as JSON for sharing. "Try Again" attempts to re-render — if the same
             input still triggers it, refresh the page or clear localStorage.
@@ -136,7 +136,7 @@ export default class ErrorBoundary extends React.Component {
               border: '1px solid #1f2a44',
               padding: 14,
               marginBottom: 14,
-              fontSize: 12,
+              fontSize: 13,
             }}
           >
             <div style={{ color: '#fb7185', marginBottom: 6 }}>
@@ -149,7 +149,7 @@ export default class ErrorBoundary extends React.Component {
                   color: '#a8b1c5',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
-                  fontSize: 11,
+                  fontSize: 12,
                   lineHeight: 1.5,
                   maxHeight: 240,
                   overflowY: 'auto',
@@ -168,7 +168,7 @@ export default class ErrorBoundary extends React.Component {
                 border: 'none',
                 padding: '10px 18px',
                 fontFamily: 'inherit',
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 600,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
@@ -185,7 +185,7 @@ export default class ErrorBoundary extends React.Component {
                 border: '1px solid #1f2a44',
                 padding: '10px 18px',
                 fontFamily: 'inherit',
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 600,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
@@ -202,7 +202,7 @@ export default class ErrorBoundary extends React.Component {
                 border: '1px solid #1f2a44',
                 padding: '10px 18px',
                 fontFamily: 'inherit',
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 600,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',

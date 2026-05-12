@@ -61,7 +61,7 @@ function DiagnosticsPanel() {
           <label
             htmlFor="diag-level"
             className="ap-eyebrow"
-            style={{ fontSize: 11, color: T.textMuted }}
+            style={{ fontSize: 12, color: T.textMuted }}
           >
             LEVEL
           </label>
@@ -70,14 +70,14 @@ function DiagnosticsPanel() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="ap-input"
-            style={{ padding: '4px 8px', fontSize: 12, width: 'auto', minHeight: 24 }}
+            style={{ padding: '4px 8px', fontSize: 13, width: 'auto', minHeight: 24 }}
           >
             <option value="debug">debug ({counts.debug || 0})</option>
             <option value="info">info ({counts.info || 0})</option>
             <option value="warn">warn ({counts.warn || 0})</option>
             <option value="error">error ({counts.error || 0})</option>
           </select>
-          <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
+          <span className="ap-mono" style={{ fontSize: 12, color: T.textMuted }}>
             {visible.length} / {all.length} entries
           </span>
         </div>
@@ -86,7 +86,7 @@ function DiagnosticsPanel() {
             onClick={handleCopy}
             className="ap-btn ap-btn-ghost"
             type="button"
-            style={{ fontSize: 11, padding: '6px 10px' }}
+            style={{ fontSize: 12, padding: '6px 10px' }}
             title="Copy all logs to clipboard"
           >
             <Copy
@@ -100,7 +100,7 @@ function DiagnosticsPanel() {
             onClick={handleDownload}
             className="ap-btn ap-btn-ghost"
             type="button"
-            style={{ fontSize: 11, padding: '6px 10px' }}
+            style={{ fontSize: 12, padding: '6px 10px' }}
             title="Save logs as JSON"
           >
             <Download
@@ -114,7 +114,7 @@ function DiagnosticsPanel() {
             onClick={clearLogs}
             className="ap-btn ap-btn-ghost"
             type="button"
-            style={{ fontSize: 11, padding: '6px 10px' }}
+            style={{ fontSize: 12, padding: '6px 10px' }}
             title="Clear the log buffer"
           >
             <Trash2
@@ -136,7 +136,7 @@ function DiagnosticsPanel() {
           maxHeight: 480,
           overflowY: 'auto',
           fontFamily: fontMono,
-          fontSize: 11,
+          fontSize: 12,
           padding: 8,
         }}
       >
@@ -172,7 +172,7 @@ function DiagnosticsPanel() {
                   style={{
                     margin: '4px 0 0 24px',
                     color: T.textDim,
-                    fontSize: 10,
+                    fontSize: 11,
                     whiteSpace: 'pre-wrap',
                   }}
                 >
@@ -191,7 +191,7 @@ export function DiagnosticsTab() {
   const [show, setShow] = useState(false);
   return (
     <section>
-      <h2 className="ap-display" style={{ margin: '0 0 14px', fontSize: 22, color: T.text }}>
+      <h2 className="ap-display" style={{ margin: '0 0 14px', fontSize: 24, color: T.text }}>
         Diagnostics
       </h2>
 
@@ -204,7 +204,7 @@ export function DiagnosticsTab() {
           borderLeft: `3px solid ${T.accentAlt}`,
         }}
       >
-        <p style={{ margin: 0, fontSize: 13, color: T.textDim, lineHeight: 1.7 }}>{COPY}</p>
+        <p style={{ margin: 0, fontSize: 14, color: T.textDim, lineHeight: 1.7 }}>{COPY}</p>
       </div>
 
       <div className="ap-card" style={{ padding: 18, marginBottom: 14 }}>
@@ -224,7 +224,7 @@ export function DiagnosticsTab() {
             aria-label="Show diagnostics panel"
             style={{ width: 16, height: 16, cursor: 'pointer' }}
           />
-          <span style={{ fontSize: 13, color: T.text }}>Show diagnostics panel</span>
+          <span style={{ fontSize: 14, color: T.text }}>Show diagnostics panel</span>
         </label>
       </div>
 
@@ -233,7 +233,7 @@ export function DiagnosticsTab() {
       ) : (
         <div
           className="ap-card"
-          style={{ padding: 18, color: T.textMuted, fontSize: 13, fontStyle: 'italic' }}
+          style={{ padding: 18, color: T.textMuted, fontSize: 14, fontStyle: 'italic' }}
         >
           Diagnostics hidden. Toggle on to view live logs.
         </div>

@@ -54,10 +54,10 @@ export function ScoreGauge({ score }) {
         <div className="ap-eyebrow" style={{ marginBottom: 4 }}>
           SCORE
         </div>
-        <div className="ap-display" style={{ fontSize: 84, lineHeight: 1, color: tier.color }}>
+        <div className="ap-display" style={{ fontSize: 91, lineHeight: 1, color: tier.color }}>
           {score}
         </div>
-        <div className="ap-mono" style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
+        <div className="ap-mono" style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>
           / 100
         </div>
       </div>
@@ -70,10 +70,10 @@ export function CategoryBar({ name, count, max, color }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span className="ap-mono" style={{ fontSize: 12, color: T.text }}>
+        <span className="ap-mono" style={{ fontSize: 13, color: T.text }}>
           {name}
         </span>
-        <span className="ap-mono" style={{ fontSize: 12, color: T.textDim }}>
+        <span className="ap-mono" style={{ fontSize: 13, color: T.textDim }}>
           {count}
         </span>
       </div>
@@ -100,7 +100,7 @@ export function SeverityChip({ severity }) {
     <span
       className="ap-mono"
       style={{
-        fontSize: 10,
+        fontSize: 11,
         letterSpacing: '0.12em',
         textTransform: 'uppercase',
         color: c.fg,

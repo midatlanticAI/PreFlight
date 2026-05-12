@@ -26,11 +26,11 @@ export function IndexView({ type }) {
       <h2
         id={`learn-${type}-heading`}
         className="ap-display"
-        style={{ margin: '0 0 6px', fontSize: 24, fontWeight: 700, color: T.text }}
+        style={{ margin: '0 0 6px', fontSize: 26, fontWeight: 700, color: T.text }}
       >
         {meta.heading}
       </h2>
-      <p style={{ color: T.textMuted, fontSize: 13, margin: '0 0 18px' }}>
+      <p style={{ color: T.textMuted, fontSize: 14, margin: '0 0 18px' }}>
         {entries.length} {meta.kind}
         {entries.length === 1 ? '' : 's'} · {entries.filter((e) => !e.draft).length} published ·{' '}
         {entries.filter((e) => e.draft).length} draft
@@ -42,7 +42,7 @@ export function IndexView({ type }) {
           style={{
             padding: 24,
             color: T.textMuted,
-            fontSize: 13,
+            fontSize: 14,
             textAlign: 'center',
           }}
         >
@@ -83,7 +83,7 @@ export function IndexView({ type }) {
                     className="ap-display"
                     style={{
                       margin: 0,
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: 700,
                       color: T.text,
                     }}
@@ -94,7 +94,7 @@ export function IndexView({ type }) {
                     <span
                       className="ap-mono"
                       style={{
-                        fontSize: 10,
+                        fontSize: 11,
                         padding: '2px 7px',
                         color: T.textDim,
                         background: T.bg,
@@ -111,7 +111,7 @@ export function IndexView({ type }) {
                   <p
                     style={{
                       margin: '0 0 10px',
-                      fontSize: 13,
+                      fontSize: 14,
                       color: T.textDim,
                       lineHeight: 1.6,
                     }}
@@ -122,7 +122,7 @@ export function IndexView({ type }) {
                 {e.last_updated && (
                   <span
                     className="ap-mono"
-                    style={{ fontSize: 10, color: T.textMuted, fontFamily: fontMono }}
+                    style={{ fontSize: 11, color: T.textMuted, fontFamily: fontMono }}
                   >
                     <Clock
                       size={9}

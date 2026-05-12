@@ -25,17 +25,17 @@ export function EntryView() {
   const entry = getBySlug(slug);
   if (!entry) {
     return (
-      <div className="ap-card" style={{ padding: 24, color: T.textDim, fontSize: 14 }}>
+      <div className="ap-card" style={{ padding: 24, color: T.textDim, fontSize: 15 }}>
         <h2
           className="ap-display"
-          style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: T.text }}
+          style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 700, color: T.text }}
         >
           Not found.
         </h2>
         <p style={{ margin: '0 0 14px' }}>
           No Learn entry matches the slug <code>{slug}</code>.
         </p>
-        <Link to="/learn" style={{ color: T.accent, fontFamily: fontMono, fontSize: 12 }}>
+        <Link to="/learn" style={{ color: T.accent, fontFamily: fontMono, fontSize: 13 }}>
           <ChevronLeft
             size={12}
             aria-hidden="true"
@@ -108,13 +108,13 @@ function IncidentMetaHeader({ entry }) {
     >
       {tier && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span className="ap-eyebrow" style={{ fontSize: 10, color: T.textMuted }}>
+          <span className="ap-eyebrow" style={{ fontSize: 11, color: T.textMuted }}>
             CVSS
           </span>
           <span
             style={{
               fontFamily: fontMono,
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: 700,
               color: tier.color,
               lineHeight: 1,
@@ -125,7 +125,7 @@ function IncidentMetaHeader({ entry }) {
           <span
             style={{
               fontFamily: fontMono,
-              fontSize: 10,
+              fontSize: 11,
               color: tier.color,
               background: tier.bg,
               border: `1px solid ${tier.border}`,
@@ -141,13 +141,13 @@ function IncidentMetaHeader({ entry }) {
       )}
       {items.map((it) => (
         <div key={it.label} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span className="ap-eyebrow" style={{ fontSize: 10, color: T.textMuted }}>
+          <span className="ap-eyebrow" style={{ fontSize: 11, color: T.textMuted }}>
             {it.label}
           </span>
           <span
             style={{
               fontFamily: it.mono ? fontMono : 'inherit',
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 600,
               color: T.text,
             }}
@@ -172,7 +172,7 @@ export function EntryBody({ entry }) {
         className="ap-mono"
         style={{
           color: T.textDim,
-          fontSize: 11,
+          fontSize: 12,
           textDecoration: 'none',
           marginBottom: 12,
           display: 'inline-flex',
@@ -192,7 +192,7 @@ export function EntryBody({ entry }) {
           className="ap-display"
           style={{
             margin: '0 0 6px',
-            fontSize: 32,
+            fontSize: 35,
             fontWeight: 700,
             color: T.text,
             letterSpacing: '-0.01em',
@@ -203,7 +203,7 @@ export function EntryBody({ entry }) {
         {entry.last_updated && (
           <span
             className="ap-mono"
-            style={{ fontSize: 11, color: T.textMuted, fontFamily: fontMono }}
+            style={{ fontSize: 12, color: T.textMuted, fontFamily: fontMono }}
           >
             Updated {entry.last_updated}
             {entry.draft && ' · Draft'}
@@ -218,7 +218,7 @@ export function EntryBody({ entry }) {
         style={{
           padding: 28,
           color: T.textDim,
-          fontSize: 14,
+          fontSize: 15,
           lineHeight: 1.75,
         }}
       >
@@ -230,7 +230,7 @@ export function EntryBody({ entry }) {
           <section style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${T.border}` }}>
             <h3
               className="ap-eyebrow"
-              style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted }}
+              style={{ margin: '0 0 8px', fontSize: 12, color: T.textMuted }}
             >
               RELATED PROBES
             </h3>
@@ -239,7 +239,7 @@ export function EntryBody({ entry }) {
                 <li
                   key={p}
                   className="ap-mono"
-                  style={{ fontSize: 12, color: T.text, marginBottom: 4 }}
+                  style={{ fontSize: 13, color: T.text, marginBottom: 4 }}
                 >
                   · {p}
                 </li>
@@ -252,7 +252,7 @@ export function EntryBody({ entry }) {
           <section style={{ marginTop: 20, paddingTop: 20, borderTop: `1px solid ${T.border}` }}>
             <h3
               className="ap-eyebrow"
-              style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted }}
+              style={{ margin: '0 0 8px', fontSize: 12, color: T.textMuted }}
             >
               SOURCES
             </h3>
@@ -263,7 +263,7 @@ export function EntryBody({ entry }) {
                     href={s.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: T.accent, fontSize: 13 }}
+                    style={{ color: T.accent, fontSize: 14 }}
                   >
                     {s.title}
                     <ExternalLink

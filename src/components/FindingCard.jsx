@@ -60,7 +60,7 @@ export function FindingCard({
             <span
               className="ap-mono"
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 color: T.cat[finding.category],
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
@@ -68,7 +68,7 @@ export function FindingCard({
             >
               {finding.category}
             </span>
-            <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>
+            <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
               {finding.cwe}
             </span>
             {finding.confidence && (
@@ -82,7 +82,7 @@ export function FindingCard({
                       : 'Heuristic — path / structural inference; manual review recommended'
                 }
                 style={{
-                  fontSize: 10,
+                  fontSize: 11,
                   color: T.textDim,
                   background: T.panelAlt,
                   border: `1px solid ${T.border}`,
@@ -105,7 +105,7 @@ export function FindingCard({
                       : 'Manual — architectural / scope-dependent; no canned fix'
                 }
                 style={{
-                  fontSize: 10,
+                  fontSize: 11,
                   // Mint highlight on "mechanical" — easy-win signal.
                   color:
                     finding.autofix === 'mechanical'
@@ -129,12 +129,12 @@ export function FindingCard({
               </span>
             )}
           </div>
-          <div style={{ fontSize: 13, color: T.text, marginBottom: 4, fontWeight: 500 }}>
+          <div style={{ fontSize: 14, color: T.text, marginBottom: 4, fontWeight: 500 }}>
             {finding.title}
           </div>
           <div
             className="ap-mono"
-            style={{ fontSize: 11, color: T.textMuted, wordBreak: 'break-all' }}
+            style={{ fontSize: 12, color: T.textMuted, wordBreak: 'break-all' }}
           >
             {finding.file}
             {finding.line ? `:${finding.line}` : ''}
@@ -160,7 +160,7 @@ export function FindingCard({
               padding: 12,
               background: T.bg,
               border: `1px solid ${T.border}`,
-              fontSize: 12,
+              fontSize: 13,
               color: T.textDim,
               overflowX: 'auto',
               fontFamily: fontMono,
@@ -201,7 +201,7 @@ export function FindingCard({
                     border: `1px solid ${T.border}`,
                     color: T.textMuted,
                     cursor: 'pointer',
-                    fontSize: 10,
+                    fontSize: 11,
                     padding: '3px 8px',
                     letterSpacing: '0.1em',
                     textTransform: 'uppercase',
@@ -221,7 +221,7 @@ export function FindingCard({
                   padding: 12,
                   background: T.bg,
                   border: `1px solid ${T.border}`,
-                  fontSize: 12,
+                  fontSize: 13,
                   overflowX: 'auto',
                   fontFamily: fontMono,
                   whiteSpace: 'pre',
@@ -277,7 +277,7 @@ export function FindingCard({
           <div className="ap-eyebrow" style={{ marginTop: 14, marginBottom: 6 }}>
             REMEDIATION
           </div>
-          <div style={{ fontSize: 13, color: T.textDim, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+          <div style={{ fontSize: 14, color: T.textDim, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
             {finding.remediation}
           </div>
           {/* Explain & Verify — BYOK AI feature.
@@ -293,7 +293,7 @@ export function FindingCard({
                 onClick={() => onExplainVerify(finding)}
                 className="ap-btn ap-btn-ghost"
                 disabled={aiResponse?.status === 'streaming'}
-                style={{ fontSize: 11, padding: '6px 14px' }}
+                style={{ fontSize: 12, padding: '6px 14px' }}
               >
                 <MessageSquare
                   size={11}
@@ -323,7 +323,7 @@ export function FindingCard({
                   <div
                     className="ap-mono"
                     style={{
-                      fontSize: 10,
+                      fontSize: 11,
                       color: T.accentAlt,
                       marginBottom: 8,
                       letterSpacing: '0.1em',
@@ -338,11 +338,11 @@ export function FindingCard({
                     )}
                   </div>
                   {aiResponse.status === 'error' ? (
-                    <div style={{ fontSize: 12, color: T.sev.critical.fg }}>{aiResponse.error}</div>
+                    <div style={{ fontSize: 13, color: T.sev.critical.fg }}>{aiResponse.error}</div>
                   ) : (
                     <div
                       style={{
-                        fontSize: 13,
+                        fontSize: 14,
                         color: T.textDim,
                         lineHeight: 1.7,
                         whiteSpace: 'pre-wrap',
@@ -356,7 +356,7 @@ export function FindingCard({
             </div>
           )}
           <div style={{ marginTop: 12 }}>
-            <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>
+            <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
               probe: {finding.probe}
             </span>
           </div>
@@ -370,7 +370,7 @@ export function FindingCard({
                 <span
                   className="ap-mono"
                   style={{
-                    fontSize: 10,
+                    fontSize: 11,
                     padding: '3px 8px',
                     background: T.panelAlt,
                     border: `1px solid ${T.borderAlt}`,
@@ -381,11 +381,11 @@ export function FindingCard({
                 >
                   {finding.suppression.disposition.replace(/-/g, ' ')}
                 </span>
-                <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>
+                <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
                   set {timeAgo(finding.suppression.at)}
                 </span>
                 {finding.suppression.note && (
-                  <span style={{ fontSize: 11, color: T.textDim, fontStyle: 'italic' }}>
+                  <span style={{ fontSize: 12, color: T.textDim, fontStyle: 'italic' }}>
                     “{finding.suppression.note}”
                   </span>
                 )}
@@ -393,7 +393,7 @@ export function FindingCard({
                   <button
                     onClick={() => onUnsuppress(finding)}
                     className="ap-btn ap-btn-ghost"
-                    style={{ padding: '4px 10px', fontSize: 10 }}
+                    style={{ padding: '4px 10px', fontSize: 11 }}
                   >
                     <RefreshCw
                       size={10}
@@ -414,7 +414,7 @@ export function FindingCard({
                 <button
                   onClick={() => onSuppress(finding, 'false-positive')}
                   className="ap-btn ap-btn-ghost"
-                  style={{ padding: '4px 10px', fontSize: 10 }}
+                  style={{ padding: '4px 10px', fontSize: 11 }}
                   title="The scanner is wrong — this is not a real issue"
                 >
                   False positive
@@ -422,7 +422,7 @@ export function FindingCard({
                 <button
                   onClick={() => onSuppress(finding, 'wont-fix')}
                   className="ap-btn ap-btn-ghost"
-                  style={{ padding: '4px 10px', fontSize: 10 }}
+                  style={{ padding: '4px 10px', fontSize: 11 }}
                   title="Real issue but intentionally not fixing"
                 >
                   Won't fix
@@ -430,7 +430,7 @@ export function FindingCard({
                 <button
                   onClick={() => onSuppress(finding, 'accepted-risk')}
                   className="ap-btn ap-btn-ghost"
-                  style={{ padding: '4px 10px', fontSize: 10 }}
+                  style={{ padding: '4px 10px', fontSize: 11 }}
                   title="Real risk that's been formally accepted"
                 >
                   Accepted risk

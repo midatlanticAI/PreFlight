@@ -40,7 +40,7 @@ function ExplainerBlock() {
       <div className="ap-eyebrow" style={{ marginBottom: 6, color: T.accentAlt }}>
         PRIVACY POSTURE
       </div>
-      <p style={{ margin: 0, fontSize: 13, color: T.textDim, lineHeight: 1.7 }}>
+      <p style={{ margin: 0, fontSize: 14, color: T.textDim, lineHeight: 1.7 }}>
         Pre-Flight stores everything in your browser. Nothing leaves this tab unless you scan a
         public GitHub URL (which fetches from GitHub directly, not through us) or opt into Explain
         &amp; Verify (which sends to your chosen AI provider with your own key).
@@ -66,17 +66,17 @@ export function GeneralTab() {
 
   return (
     <section>
-      <h2 className="ap-display" style={{ margin: '0 0 14px', fontSize: 22, color: T.text }}>
+      <h2 className="ap-display" style={{ margin: '0 0 14px', fontSize: 24, color: T.text }}>
         General
       </h2>
 
       <ExplainerBlock />
 
       <div className="ap-card" style={{ padding: 18, marginBottom: 14 }}>
-        <h3 className="ap-eyebrow" style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted }}>
+        <h3 className="ap-eyebrow" style={{ margin: '0 0 8px', fontSize: 12, color: T.textMuted }}>
           LOCAL DATA
         </h3>
-        <p style={{ margin: '0 0 12px', fontSize: 13, color: T.textDim, lineHeight: 1.7 }}>
+        <p style={{ margin: '0 0 12px', fontSize: 14, color: T.textDim, lineHeight: 1.7 }}>
           Wipe scan history, the diagnostics log buffer, your AI settings, your GitHub token, the
           suppression store, and the analytics counter — everything Pre-Flight remembers locally.
           The page reloads to a fresh state when you confirm.
@@ -86,7 +86,7 @@ export function GeneralTab() {
             onClick={() => setShowConfirm(true)}
             className="ap-btn ap-btn-ghost"
             type="button"
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 13 }}
           >
             <Trash2
               size={12}
@@ -116,13 +116,13 @@ export function GeneralTab() {
               }}
             >
               <AlertTriangle size={14} aria-hidden="true" />
-              <strong style={{ fontSize: 13 }}>This cannot be undone.</strong>
+              <strong style={{ fontSize: 14 }}>This cannot be undone.</strong>
             </div>
             <ul
               style={{
                 margin: '0 0 12px 18px',
                 padding: 0,
-                fontSize: 12,
+                fontSize: 13,
                 color: T.textDim,
                 lineHeight: 1.7,
               }}
@@ -139,7 +139,7 @@ export function GeneralTab() {
                 onClick={() => setShowConfirm(false)}
                 className="ap-btn ap-btn-ghost"
                 type="button"
-                style={{ fontSize: 11 }}
+                style={{ fontSize: 12 }}
               >
                 Cancel
               </button>
@@ -148,7 +148,7 @@ export function GeneralTab() {
                 className="ap-btn"
                 type="button"
                 style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   background: T.sev.critical.fg,
                   borderColor: T.sev.critical.fg,
                 }}
@@ -161,10 +161,10 @@ export function GeneralTab() {
       </div>
 
       <div className="ap-card" style={{ padding: 18 }}>
-        <h3 className="ap-eyebrow" style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted }}>
+        <h3 className="ap-eyebrow" style={{ margin: '0 0 8px', fontSize: 12, color: T.textMuted }}>
           VERSION
         </h3>
-        <div style={{ fontSize: 13, color: T.text, fontFamily: fontMono }}>
+        <div style={{ fontSize: 14, color: T.text, fontFamily: fontMono }}>
           Pre-Flight v{VERSION} · built {BUILD_DATE}
         </div>
         <a
@@ -176,7 +176,7 @@ export function GeneralTab() {
             alignItems: 'center',
             gap: 4,
             color: T.accent,
-            fontSize: 12,
+            fontSize: 13,
             marginTop: 8,
             fontFamily: fontMono,
           }}

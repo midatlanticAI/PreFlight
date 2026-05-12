@@ -16,12 +16,12 @@ const RESOURCES = [
 export function AboutTab() {
   return (
     <section>
-      <h2 className="ap-display" style={{ margin: '0 0 14px', fontSize: 22, color: T.text }}>
+      <h2 className="ap-display" style={{ margin: '0 0 14px', fontSize: 24, color: T.text }}>
         About
       </h2>
 
       <div className="ap-card" style={{ padding: 18, marginBottom: 14 }}>
-        <p style={{ margin: '0 0 12px', fontSize: 14, color: T.textDim, lineHeight: 1.75 }}>
+        <p style={{ margin: '0 0 12px', fontSize: 15, color: T.textDim, lineHeight: 1.75 }}>
           Pre-Flight is built and maintained by Johnathan Viruet at Mid-Atlantic AI. No tracking, no
           analytics beacons, no account required. All scanning runs in your browser tab.
         </p>
@@ -30,7 +30,7 @@ export function AboutTab() {
             listStyle: 'none',
             padding: 0,
             margin: '0 0 12px',
-            fontSize: 13,
+            fontSize: 14,
             color: T.text,
             lineHeight: 1.9,
           }}
@@ -43,7 +43,7 @@ export function AboutTab() {
             with attribution).
           </li>
         </ul>
-        <p style={{ margin: '0 0 8px', fontSize: 13, color: T.textDim, lineHeight: 1.7 }}>
+        <p style={{ margin: '0 0 8px', fontSize: 14, color: T.textDim, lineHeight: 1.7 }}>
           Star the repo, file issues, or contribute probes:
         </p>
         <a
@@ -56,14 +56,14 @@ export function AboutTab() {
             alignItems: 'center',
             gap: 6,
             color: T.accent,
-            fontSize: 13,
+            fontSize: 14,
             marginBottom: 12,
           }}
         >
           <Github size={12} aria-hidden="true" />
           github.com/midatlanticAI/PreFlight
         </a>
-        <p style={{ margin: 0, fontSize: 13, color: T.textDim, lineHeight: 1.7 }}>
+        <p style={{ margin: 0, fontSize: 14, color: T.textDim, lineHeight: 1.7 }}>
           Questions or feedback:{' '}
           <a
             href="mailto:john@midatlantic.ai"
@@ -73,7 +73,7 @@ export function AboutTab() {
               gap: 4,
               color: T.accent,
               fontFamily: fontMono,
-              fontSize: 13,
+              fontSize: 14,
             }}
           >
             <Mail size={11} aria-hidden="true" />
@@ -83,7 +83,7 @@ export function AboutTab() {
       </div>
 
       <div className="ap-card" style={{ padding: 18 }}>
-        <h3 className="ap-eyebrow" style={{ margin: '0 0 12px', fontSize: 11, color: T.textMuted }}>
+        <h3 className="ap-eyebrow" style={{ margin: '0 0 12px', fontSize: 12, color: T.textMuted }}>
           RESOURCES
         </h3>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -100,19 +100,19 @@ export function AboutTab() {
                     alignItems: 'center',
                     gap: 4,
                     color: T.accent,
-                    fontSize: 13,
+                    fontSize: 14,
                   }}
                 >
                   {label}
                   <ExternalLink size={10} aria-hidden="true" />
                 </a>
               ) : (
-                <span style={{ color: T.textMuted, fontSize: 13, fontFamily: fontMono }}>
+                <span style={{ color: T.textMuted, fontSize: 14, fontFamily: fontMono }}>
                   {label}{' '}
                   <span
                     style={{
                       fontStyle: 'italic',
-                      fontSize: 11,
+                      fontSize: 12,
                       marginLeft: 4,
                       color: T.textMuted,
                     }}

@@ -80,7 +80,7 @@ export function ResultsView({
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           className="ap-btn ap-btn-ghost"
-          style={{ padding: '8px 14px', fontSize: 11 }}
+          style={{ padding: '8px 14px', fontSize: 12 }}
           title="Go back to the input screen"
           type="button"
         >
@@ -91,7 +91,7 @@ export function ResultsView({
           />
           Back to Home · New Scan
         </button>
-        <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
+        <span className="ap-mono" style={{ fontSize: 12, color: T.textMuted }}>
           Source: <span style={{ color: T.textDim, wordBreak: 'break-all' }}>{results.source}</span>
         </span>
       </div>
@@ -103,7 +103,7 @@ export function ResultsView({
             <span className="ap-eyebrow">
               DELTA SINCE {timeAgo(diff.priorScannedAt).toUpperCase()}
             </span>
-            <span className="ap-mono" style={{ fontSize: 12, color: T.textDim }}>
+            <span className="ap-mono" style={{ fontSize: 13, color: T.textDim }}>
               Prior score: {diff.priorScore} → {liveScore}
               {liveScore - diff.priorScore !== 0 && (
                 <span
@@ -152,10 +152,10 @@ export function ResultsView({
           </div>
           <div style={{ display: 'flex', gap: 18, marginTop: 10, flexWrap: 'wrap' }}>
             <div>
-              <span className="ap-mono" style={{ fontSize: 11, color: T.sev.critical.fg }}>
+              <span className="ap-mono" style={{ fontSize: 12, color: T.sev.critical.fg }}>
                 NEW:
               </span>
-              <span className="ap-mono" style={{ fontSize: 12, color: T.text, marginLeft: 6 }}>
+              <span className="ap-mono" style={{ fontSize: 13, color: T.text, marginLeft: 6 }}>
                 {diff.introduced.count}
               </span>
               {SEV_ORDER.filter((s) => diff.introduced.bySeverity[s]).map((s) => (
@@ -164,7 +164,7 @@ export function ResultsView({
                   className="ap-mono"
                   style={{
                     marginLeft: 6,
-                    fontSize: 10,
+                    fontSize: 11,
                     padding: '1px 5px',
                     color: T.sev[s].fg,
                     background: T.sev[s].bg,
@@ -176,10 +176,10 @@ export function ResultsView({
               ))}
             </div>
             <div>
-              <span className="ap-mono" style={{ fontSize: 11, color: T.good }}>
+              <span className="ap-mono" style={{ fontSize: 12, color: T.good }}>
                 FIXED:
               </span>
-              <span className="ap-mono" style={{ fontSize: 12, color: T.text, marginLeft: 6 }}>
+              <span className="ap-mono" style={{ fontSize: 13, color: T.text, marginLeft: 6 }}>
                 {diff.fixed.count}
               </span>
               {SEV_ORDER.filter((s) => diff.fixed.bySeverity[s]).map((s) => (
@@ -188,7 +188,7 @@ export function ResultsView({
                   className="ap-mono"
                   style={{
                     marginLeft: 6,
-                    fontSize: 10,
+                    fontSize: 11,
                     padding: '1px 5px',
                     color: T.sev[s].fg,
                     background: T.sev[s].bg,
@@ -200,10 +200,10 @@ export function ResultsView({
               ))}
             </div>
             <div>
-              <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
+              <span className="ap-mono" style={{ fontSize: 12, color: T.textMuted }}>
                 STILL OPEN:
               </span>
-              <span className="ap-mono" style={{ fontSize: 12, color: T.text, marginLeft: 6 }}>
+              <span className="ap-mono" style={{ fontSize: 13, color: T.text, marginLeft: 6 }}>
                 {partitioned.visible.length}
               </span>
             </div>
@@ -236,7 +236,7 @@ export function ResultsView({
               <span
                 className="ap-display"
                 style={{
-                  fontSize: 36,
+                  fontSize: 39,
                   color: tier.color,
                 }}
               >
@@ -245,7 +245,7 @@ export function ResultsView({
               <span
                 className="ap-mono"
                 style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   color: tier.color,
                   background: 'rgba(0,0,0,0.3)',
                   border: `1px solid ${tier.ring}`,
@@ -267,7 +267,7 @@ export function ResultsView({
                     <li
                       key={f.id}
                       style={{
-                        fontSize: 14,
+                        fontSize: 15,
                         color: T.text,
                         padding: '4px 0',
                         paddingLeft: 18,
@@ -290,7 +290,7 @@ export function ResultsView({
                       <span
                         className="ap-mono"
                         style={{
-                          fontSize: 10,
+                          fontSize: 11,
                           color: T.sev[f.severity].fg,
                           marginRight: 8,
                           textTransform: 'uppercase',
@@ -308,7 +308,7 @@ export function ResultsView({
             )}
 
             {results.findings.length === 0 && results.filesScanned > 0 && (
-              <div style={{ fontSize: 14, color: T.good, marginTop: 8 }}>
+              <div style={{ fontSize: 15, color: T.good, marginTop: 8 }}>
                 <ShieldCheck
                   size={16}
                   aria-hidden="true"
@@ -323,7 +323,7 @@ export function ResultsView({
               <div
                 role="alert"
                 style={{
-                  fontSize: 14,
+                  fontSize: 15,
                   color: T.sev.high.fg,
                   marginTop: 8,
                   padding: 12,
@@ -356,7 +356,7 @@ export function ResultsView({
                   border: `1px solid ${T.border}`,
                   color: T.textMuted,
                   cursor: 'pointer',
-                  fontSize: 10,
+                  fontSize: 11,
                   padding: '4px 10px',
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
@@ -418,14 +418,14 @@ export function ResultsView({
                 />
                 <span
                   className="ap-mono"
-                  style={{ fontSize: 12, textTransform: 'uppercase', color: T.text }}
+                  style={{ fontSize: 13, textTransform: 'uppercase', color: T.text }}
                 >
                   {s}
                 </span>
               </div>
               <span
                 className="ap-mono"
-                style={{ fontSize: 13, color: sevCounts[s] ? T.sev[s].fg : T.textMuted }}
+                style={{ fontSize: 14, color: sevCounts[s] ? T.sev[s].fg : T.textMuted }}
               >
                 {sevCounts[s] || 0}
               </span>
@@ -436,7 +436,7 @@ export function ResultsView({
           <div className="ap-eyebrow" style={{ marginBottom: 16 }}>
             SCAN META
           </div>
-          <div style={{ fontSize: 12, color: T.textDim, lineHeight: 2 }}>
+          <div style={{ fontSize: 13, color: T.textDim, lineHeight: 2 }}>
             <div>
               <span style={{ color: T.textMuted }}>Source: </span>
               <span className="ap-mono" style={{ wordBreak: 'break-all' }}>
@@ -489,7 +489,7 @@ export function ResultsView({
               may be incomplete
             </span>
           </div>
-          <div style={{ fontSize: 12, color: T.textDim, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 13, color: T.textDim, lineHeight: 1.6 }}>
             The remaining probes ran successfully. Open the Diagnostics panel for stack traces.
           </div>
           <ul style={{ margin: '8px 0 0', padding: 0, listStyle: 'none' }}>
@@ -497,7 +497,7 @@ export function ResultsView({
               <li
                 key={i}
                 className="ap-mono"
-                style={{ fontSize: 11, color: T.textDim, padding: '2px 0' }}
+                style={{ fontSize: 12, color: T.textDim, padding: '2px 0' }}
               >
                 <span style={{ color: T.sev.medium.fg }}>·</span> <strong>{p.probe}</strong>:{' '}
                 {p.error}
@@ -523,7 +523,7 @@ export function ResultsView({
               <div className="ap-eyebrow" style={{ marginBottom: 4 }}>
                 EXPORT / SHARE
               </div>
-              <div style={{ fontSize: 12, color: T.textMuted }}>
+              <div style={{ fontSize: 13, color: T.textMuted }}>
                 Each export includes a ±5-line code snapshot per finding so an agent or dev has
                 enough context to fix.
               </div>
@@ -667,7 +667,7 @@ export function ResultsView({
               className="ap-display"
               style={{
                 margin: 0,
-                fontSize: 32,
+                fontSize: 35,
                 fontWeight: 400,
                 color: T.text,
               }}
@@ -681,7 +681,7 @@ export function ResultsView({
                   onClick={() => setFilter(s)}
                   className="ap-mono"
                   style={{
-                    fontSize: 10,
+                    fontSize: 11,
                     letterSpacing: '0.1em',
                     textTransform: 'uppercase',
                     padding: '6px 10px',
@@ -716,7 +716,7 @@ export function ResultsView({
               />
             ))}
             {filteredFindings.length === 0 && (
-              <div style={{ padding: 32, textAlign: 'center', color: T.textMuted, fontSize: 13 }}>
+              <div style={{ padding: 32, textAlign: 'center', color: T.textMuted, fontSize: 14 }}>
                 No findings match the current filter.
               </div>
             )}
@@ -729,14 +729,14 @@ export function ResultsView({
                 className="ap-display"
                 style={{
                   margin: '0 0 12px',
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: 700,
                   color: T.textDim,
                 }}
               >
                 Suppressed ({partitioned.suppressed.length})
               </h3>
-              <p style={{ fontSize: 12, color: T.textMuted, marginBottom: 12 }}>
+              <p style={{ fontSize: 13, color: T.textMuted, marginBottom: 12 }}>
                 These findings are excluded from the score and the filtered list above. Click to
                 expand and un-suppress.
               </p>

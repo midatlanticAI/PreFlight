@@ -33,7 +33,7 @@ export function LearnPage() {
           className="ap-display"
           style={{
             margin: '0 0 8px',
-            fontSize: 36,
+            fontSize: 39,
             fontWeight: 700,
             color: T.text,
             letterSpacing: '-0.01em',
@@ -41,7 +41,7 @@ export function LearnPage() {
         >
           A library for vibers building vibeware.
         </h1>
-        <p style={{ fontSize: 14, color: T.textDim, lineHeight: 1.7, margin: 0, maxWidth: 720 }}>
+        <p style={{ fontSize: 15, color: T.textDim, lineHeight: 1.7, margin: 0, maxWidth: 720 }}>
           Pre-Flight catches security issues. This is where we explain them — the patterns we look
           for, the real-world incidents behind the threat-intel, and the architecture shapes that
           shape (or break) your security posture. Read once, build safer forever.
@@ -73,7 +73,7 @@ export function LearnPage() {
               background: isActive ? T.accent : 'transparent',
               border: 'none',
               fontFamily: fontUI,
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: 600,
               cursor: 'pointer',
               textDecoration: 'none',
@@ -91,7 +91,7 @@ export function LearnPage() {
         @media (max-width: 480px) {
           .ap-learn-subnav a {
             padding: 10px 12px !important;
-            font-size: 13px !important;
+            font-size: 14px !important;
           }
         }
       `}</style>

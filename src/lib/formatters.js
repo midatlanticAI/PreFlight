@@ -12,6 +12,7 @@
 import { SEV_ORDER } from './scoring.js';
 import { riskTier } from './theme.js';
 import { snippetToText } from './snippet.js';
+import sam from './personas/sam.js';
 
 export function formatJSON(results) {
   return JSON.stringify(
@@ -136,26 +137,57 @@ export function formatPRComment(results) {
   return md;
 }
 
+// formatAgentPrompt — exports a Sam-shaped batch prompt for pasting into
+// the user's own AI environment (Cursor, Claude Code, ChatGPT, etc.).
+//
+// The output is two parts:
+//   1. Sam's INSTRUCTIONS verbatim — the activation contract.
+//   2. A batch header + one SAM_COMMAND_SNIPPET per finding.
+//
+// FILE_CONTENT is intentionally omitted in this mode. The downstream AI the
+// user pastes into has its own access to the user's local environment and
+// can read the full file from there. Sam's SNIPPET-mode discipline says
+// "return FIX_NOT_TRIVIAL when the snippet is insufficient" — which is the
+// correct outcome here for fixes that require unseen context. That refusal
+// signals to the downstream AI that the fix is harder than it looks.
 export function formatAgentPrompt(results) {
   const tier = riskTier(results.score);
   const top = results.findings.slice(0, 30);
-  let p = `You are a senior application-security engineer. The findings below come from a static audit of a web app (score ${results.score}/100, ${tier.label}). For each finding, propose the smallest correct fix:\n`;
-  p += `- If you have enough context, output a unified diff against the file.\n`;
-  p += `- Otherwise describe the change in one or two sentences with a precise file:line reference.\n`;
-  p += `- Group fixes by file when there are multiple in the same file.\n`;
-  p += `- Call out any finding that needs human judgement (auth model, business logic) instead of guessing.\n\n`;
-  p += `Findings (highest severity first):\n\n`;
 
+  let p = '';
+  // Persona activation. The receiving AI takes on Sam's role.
+  p += sam.INSTRUCTIONS;
+  p += '\n\n----------------------------------------------------------------\n\n';
+
+  // Batch context. Tells the receiving AI this is multiple findings at once,
+  // and that the activation acknowledgment should be skipped so the user gets
+  // outputs directly.
+  p += `BATCH CONTEXT\n`;
+  p += `You are receiving ${top.length} finding${top.length === 1 ? '' : 's'} from a Pre-Flight audit `;
+  p += `(score ${results.score}/100, ${tier.label}). For each finding below, apply the `;
+  p += `SAM_COMMAND_SNIPPET procedure. Output one unified diff OR FIX_NOT_TRIVIAL plus rationale per `;
+  p += `finding, separated by a single line containing only "---". Process findings in order.\n\n`;
+  p += `Skip the activation acknowledgment for this batch. Produce fix outputs directly.\n\n`;
+  p += `Findings ordered highest severity first. A senior application-security engineer reading this prompt should expect SAM_COMMAND_SNIPPET mode throughout.\n\n`;
+
+  // One structured command per finding.
   top.forEach((f, i) => {
-    p += `### ${i + 1}. [${f.severity}] ${f.title}\n`;
-    p += `- File: ${f.file}${f.line ? ':' + f.line : ''}\n`;
-    p += `- Category: ${f.category} | ${f.cwe} | probe: ${f.probe}\n`;
-    p += `- Evidence: ${f.evidence}\n`;
+    p += `================================================================\n`;
+    p += `FINDING ${i + 1} of ${top.length}\n`;
+    p += `================================================================\n`;
+    p += `COMMAND: SAM_COMMAND_SNIPPET\n`;
+    p += `PROBE: ${f.probe} (${f.category}, ${f.cwe})\n`;
+    p += `SEVERITY: ${f.severity}\n`;
+    p += `FILE_PATH: ${f.file}${f.line ? ':' + f.line : ''}\n`;
+    p += `CODE_CONTEXT:\n`;
     if (f.snippet) {
-      p += `- Code (line ${f.line} marked with \`>\`):\n`;
       p += '```\n' + snippetToText(f.snippet) + '\n```\n';
+    } else {
+      p += '(no code snippet captured by the scanner for this finding)\n';
     }
-    p += `- Remediation hint: ${f.remediation}\n\n`;
+    p += `EVIDENCE: ${f.evidence}\n`;
+    p += `REMEDIATION_HINT: ${f.remediation}\n`;
+    p += `FILE_CONTENT: (omitted in SNIPPET mode; if the snippet is insufficient, return FIX_NOT_TRIVIAL)\n\n`;
   });
 
   if (results.findings.length > top.length) {

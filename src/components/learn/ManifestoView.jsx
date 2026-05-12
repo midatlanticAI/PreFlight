@@ -12,14 +12,14 @@ export function ManifestoView() {
   return (
     <div
       className="ap-card"
-      style={{ padding: 32, color: T.textDim, fontSize: 14, lineHeight: 1.7 }}
+      style={{ padding: 32, color: T.textDim, fontSize: 15, lineHeight: 1.7 }}
     >
       <div className="ap-eyebrow" style={{ marginBottom: 12 }}>
         VIBE-AWARE
       </div>
       <h2
         className="ap-display"
-        style={{ margin: '0 0 14px', fontSize: 24, fontWeight: 700, color: T.text }}
+        style={{ margin: '0 0 14px', fontSize: 26, fontWeight: 700, color: T.text }}
       >
         Manifesto — coming soon.
       </h2>

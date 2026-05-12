@@ -82,7 +82,7 @@ export function PrivateReposTab() {
 
   return (
     <section>
-      <h2 className="ap-display" style={{ margin: '0 0 14px', fontSize: 22, color: T.text }}>
+      <h2 className="ap-display" style={{ margin: '0 0 14px', fontSize: 24, color: T.text }}>
         Private Repos
       </h2>
 
@@ -101,7 +101,7 @@ export function PrivateReposTab() {
         <p
           style={{
             margin: 0,
-            fontSize: 13,
+            fontSize: 14,
             color: T.textDim,
             lineHeight: 1.7,
             whiteSpace: 'pre-line',
@@ -115,7 +115,7 @@ export function PrivateReposTab() {
         <label
           htmlFor="github-pat"
           className="ap-eyebrow"
-          style={{ display: 'block', marginBottom: 8, fontSize: 11, color: T.textMuted }}
+          style={{ display: 'block', marginBottom: 8, fontSize: 12, color: T.textMuted }}
         >
           GITHUB PERSONAL ACCESS TOKEN
         </label>
@@ -132,7 +132,7 @@ export function PrivateReposTab() {
             }}
             autoComplete="off"
             spellCheck={false}
-            style={{ paddingRight: 70, fontFamily: fontMono, fontSize: 12 }}
+            style={{ paddingRight: 70, fontFamily: fontMono, fontSize: 13 }}
           />
           <button
             type="button"
@@ -148,7 +148,7 @@ export function PrivateReposTab() {
               border: `1px solid ${T.border}`,
               color: T.textDim,
               cursor: 'pointer',
-              fontSize: 10,
+              fontSize: 11,
               padding: '4px 8px',
               minHeight: 24,
             }}
@@ -172,7 +172,7 @@ export function PrivateReposTab() {
             alignItems: 'center',
             gap: 4,
             color: T.accent,
-            fontSize: 12,
+            fontSize: 13,
             marginBottom: 14,
           }}
         >
@@ -187,7 +187,7 @@ export function PrivateReposTab() {
             style={{
               padding: 10,
               marginBottom: 12,
-              fontSize: 12,
+              fontSize: 13,
               background:
                 status.kind === 'ok'
                   ? T.sev.info.bg
@@ -218,7 +218,7 @@ export function PrivateReposTab() {
             onClick={handleSave}
             className="ap-btn"
             type="button"
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 13 }}
             disabled={testing}
           >
             <Check
@@ -232,7 +232,7 @@ export function PrivateReposTab() {
             onClick={handleTest}
             className="ap-btn ap-btn-ghost"
             type="button"
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 13 }}
             disabled={testing}
           >
             <Wifi
@@ -246,7 +246,7 @@ export function PrivateReposTab() {
             onClick={handleClear}
             className="ap-btn ap-btn-ghost"
             type="button"
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 13 }}
             disabled={testing}
           >
             <Trash2

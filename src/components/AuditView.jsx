@@ -82,7 +82,7 @@ export function AuditView({
           their score / findings instead of reading marketing copy again. */}
       {!results && (
         <header style={{ marginBottom: 36 }} className="ap-hero">
-          <div className="ap-eyebrow" style={{ marginBottom: 12, fontSize: 12 }}>
+          <div className="ap-eyebrow" style={{ marginBottom: 12, fontSize: 13 }}>
             <span style={{ color: T.accent }}>MID-ATLANTIC AI</span>
             <span style={{ color: T.textMuted }}> · PRE-FLIGHT AUDIT TOOL</span>
           </div>
@@ -93,7 +93,7 @@ export function AuditView({
               // Fluid type via clamp(min, preferred, max) — scales from 32 px on phones
               // up to 56 px on desktop without manual breakpoints, keeping the wordmark
               // readable everywhere.
-              fontSize: 'clamp(32px, 7vw, 56px)',
+              fontSize: 'clamp(35px, 7vw, 60px)',
               fontWeight: 700,
               letterSpacing: '-0.02em',
               lineHeight: 1.05,
@@ -104,7 +104,7 @@ export function AuditView({
             <br />
             <span
               style={{
-                fontSize: 'clamp(20px, 4vw, 32px)',
+                fontSize: 'clamp(22px, 4vw, 35px)',
                 fontWeight: 700,
                 lineHeight: 1.2,
                 display: 'inline-block',
@@ -120,7 +120,7 @@ export function AuditView({
             style={{
               maxWidth: 620,
               marginTop: 20,
-              fontSize: 16,
+              fontSize: 17,
               color: T.text,
               lineHeight: 1.6,
               fontFamily: fontUI,
@@ -133,7 +133,7 @@ export function AuditView({
             style={{
               maxWidth: 620,
               marginTop: 8,
-              fontSize: 15,
+              fontSize: 16,
               color: T.textDim,
               lineHeight: 1.75,
               fontFamily: fontUI,
@@ -147,7 +147,7 @@ export function AuditView({
           <p
             style={{
               marginTop: 14,
-              fontSize: 12,
+              fontSize: 13,
               color: T.textMuted,
               fontFamily: fontMono,
             }}
@@ -240,7 +240,7 @@ export function AuditView({
                     }}
                   />
                 </div>
-                <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
+                <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.6 }}>
                   Scans .env files, package.json, source files (.ts/.tsx/.js/.jsx), Supabase
                   migrations, Firebase rules, next.config, vercel.json. node_modules and build
                   outputs are skipped automatically. Files stay in this tab — nothing uploads.
@@ -252,7 +252,7 @@ export function AuditView({
                       padding: 12,
                       background: T.bg,
                       border: `1px solid ${T.border}`,
-                      fontSize: 12,
+                      fontSize: 13,
                       color: T.textDim,
                     }}
                   >
@@ -272,7 +272,7 @@ export function AuditView({
                           color: T.textMuted,
                           cursor: 'pointer',
                           fontFamily: fontMono,
-                          fontSize: 11,
+                          fontSize: 12,
                         }}
                       >
                         clear
@@ -283,13 +283,13 @@ export function AuditView({
                         <div
                           key={f.path}
                           className="ap-mono"
-                          style={{ fontSize: 11, padding: '2px 0', wordBreak: 'break-all' }}
+                          style={{ fontSize: 12, padding: '2px 0', wordBreak: 'break-all' }}
                         >
                           {f.path}
                         </div>
                       ))}
                       {files.length > 10 && (
-                        <div style={{ fontSize: 11, color: T.textMuted, marginTop: 4 }}>
+                        <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>
                           + {files.length - 10} more
                         </div>
                       )}
@@ -415,7 +415,7 @@ export function AuditView({
                               i < urlSuggestions.length - 1 ? `1px solid ${T.border}` : 'none',
                             cursor: 'pointer',
                             fontFamily: fontMono,
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: i === urlIndex ? 600 : 400,
                             wordBreak: 'break-all',
                             display: 'flex',
@@ -435,7 +435,7 @@ export function AuditView({
                     </div>
                   )}
                 </div>
-                <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.6, marginTop: 12 }}>
+                <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.6, marginTop: 12 }}>
                   Public repos only. Reads up to 80 security-relevant files via the unauthenticated
                   GitHub API (60 requests per hour limit per IP). If the fetch fails — sandboxed
                   iframes sometimes block cross-origin requests — download the repo as a zip from
@@ -480,18 +480,18 @@ export function AuditView({
                   role="status"
                   aria-live="polite"
                   aria-atomic="true"
-                  style={{ fontSize: 11, color: T.textDim }}
+                  style={{ fontSize: 12, color: T.textDim }}
                 >
                   [{progress.current}/{progress.total}] {progress.stage}
                 </span>
               )}
               {!scanning && mode === 'upload' && files.length === 0 && (
-                <span style={{ fontSize: 12, color: T.textMuted }} role="status">
+                <span style={{ fontSize: 13, color: T.textMuted }} role="status">
                   ← Select files or a folder first.
                 </span>
               )}
               {!scanning && mode === 'github' && !githubUrl && (
-                <span style={{ fontSize: 12, color: T.textMuted }} role="status">
+                <span style={{ fontSize: 13, color: T.textMuted }} role="status">
                   ← Enter a GitHub repo URL first.
                 </span>
               )}
@@ -508,7 +508,7 @@ export function AuditView({
                   background: T.sev.critical.bg,
                   border: `1px solid ${T.sev.critical.border}`,
                   color: T.sev.critical.fg,
-                  fontSize: 12,
+                  fontSize: 13,
                 }}
               >
                 <AlertCircle
@@ -571,7 +571,7 @@ export function AuditView({
           marginTop: 64,
           paddingTop: 24,
           borderTop: `1px solid ${T.border}`,
-          fontSize: 12,
+          fontSize: 13,
           color: T.textMuted,
           lineHeight: 1.7,
           display: 'flex',

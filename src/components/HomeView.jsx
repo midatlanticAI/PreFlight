@@ -57,7 +57,7 @@ export function HomeView({
                     border: `1px solid ${T.border}`,
                     color: T.textDim,
                     cursor: 'pointer',
-                    fontSize: 10,
+                    fontSize: 11,
                     padding: '4px 10px',
                     letterSpacing: '0.1em',
                     textTransform: 'uppercase',
@@ -74,7 +74,7 @@ export function HomeView({
                   border: `1px solid ${T.border}`,
                   color: T.textDim,
                   cursor: 'pointer',
-                  fontSize: 10,
+                  fontSize: 11,
                   padding: '4px 10px',
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
@@ -96,13 +96,13 @@ export function HomeView({
                 background: T.bg,
                 border: `1px dashed ${T.border}`,
                 color: T.textDim,
-                fontSize: 13,
+                fontSize: 14,
                 lineHeight: 1.7,
               }}
             >
               <Clock size={20} color={T.textMuted} aria-hidden="true" style={{ marginBottom: 8 }} />
               <div style={{ marginBottom: 4 }}>No scans yet.</div>
-              <div style={{ fontSize: 12, color: T.textMuted }}>
+              <div style={{ fontSize: 13, color: T.textMuted }}>
                 Run an audit above and the result lands here. Up to {HISTORY_MAX} scans are kept
                 locally so you can re-view or re-run them without retyping the URL.
               </div>
@@ -141,7 +141,7 @@ export function HomeView({
                   >
                     <span
                       className="ap-display"
-                      style={{ fontSize: 18, color: tier.color, lineHeight: 1 }}
+                      style={{ fontSize: 19, color: tier.color, lineHeight: 1 }}
                     >
                       {entry.score}
                     </span>
@@ -157,7 +157,7 @@ export function HomeView({
                       <span
                         className="ap-mono"
                         style={{
-                          fontSize: 12,
+                          fontSize: 13,
                           color: T.text,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -170,7 +170,7 @@ export function HomeView({
                     <div
                       style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}
                     >
-                      <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>
+                      <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
                         <Clock
                           size={9}
                           style={{
@@ -181,7 +181,7 @@ export function HomeView({
                         />
                         {timeAgo(entry.scannedAt)}
                       </span>
-                      <span className="ap-mono" style={{ fontSize: 10, color: T.textMuted }}>
+                      <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
                         {entry.filesScanned} files
                       </span>
                       <span style={{ display: 'flex', gap: 4 }}>
@@ -192,7 +192,7 @@ export function HomeView({
                             title={`${entry.bySeverity[s]} ${s}`}
                             aria-label={`${entry.bySeverity[s]} ${s}`}
                             style={{
-                              fontSize: 10,
+                              fontSize: 11,
                               padding: '1px 5px',
                               color: T.sev[s].fg,
                               background: T.sev[s].bg,
@@ -203,7 +203,7 @@ export function HomeView({
                           </span>
                         ))}
                         {(!entry.bySeverity || Object.keys(entry.bySeverity).length === 0) && (
-                          <span className="ap-mono" style={{ fontSize: 10, color: T.good }}>
+                          <span className="ap-mono" style={{ fontSize: 11, color: T.good }}>
                             clean
                           </span>
                         )}
@@ -221,7 +221,7 @@ export function HomeView({
                         border: `1px solid ${T.borderAlt}`,
                         color: T.accent,
                         cursor: 'pointer',
-                        fontSize: 10,
+                        fontSize: 11,
                         padding: '5px 10px',
                         letterSpacing: '0.1em',
                         textTransform: 'uppercase',
@@ -251,7 +251,7 @@ export function HomeView({
                         color: scanning || entry.sourceType !== 'github' ? T.textDim : T.good,
                         cursor:
                           scanning || entry.sourceType !== 'github' ? 'not-allowed' : 'pointer',
-                        fontSize: 10,
+                        fontSize: 11,
                         padding: '5px 10px',
                         letterSpacing: '0.1em',
                         textTransform: 'uppercase',
@@ -283,7 +283,7 @@ export function HomeView({
               );
             })}
           </div>
-          <div style={{ marginTop: 10, fontSize: 11, color: T.textMuted }}>
+          <div style={{ marginTop: 10, fontSize: 12, color: T.textMuted }}>
             Stored locally in your browser (localStorage). Capped at {HISTORY_MAX} entries; oldest
             is dropped automatically. GitHub URLs from history autocomplete in the URL input above.
           </div>
@@ -310,7 +310,7 @@ export function HomeView({
                   padding: 12,
                   background: T.bg,
                   border: `1px solid ${T.border}`,
-                  fontSize: 12,
+                  fontSize: 13,
                   color: T.textDim,
                 }}
               >
@@ -323,7 +323,7 @@ export function HomeView({
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 18, fontSize: 11, color: T.textMuted, lineHeight: 1.6 }}>
+          <div style={{ marginTop: 18, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
             v0.4 release. Static analysis only. 33 probes covering OWASP Top 10 2025 + OWASP LLM Top
             10 2025 + 2026 supply-chain incidents (Shai-Hulud, Axios/Sapphire Sleet, Mini Shai-Hulud
             TanStack) + MCP attack surface + AI-tooling rules-file injection + post-infection
@@ -351,7 +351,7 @@ export function HomeView({
             className="ap-display"
             style={{
               margin: '0 0 18px',
-              fontSize: 28,
+              fontSize: 30,
               fontWeight: 700,
               color: T.text,
             }}
@@ -393,16 +393,16 @@ export function HomeView({
                   borderBottom: i < 5 ? `1px solid ${T.border}` : 'none',
                 }}
               >
-                <dt style={{ fontWeight: 600, color: T.text, marginBottom: 6, fontSize: 14 }}>
+                <dt style={{ fontWeight: 600, color: T.text, marginBottom: 6, fontSize: 15 }}>
                   {item.q}
                 </dt>
-                <dd style={{ margin: 0, color: T.textDim, fontSize: 13, lineHeight: 1.7 }}>
+                <dd style={{ margin: 0, color: T.textDim, fontSize: 14, lineHeight: 1.7 }}>
                   {item.a}
                 </dd>
               </div>
             ))}
           </dl>
-          <p style={{ fontSize: 11, color: T.textMuted, marginTop: 12, marginBottom: 0 }}>
+          <p style={{ fontSize: 12, color: T.textMuted, marginTop: 12, marginBottom: 0 }}>
             Last updated 2026-05-11 · machine-readable index at{' '}
             <a href="/llms.txt" style={{ color: T.textMuted }}>
               llms.txt

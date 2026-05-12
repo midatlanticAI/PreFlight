@@ -48,7 +48,7 @@ export function Nav() {
             background: isActive ? T.accent : 'transparent',
             border: 'none',
             fontFamily: fontUI,
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: 600,
             cursor: 'pointer',
             textDecoration: 'none',
@@ -71,7 +71,7 @@ export function Nav() {
         @media (max-width: 480px) {
           .ap-primary-nav a {
             padding: 10px 12px !important;
-            font-size: 13px !important;
+            font-size: 14px !important;
             gap: 6px !important;
           }
         }

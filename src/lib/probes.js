@@ -881,6 +881,7 @@ export function probeSSRFOpenRedirect(files) {
 export function probeCookieFlags(files) {
   const findings = [];
   files.forEach((file) => {
+    if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$|\.py$/.test(file.path)) return;
     const lines = file.content.split('\n');
     lines.forEach((line, i) => {
