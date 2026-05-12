@@ -35,6 +35,13 @@ export function isScannerSelfSource(path) {
   if (/(^|\/)src\/lib\/stable-id\.[jt]sx?$/i.test(path)) return true;
   if (/(^|\/)src\/lib\/suppression\.[jt]sx?$/i.test(path)) return true;
   if (/(^|\/)src\/data\/compromised-packages\.[jt]s$/i.test(path)) return true;
+  // v0.4: Learn content (markdown) + the components that render Settings / Learn pages
+  // routinely contain pattern strings, sample IOC text, and reference URLs in their
+  // teaching copy. They're not real code — exclude from pattern-matching probes.
+  if (/(^|\/)src\/learn\//i.test(path)) return true;
+  if (/(^|\/)src\/components\/learn\//i.test(path)) return true;
+  if (/(^|\/)src\/components\/settings\//i.test(path)) return true;
+  if (/(^|\/)src\/lib\/learn-content\.[jt]s$/i.test(path)) return true;
   // The Vite-bundled JS in dist/ contains the inlined probe source.
   if (/(^|\/)dist\/.*\.js$/i.test(path)) return true;
   return false;

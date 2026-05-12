@@ -1,0 +1,10 @@
+# Cloudflare Pages SPA fallback. With react-router-dom owning client-side routing,
+# any deep-link (e.g. /learn/patterns/secret-scanner) must serve index.html so the
+# JS bundle can boot and the router can pick up the URL. Without this rule, refreshing
+# on a non-root URL hits a 404 because Pages has no matching file on disk.
+#
+# Static assets (/assets/*, *.svg, *.txt, *.xml, robots.txt, sitemap.xml, etc.) are
+# matched by their actual files first — Pages serves the SPA fallback only when no
+# real file matches the request path.
+
+/*  /index.html  200

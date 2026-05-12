@@ -1,16 +1,7 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import {
-  Upload,
-  Github,
-  Loader2,
-  FileText,
-  AlertCircle,
-  Zap,
-  Folder,
-  MessageSquare,
-  Bug,
-} from 'lucide-react';
-import { log, getLogs, subscribe as subscribeLogs } from './lib/logger.js';
+// SPDX-License-Identifier: MIT
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { log, subscribe as subscribeLogs } from './lib/logger.js';
 import { track, timing } from './lib/analytics.js';
 
 // Theme, scoring, snippets, formatters, clipboard helpers, history, and the GitHub fetcher
@@ -152,7 +143,7 @@ import {
   unsuppressFinding,
   partitionFindings,
 } from './lib/probes.js';
-import { AI_PROVIDERS, loadAIConfig, explainAndVerify } from './lib/ai.js';
+import { loadAIConfig, explainAndVerify } from './lib/ai.js';
 import {
   findPreflightConfigFile,
   parsePreflightConfig,
@@ -174,23 +165,79 @@ export { GlobalStyle };
 import { ScoreGauge, CategoryBar, SeverityChip } from './components/ScoreDisplay.jsx';
 export { ScoreGauge, CategoryBar, SeverityChip };
 
-import { DiagnosticsDrawer } from './components/DiagnosticsDrawer.jsx';
-export { DiagnosticsDrawer };
-
 import { FindingCard } from './components/FindingCard.jsx';
 export { FindingCard };
 
-// ==========================================================================
-// AI SETTINGS MODAL
-// =========================================================================
-// BYOK panel. The user's key never leaves their browser — saved to
-// localStorage, sent only to the provider endpoint they chose. The modal
-// shows the privacy contract in plain language so it's clear what happens.
-
-import { AISettingsModal } from './components/AISettingsModal.jsx';
 import { HomeView } from './components/HomeView.jsx';
 import { ResultsView } from './components/ResultsView.jsx';
-export { AISettingsModal, HomeView, ResultsView };
+import { AuditView } from './components/AuditView.jsx';
+import { Nav } from './components/Nav.jsx';
+export { HomeView, ResultsView, AuditView, Nav };
+
+// v0.4: Learn + Settings trees are lazy-loaded so the main bundle stays under the 500 KB
+// budget. react-markdown + remark-gfm + gray-matter + every .md file in src/learn/ all
+// ship in the Learn chunk; the Settings chunk holds the BYOK / BYOT forms. Users on the
+// Audit page never download either chunk.
+//
+// lazyNamed() wraps React.lazy with a named-export adapter + a .catch that logs the
+// failure to our diagnostics buffer before re-throwing. Re-throwing is required so the
+// surrounding <ErrorBoundary> still surfaces the failure to the user instead of leaving
+// a blank route element when a chunk 404s.
+function lazyNamed(loader, name) {
+  return React.lazy(() =>
+    loader()
+      .then((m) => ({ default: m[name] }))
+      .catch((e) => {
+        log.error('[lazy] chunk load failed', { component: name, error: e?.message });
+        throw e;
+      })
+  );
+}
+const LearnPage = lazyNamed(() => import('./components/learn/LearnPage.jsx'), 'LearnPage');
+const ManifestoView = lazyNamed(
+  () => import('./components/learn/ManifestoView.jsx'),
+  'ManifestoView'
+);
+const IndexView = lazyNamed(() => import('./components/learn/IndexView.jsx'), 'IndexView');
+const EntryView = lazyNamed(() => import('./components/learn/EntryView.jsx'), 'EntryView');
+const SettingsPage = lazyNamed(
+  () => import('./components/settings/SettingsPage.jsx'),
+  'SettingsPage'
+);
+const GeneralTab = lazyNamed(() => import('./components/settings/GeneralTab.jsx'), 'GeneralTab');
+const ExplainVerifyTab = lazyNamed(
+  () => import('./components/settings/ExplainVerifyTab.jsx'),
+  'ExplainVerifyTab'
+);
+const PrivateReposTab = lazyNamed(
+  () => import('./components/settings/PrivateReposTab.jsx'),
+  'PrivateReposTab'
+);
+const DiagnosticsTab = lazyNamed(
+  () => import('./components/settings/DiagnosticsTab.jsx'),
+  'DiagnosticsTab'
+);
+const AboutTab = lazyNamed(() => import('./components/settings/AboutTab.jsx'), 'AboutTab');
+
+// Tiny 404 view for unmatched routes.
+function NotFoundView() {
+  return (
+    <div className="ap-card" style={{ padding: 28 }}>
+      <h2
+        className="ap-display"
+        style={{ margin: '0 0 8px', fontSize: 22, color: T.text, fontWeight: 700 }}
+      >
+        Nothing here.
+      </h2>
+      <p style={{ margin: '0 0 14px', fontSize: 13, color: T.textDim, lineHeight: 1.7 }}>
+        The URL you opened doesn&apos;t match any Pre-Flight route.
+      </p>
+      <Link to="/" style={{ color: T.accent, fontFamily: fontMono, fontSize: 12 }}>
+        Back to Audit →
+      </Link>
+    </div>
+  );
+}
 
 // =========================================================================
 // MAIN APP
@@ -211,8 +258,6 @@ export default function App() {
   const [urlOpen, setUrlOpen] = useState(false);
   const [urlIndex, setUrlIndex] = useState(-1);
   const [probeErrors, setProbeErrors] = useState([]);
-  const [diagOpen, setDiagOpen] = useState(false);
-  const [diagFilter, setDiagFilter] = useState('debug');
   const [suppressions, setSuppressions] = useState(() => loadSuppressions());
   // Default to *showing* suppressed findings — they're still useful context (".preflight.yml
   // says this is intentional, here's why") and hiding them by default obscures the workflow.
@@ -222,20 +267,36 @@ export default function App() {
     saveSuppressions(suppressions);
   }, [suppressions]);
 
-  // AI settings (BYOK). aiConfig is null until the user opens settings and pastes a key.
-  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  // AI settings (BYOK). aiConfig is null until the user configures a provider in
+  // Settings → Explain & Verify. We re-read from localStorage whenever the user
+  // navigates back to the Audit view ('/') so freshly-saved configuration takes
+  // effect without a full reload.
   const [aiConfig, setAiConfig] = useState(() => loadAIConfig());
+  const navigate = useNavigate();
   // Per-finding AI responses, keyed by stableId. Session-only — not persisted, so users
   // re-running can choose to re-spend tokens or not. The shape is:
   //   { [stableId]: { status: 'streaming' | 'done' | 'error', text: string, error?: string, provider, model } }
   const [aiResponses, setAiResponses] = useState({});
 
-  const handleAISaved = () => setAiConfig(loadAIConfig());
+  // Re-read aiConfig from localStorage when the Settings tab saves it. We listen
+  // to a custom event the Settings save dispatches and to the cross-tab `storage`
+  // event so an AI-config change in any tab updates this one too.
+  useEffect(() => {
+    const refresh = () => setAiConfig(loadAIConfig());
+    window.addEventListener('preflight:ai-config-changed', refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener('preflight:ai-config-changed', refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
 
   const handleExplainVerify = async (finding) => {
     if (!finding?.stableId) return;
     if (!aiConfig) {
-      setAiSettingsOpen(true);
+      // No provider configured yet — send the user to the Settings page that explains
+      // what's about to happen and lets them paste a key.
+      navigate('/settings/ai');
       return;
     }
     track(`ai.explain_verify.start.${aiConfig.provider}`);
@@ -284,8 +345,9 @@ export default function App() {
   // logsTick exists only as a re-render trigger when the logger emits new entries.
   // The value itself is unread — we just bump it from the subscriber callback.
   const [, setLogsTick] = useState(0);
-  const fileInputRef = useRef(null);
-  const folderInputRef = useRef(null);
+  // (The file/folder input refs moved into AuditView in v0.4 — they live with the
+  // hidden <input type="file"> elements they trigger. App keeps the `files` state but
+  // not the refs.)
   // React 18 silently no-ops setState on unmounted components, so we don't need a
   // mountedRef gate around every setter — that approach actually deadlocked the UI
   // when StrictMode's dev unmount/remount cycle made the ref false at the wrong moment.
@@ -700,623 +762,150 @@ export default function App() {
   return (
     <div className="ap-app">
       <GlobalStyle />
+      <a href="#main" className="ap-skip-link">
+        Skip to main content
+      </a>
       <main id="main" style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 24px 80px' }}>
-        {/* HEADER */}
-        <header
+        {/* TOP NAV: appears on every route. */}
+        <div
           style={{
-            marginBottom: 40,
             display: 'flex',
-            alignItems: 'flex-start',
+            alignItems: 'center',
             justifyContent: 'space-between',
+            marginBottom: 28,
+            gap: 16,
             flexWrap: 'wrap',
-            gap: 24,
           }}
         >
-          <div style={{ flex: '1 1 480px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-              <img
-                src="/maai-logo.svg"
-                alt="Mid-Atlantic AI"
+          <Link
+            to="/"
+            aria-label="Pre-Flight home"
+            style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}
+          >
+            <img
+              src="/maai-logo.svg"
+              alt="Mid-Atlantic AI"
+              style={{ height: 36, width: 'auto', display: 'block' }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+              <span
+                className="ap-display"
                 style={{
-                  height: 96,
-                  width: 'auto',
-                  display: 'block',
+                  fontSize: 18,
+                  fontWeight: 700,
+                  fontStyle: 'italic',
+                  color: T.accent,
+                  letterSpacing: '-0.01em',
                 }}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span className="ap-eyebrow" style={{ color: T.accent, fontSize: 13 }}>
-                  MID-ATLANTIC AI
-                </span>
-                <span className="ap-eyebrow" style={{ color: T.textMuted, fontSize: 11 }}>
-                  PRE-FLIGHT AUDIT TOOL
-                </span>
-              </div>
-            </div>
-            <h1
-              className="ap-display"
-              style={{
-                margin: 0,
-                fontSize: 56,
-                fontWeight: 400,
-                letterSpacing: '-0.02em',
-                lineHeight: 1,
-                color: T.text,
-              }}
-            >
-              Pre-Flight <span style={{ color: T.accent }}>audit</span>
-              <br />
-              for vibe-coded apps.
-            </h1>
-            <p
-              style={{
-                maxWidth: 580,
-                marginTop: 16,
-                fontSize: 13,
-                color: T.textDim,
-                lineHeight: 1.7,
-              }}
-            >
-              A friendly second set of eyes for projects shipped through Lovable, Cursor, Bolt,
-              Replit, Claude Code, or any AI tool. Catches the secrets, misconfigured RLS, exposed
-              admin routes, and supply-chain hooks that the polish layer hides. All scanning runs
-              locally in this tab.
-            </p>
-            <p
-              style={{
-                marginTop: 12,
-                fontSize: 11,
-                color: T.textMuted,
-              }}
-            >
-              <time dateTime="2026-05-11">Updated 2026-05-11</time> · 26 probes · v0.3 · Free, no
-              signup
-            </p>
-          </div>
-        </header>
-
-        {/* INPUT SECTION */}
-        {!results && (
-          <div className="ap-card ap-fade-in" style={{ marginBottom: 32 }}>
-            <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}` }}>
-              <button
-                className={`ap-tab ${mode === 'upload' ? 'ap-tab-active' : ''}`}
-                onClick={() => setMode('upload')}
               >
-                <Upload
-                  size={12}
-                  style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }}
-                />
-                Files / Folder
-              </button>
-              <button
-                className={`ap-tab ${mode === 'github' ? 'ap-tab-active' : ''}`}
-                onClick={() => setMode('github')}
+                Pre-Flight
+              </span>
+              <span
+                className="ap-eyebrow"
+                style={{ fontSize: 9, color: T.textMuted, marginTop: 3 }}
               >
-                <Github
-                  size={12}
-                  style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }}
-                />
-                GitHub URL
-              </button>
+                BY MID-ATLANTIC AI
+              </span>
             </div>
+          </Link>
+          <Nav />
+        </div>
 
-            <div style={{ padding: 28 }}>
-              {mode === 'upload' && (
-                <div>
-                  <div className="ap-eyebrow" style={{ marginBottom: 14 }}>
-                    UPLOAD SOURCE
-                  </div>
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-                    <button
-                      className="ap-btn ap-btn-ghost"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <FileText
-                        size={14}
-                        style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-2px' }}
-                      />
-                      Select Files
-                    </button>
-                    <button
-                      className="ap-btn ap-btn-ghost"
-                      onClick={() => folderInputRef.current?.click()}
-                    >
-                      <Folder
-                        size={14}
-                        style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-2px' }}
-                      />
-                      Select Folder
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        log.info('file input change fired', {
-                          filesAttached: e.target.files?.length || 0,
-                        });
-                        handleFiles(e.target.files);
-                      }}
-                    />
-                    <input
-                      ref={folderInputRef}
-                      type="file"
-                      multiple
-                      // webkitdirectory is the only universally-implemented folder-picker attr
-                      // (Chrome, Edge, Safari). Firefox does not support folder upload via
-                      // <input>, so the obsolete `directory` / `mozdirectory` attrs would
-                      // only add unknown-prop warnings, not gain coverage.
-                      webkitdirectory=""
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        log.info('folder input change fired', {
-                          filesAttached: e.target.files?.length || 0,
-                        });
-                        handleFiles(e.target.files);
-                      }}
-                    />
-                  </div>
-                  <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
-                    Scans .env files, package.json, source files (.ts/.tsx/.js/.jsx), Supabase
-                    migrations, Firebase rules, next.config, vercel.json. node_modules and build
-                    outputs are skipped automatically. Files stay in this tab — nothing uploads.
-                  </div>
-                  {files.length > 0 && (
-                    <div
-                      style={{
-                        marginTop: 16,
-                        padding: 12,
-                        background: T.bg,
-                        border: `1px solid ${T.border}`,
-                        fontSize: 12,
-                        color: T.textDim,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          marginBottom: 8,
-                        }}
-                      >
-                        <span className="ap-eyebrow">{files.length} FILES STAGED</span>
-                        <button
-                          onClick={() => setFiles([])}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: T.textMuted,
-                            cursor: 'pointer',
-                            fontFamily: fontMono,
-                            fontSize: 11,
-                          }}
-                        >
-                          clear
-                        </button>
-                      </div>
-                      <div style={{ maxHeight: 120, overflowY: 'auto' }}>
-                        {files.slice(0, 10).map((f) => (
-                          <div
-                            key={f.path}
-                            className="ap-mono"
-                            style={{ fontSize: 11, padding: '2px 0', wordBreak: 'break-all' }}
-                          >
-                            {f.path}
-                          </div>
-                        ))}
-                        {files.length > 10 && (
-                          <div style={{ fontSize: 11, color: T.textMuted, marginTop: 4 }}>
-                            + {files.length - 10} more
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {mode === 'github' && (
-                <div>
-                  <label
-                    htmlFor="gh-url-input"
-                    className="ap-eyebrow"
-                    style={{ display: 'block', marginBottom: 14 }}
-                  >
-                    PUBLIC REPOSITORY URL
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      id="gh-url-input"
-                      className="ap-input"
-                      placeholder="https://github.com/owner/repo"
-                      value={githubUrl}
-                      autoComplete="off"
-                      role="combobox"
-                      aria-autocomplete="list"
-                      aria-expanded={urlOpen && urlSuggestions.length > 0}
-                      aria-controls="url-suggestion-listbox"
-                      aria-activedescendant={urlIndex >= 0 ? `url-sugg-${urlIndex}` : undefined}
-                      onChange={(e) => {
-                        setGithubUrl(e.target.value);
-                        setUrlOpen(true);
-                        setUrlIndex(-1);
-                      }}
-                      onFocus={() => setUrlOpen(true)}
-                      onBlur={() => setTimeout(() => setUrlOpen(false), 150)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          if (urlOpen) e.stopPropagation();
-                          setUrlOpen(false);
-                          setUrlIndex(-1);
-                          return;
-                        }
-                        if (e.key === 'ArrowDown') {
-                          // Always open the dropdown on ArrowDown if there are suggestions, even when closed.
-                          if (urlSuggestions.length) {
-                            e.preventDefault();
-                            setUrlOpen(true);
-                            setUrlIndex((i) => Math.min(i + 1, urlSuggestions.length - 1));
-                          }
-                        } else if (e.key === 'ArrowUp' && urlSuggestions.length) {
-                          e.preventDefault();
-                          setUrlIndex((i) => Math.max(i - 1, -1));
-                        } else if (e.key === 'Enter' && urlIndex >= 0 && urlSuggestions.length) {
-                          e.preventDefault();
-                          setGithubUrl(urlSuggestions[urlIndex]);
-                          setUrlOpen(false);
-                          setUrlIndex(-1);
-                          track('url_autocomplete_used');
-                        } else if (e.key === 'Home' && urlSuggestions.length) {
-                          e.preventDefault();
-                          setUrlIndex(0);
-                        } else if (e.key === 'End' && urlSuggestions.length) {
-                          e.preventDefault();
-                          setUrlIndex(urlSuggestions.length - 1);
-                        }
-                      }}
-                    />
-                    {urlOpen && urlSuggestions.length > 0 && (
-                      <div
-                        id="url-suggestion-listbox"
-                        role="listbox"
-                        aria-label="GitHub URLs from scan history"
-                        className="ap-fade-in"
-                        style={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: 0,
-                          right: 0,
-                          marginTop: 4,
-                          background: T.panel,
-                          border: `1px solid ${T.borderAlt}`,
-                          zIndex: 20,
-                          maxHeight: 240,
-                          overflowY: 'auto',
-                          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                        }}
-                        onMouseDown={(e) => e.preventDefault()}
-                      >
-                        <div style={{ padding: '6px 12px', borderBottom: `1px solid ${T.border}` }}>
-                          <span className="ap-eyebrow">
-                            FROM HISTORY · {urlSuggestions.length} match
-                            {urlSuggestions.length === 1 ? '' : 'es'}
-                          </span>
-                        </div>
-                        {urlSuggestions.map((u, i) => (
-                          <button
-                            key={u}
-                            id={`url-sugg-${i}`}
-                            role="option"
-                            aria-selected={i === urlIndex}
-                            type="button"
-                            onClick={() => {
-                              setGithubUrl(u);
-                              setUrlOpen(false);
-                              setUrlIndex(-1);
-                              track('url_autocomplete_used');
-                            }}
-                            onMouseEnter={() => setUrlIndex(i)}
-                            style={{
-                              width: '100%',
-                              textAlign: 'left',
-                              padding: '10px 12px',
-                              // Stronger active highlight (was panelHover ~1.5:1; now adds left border).
-                              background: i === urlIndex ? T.panelAlt : 'transparent',
-                              borderLeft:
-                                i === urlIndex ? `3px solid ${T.accent}` : '3px solid transparent',
-                              color: T.text,
-                              borderTop: 'none',
-                              borderRight: 'none',
-                              borderBottom:
-                                i < urlSuggestions.length - 1 ? `1px solid ${T.border}` : 'none',
-                              cursor: 'pointer',
-                              fontFamily: fontMono,
-                              fontSize: 12,
-                              fontWeight: i === urlIndex ? 600 : 400,
-                              wordBreak: 'break-all',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 8,
-                            }}
-                          >
-                            <Github
-                              size={12}
-                              color={T.textMuted}
-                              aria-hidden="true"
-                              style={{ flexShrink: 0 }}
-                            />
-                            <span>{u}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.6, marginTop: 12 }}>
-                    Public repos only. Reads up to 80 security-relevant files via the
-                    unauthenticated GitHub API (60 requests per hour limit per IP). If the fetch
-                    fails — sandboxed iframes sometimes block cross-origin requests — download the
-                    repo as a zip from GitHub, expand it, and use the Files / Folder tab instead.
-                    Start typing to autocomplete from prior scans.
-                  </div>
-                </div>
-              )}
-
-              <div style={{ marginTop: 24, display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button
-                  className="ap-btn"
-                  onClick={() => handleScan()}
-                  disabled={
-                    scanning ||
-                    (mode === 'upload' && files.length === 0) ||
-                    (mode === 'github' && !githubUrl)
-                  }
-                >
-                  {scanning ? (
-                    <>
-                      <Loader2
-                        size={12}
-                        className="ap-spin"
-                        style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }}
-                      />
-                      Scanning
-                    </>
-                  ) : (
-                    <>
-                      <Zap
-                        size={12}
-                        style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-1px' }}
-                      />
-                      Run Audit
-                    </>
-                  )}
-                </button>
-                {scanning && progress.stage && (
-                  <span
-                    className="ap-mono ap-pulse"
-                    role="status"
-                    aria-live="polite"
-                    aria-atomic="true"
-                    style={{ fontSize: 11, color: T.textDim }}
-                  >
-                    [{progress.current}/{progress.total}] {progress.stage}
-                  </span>
-                )}
-                {!scanning && mode === 'upload' && files.length === 0 && (
-                  <span style={{ fontSize: 12, color: T.textMuted }} role="status">
-                    ← Select files or a folder first.
-                  </span>
-                )}
-                {!scanning && mode === 'github' && !githubUrl && (
-                  <span style={{ fontSize: 12, color: T.textMuted }} role="status">
-                    ← Enter a GitHub repo URL first.
-                  </span>
-                )}
-              </div>
-
-              {error && (
-                <div
-                  role="alert"
-                  aria-live="assertive"
-                  aria-atomic="true"
-                  style={{
-                    marginTop: 16,
-                    padding: 12,
-                    background: T.sev.critical.bg,
-                    border: `1px solid ${T.sev.critical.border}`,
-                    color: T.sev.critical.fg,
-                    fontSize: 12,
-                  }}
-                >
-                  <AlertCircle
-                    size={14}
-                    aria-hidden="true"
-                    style={{ display: 'inline-block', marginRight: 8, verticalAlign: '-2px' }}
-                  />
-                  {error}
-                </div>
-              )}
+        <React.Suspense
+          fallback={
+            <div
+              className="ap-card"
+              style={{ padding: 28, color: T.textDim, fontSize: 13, textAlign: 'center' }}
+            >
+              Loading…
             </div>
-          </div>
-        )}
-
-        {results && tier && (
-          <ResultsView
-            results={results}
-            tier={tier}
-            liveScore={liveScore}
-            partitioned={partitioned}
-            sevCounts={sevCounts}
-            catCounts={catCounts}
-            maxCat={maxCat}
-            diff={diff}
-            topFindings={topFindings}
-            filteredFindings={filteredFindings}
-            reset={reset}
-            filter={filter}
-            setFilter={setFilter}
-            expanded={expanded}
-            setExpanded={setExpanded}
-            handleSuppress={handleSuppress}
-            handleUnsuppress={handleUnsuppress}
-            showSuppressed={showSuppressed}
-            setShowSuppressed={setShowSuppressed}
-            handleExport={handleExport}
-            copied={copied}
-            aiResponses={aiResponses}
-            handleExplainVerify={handleExplainVerify}
-            aiConfig={aiConfig}
-            probeErrors={probeErrors}
-          />
-        )}
-
-        <HomeView
-          results={results}
-          history={history}
-          showAllHistory={showAllHistory}
-          setShowAllHistory={setShowAllHistory}
-          clearHistory={clearHistory}
-          loadFromHistory={loadFromHistory}
-          rerunFromHistory={rerunFromHistory}
-          removeHistoryEntry={removeHistoryEntry}
-          scanning={scanning}
-        />
-
-        {/* FOOTER */}
-        <footer
-          style={{
-            marginTop: 64,
-            paddingTop: 24,
-            borderTop: `1px solid ${T.border}`,
-            fontSize: 12,
-            color: T.textMuted,
-            lineHeight: 1.7,
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 24,
-            justifyContent: 'space-between',
-          }}
+          }
         >
-          <div>
-            <strong style={{ color: T.textDim }}>Mid-Atlantic AI · Pre-Flight Audit Tool</strong>
-            <br />
-            Static security review for vibe-coded apps. All scanning runs in your browser — no
-            upload, no signup.
-          </div>
-          <nav aria-label="Footer links" style={{ display: 'flex', gap: 18 }}>
-            <a
-              href="mailto:John@midatlantic.ai"
-              style={{ color: T.textDim, textDecoration: 'none' }}
-            >
-              Contact
-            </a>
-            <a
-              href="https://midatlantic.ai"
-              style={{ color: T.textDim, textDecoration: 'none' }}
-              rel="noopener noreferrer"
-            >
-              Mid-Atlantic AI
-            </a>
-            <a href="/llms.txt" style={{ color: T.textDim, textDecoration: 'none' }}>
-              llms.txt
-            </a>
-          </nav>
-        </footer>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <AuditView
+                  /* hero */
+                  /* below: every piece of state + handler the existing audit JSX needs */
+                  results={results}
+                  tier={tier}
+                  liveScore={liveScore}
+                  partitioned={partitioned}
+                  sevCounts={sevCounts}
+                  catCounts={catCounts}
+                  maxCat={maxCat}
+                  diff={diff}
+                  topFindings={topFindings}
+                  filteredFindings={filteredFindings}
+                  reset={reset}
+                  filter={filter}
+                  setFilter={setFilter}
+                  expanded={expanded}
+                  setExpanded={setExpanded}
+                  handleSuppress={handleSuppress}
+                  handleUnsuppress={handleUnsuppress}
+                  showSuppressed={showSuppressed}
+                  setShowSuppressed={setShowSuppressed}
+                  handleExport={handleExport}
+                  copied={copied}
+                  aiResponses={aiResponses}
+                  handleExplainVerify={handleExplainVerify}
+                  aiConfig={aiConfig}
+                  probeErrors={probeErrors}
+                  history={history}
+                  showAllHistory={showAllHistory}
+                  setShowAllHistory={setShowAllHistory}
+                  clearHistory={clearHistory}
+                  loadFromHistory={loadFromHistory}
+                  rerunFromHistory={rerunFromHistory}
+                  removeHistoryEntry={removeHistoryEntry}
+                  scanning={scanning}
+                  mode={mode}
+                  setMode={setMode}
+                  files={files}
+                  setFiles={setFiles}
+                  handleFiles={handleFiles}
+                  githubUrl={githubUrl}
+                  setGithubUrl={setGithubUrl}
+                  handleScan={handleScan}
+                  progress={progress}
+                  error={error}
+                  urlSuggestions={urlSuggestions}
+                  urlOpen={urlOpen}
+                  setUrlOpen={setUrlOpen}
+                  urlIndex={urlIndex}
+                  setUrlIndex={setUrlIndex}
+                />
+              }
+            />
+            <Route path="/learn" element={<LearnPage />}>
+              <Route index element={<ManifestoView />} />
+              <Route path="patterns" element={<IndexView type="pattern" />} />
+              <Route path="patterns/:slug" element={<EntryView />} />
+              <Route path="incidents" element={<IndexView type="incident" />} />
+              <Route path="incidents/:slug" element={<EntryView />} />
+              <Route path="shapes" element={<IndexView type="shape" />} />
+              <Route path="shapes/:slug" element={<EntryView />} />
+            </Route>
+            <Route path="/settings" element={<SettingsPage />}>
+              <Route index element={<GeneralTab />} />
+              <Route path="ai" element={<ExplainVerifyTab />} />
+              <Route path="repos" element={<PrivateReposTab />} />
+              <Route path="diagnostics" element={<DiagnosticsTab />} />
+              <Route path="about" element={<AboutTab />} />
+            </Route>
+            <Route path="*" element={<NotFoundView />} />
+          </Routes>
+        </React.Suspense>
       </main>
 
-      {/* AI SETTINGS: floating toggle (BYOK panel) */}
-      <button
-        onClick={() => setAiSettingsOpen(true)}
-        aria-label="Open AI provider settings"
-        title={
-          aiConfig
-            ? `AI configured: ${AI_PROVIDERS[aiConfig.provider]?.label || aiConfig.provider} · ${aiConfig.model}`
-            : 'Configure AI provider (BYOK) to unlock Explain & Verify'
-        }
-        type="button"
-        style={{
-          position: 'fixed',
-          right: 18,
-          bottom: 68,
-          background: T.panel,
-          color: aiConfig ? T.accentAlt : T.textDim,
-          border: `1px solid ${aiConfig ? T.accentAlt : T.borderAlt}`,
-          padding: '10px 14px',
-          fontFamily: fontMono,
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          cursor: 'pointer',
-          zIndex: 40,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-        }}
-      >
-        <MessageSquare size={12} aria-hidden="true" />
-        AI · {aiConfig ? 'configured' : 'off'}
-      </button>
-
-      <AISettingsModal
-        open={aiSettingsOpen}
-        onClose={() => setAiSettingsOpen(false)}
-        onSaved={handleAISaved}
-      />
-
-      {/* DIAGNOSTICS: floating toggle + drawer */}
-      <button
-        onClick={() => setDiagOpen((o) => !o)}
-        aria-label="Toggle diagnostics panel"
-        title="Diagnostics & logs"
-        style={{
-          position: 'fixed',
-          right: 18,
-          bottom: 18,
-          background: T.panel,
-          color: T.accent,
-          border: `1px solid ${T.borderAlt}`,
-          padding: '10px 14px',
-          fontFamily: fontMono,
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          cursor: 'pointer',
-          zIndex: 40,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-        }}
-      >
-        <Bug size={12} />
-        Diagnostics
-        {(() => {
-          const errs = getLogs().filter((e) => e.level === 'error').length;
-          if (!errs) return null;
-          return (
-            <span
-              style={{
-                background: T.sev.critical.fg,
-                color: T.bg,
-                padding: '0 6px',
-                fontSize: 10,
-                fontWeight: 700,
-              }}
-            >
-              {errs}
-            </span>
-          );
-        })()}
-      </button>
-      <DiagnosticsDrawer
-        open={diagOpen}
-        onClose={() => setDiagOpen(false)}
-        filter={diagFilter}
-        setFilter={setDiagFilter}
-      />
+      {/*
+        Floating AI · OFF and DIAGNOSTICS buttons removed in v0.4. AI settings live in
+        Settings → Explain & Verify; diagnostics live in Settings → Diagnostics. The Bug
+        icon stayed visible but mysterious for too long — moved to a labeled tab that has
+        room to explain itself.
+      */}
     </div>
   );
 }

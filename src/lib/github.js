@@ -9,8 +9,82 @@
 import { log } from './logger.js';
 import { shouldScanFile } from './probes.js';
 
+// BYOT — Bring Your Own Token. The Personal Access Token lives in localStorage under
+// `preflight.github_pat`. When present, it's added as an `Authorization: token <pat>`
+// header on every GitHub API + raw.githubusercontent.com request the scanner makes.
+// Without a token: 60/hr unauthenticated, public repos only. With a token: 5000/hr,
+// plus private repos the user has read access to.
+const GITHUB_PAT_KEY = 'preflight.github_pat';
+
+export function loadGitHubPAT() {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem(GITHUB_PAT_KEY);
+    return raw && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveGitHubPAT(pat) {
+  try {
+    if (typeof pat !== 'string' || pat.trim().length === 0) {
+      localStorage.removeItem(GITHUB_PAT_KEY);
+      return;
+    }
+    localStorage.setItem(GITHUB_PAT_KEY, pat.trim());
+  } catch (e) {
+    log.debug('github: PAT save failed', { error: e?.message });
+  }
+}
+
+export function clearGitHubPAT() {
+  try {
+    localStorage.removeItem(GITHUB_PAT_KEY);
+  } catch (e) {
+    log.debug('github: PAT clear failed', { error: e?.message });
+  }
+}
+
+// Verifies a token by calling api.github.com/user. Returns { ok, username, error }.
+// Pure: doesn't read or write the PAT store; pass the candidate token in directly.
+export async function testGitHubToken(pat) {
+  if (!pat || typeof pat !== 'string') return { ok: false, error: 'No token provided.' };
+  try {
+    const resp = await fetch('https://api.github.com/user', {
+      headers: { Authorization: `token ${pat.trim()}` },
+    });
+    if (resp.status === 401) {
+      return { ok: false, error: 'Token rejected (401). Check the token and required scope.' };
+    }
+    if (resp.status === 403) {
+      return {
+        ok: false,
+        error:
+          'Forbidden (403). Most often this means the token lacks the `repo` scope, or the user is rate-limited.',
+      };
+    }
+    if (!resp.ok) {
+      return { ok: false, error: `GitHub API ${resp.status} ${resp.statusText}` };
+    }
+    const data = await resp.json();
+    return { ok: true, username: data.login || '(unknown)' };
+  } catch (e) {
+    return { ok: false, error: e?.message || 'Network call failed.' };
+  }
+}
+
+// Build the headers object once per scan. If the user has a PAT stored, attach it;
+// otherwise return an empty object so fetch() goes out unauthenticated.
+function buildAuthHeaders() {
+  const pat = loadGitHubPAT();
+  return pat ? { Authorization: `token ${pat}` } : {};
+}
+
 export async function fetchGitHubRepo(url, onProgress) {
   const ghLog = log.child('github');
+  const authHeaders = buildAuthHeaders();
+  const authenticated = Object.keys(authHeaders).length > 0;
 
   if (typeof url !== 'string') {
     ghLog.error('fetchGitHubRepo got non-string url', { typeofArg: typeof url });
@@ -34,7 +108,9 @@ export async function fetchGitHubRepo(url, onProgress) {
 
   let repoResp;
   try {
-    repoResp = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+    repoResp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers: authHeaders,
+    });
   } catch (e) {
     ghLog.error('Repo metadata fetch threw', { error: e?.message });
     throw new Error(
@@ -49,7 +125,9 @@ export async function fetchGitHubRepo(url, onProgress) {
 
   if (repoResp.status === 404) {
     throw new Error(
-      'Repository not found, or it is private. Public repos only via URL. Use Files / Folder for private repos.'
+      authenticated
+        ? 'Repository not found, or the token does not have access to it. Verify the URL and the PAT scope (Settings → Private Repos).'
+        : 'Repository not found, or it is private. Public repos need no auth; for a private repo, paste a GitHub Personal Access Token in Settings → Private Repos.'
     );
   }
   if (repoResp.status === 403) {
@@ -86,7 +164,8 @@ export async function fetchGitHubRepo(url, onProgress) {
   let treeResp;
   try {
     treeResp = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
+      `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+      { headers: authHeaders }
     );
   } catch (e) {
     ghLog.error('Tree fetch threw', { error: e?.message });
@@ -121,7 +200,8 @@ export async function fetchGitHubRepo(url, onProgress) {
     onProgress?.({ stage: `Fetching ${t.path}`, current: i + 1, total: targets.length });
     try {
       const r = await fetch(
-        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${t.path}`
+        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${t.path}`,
+        { headers: authHeaders }
       );
       if (r.ok) {
         const content = await r.text();

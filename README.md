@@ -70,4 +70,16 @@ public/
 
 ## License
 
-TBD. Publisher: Mid-Atlantic AI · [John@midatlantic.ai](mailto:John@midatlantic.ai).
+Code is **MIT licensed**. The threat-intel data manifest is **CC-BY-4.0** — use freely
+with attribution to Mid-Atlantic AI / Pre-Flight. The split is intentional:
+
+- **Code** (everything under `src/`, `public/`, `.github/`, config files, package.json)
+  → MIT, see [`LICENSE`](./LICENSE). Use, fork, ship — no attribution required for
+  the source code itself.
+- **Threat-intel data** (`src/data/compromised-packages.js` and any future
+  `src/data/*-data.{js,json}` manifests) → CC-BY-4.0, see [`LICENSE-DATA`](./LICENSE-DATA).
+  Take the data, integrate it into your own scanner, but credit the source as
+  "Mid-Atlantic AI / Pre-Flight Audit Tool" with a link to
+  https://preflight.midatlantic.ai/ or https://github.com/midatlanticAI/PreFlight.
+
+Publisher: Mid-Atlantic AI · [John@midatlantic.ai](mailto:John@midatlantic.ai).

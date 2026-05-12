@@ -1,0 +1,95 @@
+// src/components/learn/LearnPage.jsx
+// Top-level Learn route. Sub-tab strip ( Vibe-Aware | Patterns | Field Reports | Shapes )
+// plus an <Outlet/> for the nested routes. Each sub-tab is its own URL so deep-links
+// land on the right view without a page reload.
+//
+// The sub-routes wired up here:
+//   /learn                          → ManifestoView (Vibe-Aware tab)
+//   /learn/patterns                 → IndexView with type="pattern"
+//   /learn/patterns/:slug           → EntryView
+//   /learn/incidents                → IndexView with type="incident"
+//   /learn/incidents/:slug          → EntryView
+//   /learn/shapes                   → IndexView with type="shape"
+//   /learn/shapes/:slug             → EntryView
+
+import { NavLink, Outlet } from 'react-router-dom';
+import { T, fontEyebrow, fontMono } from '../../lib/theme.js';
+
+const SUB_TABS = [
+  { to: '/learn', label: 'Vibe-Aware', end: true },
+  { to: '/learn/patterns', label: 'Patterns', end: false },
+  { to: '/learn/incidents', label: 'Field Reports', end: false },
+  { to: '/learn/shapes', label: 'Shapes', end: false },
+];
+
+export function LearnPage() {
+  return (
+    <div className="ap-fade-in">
+      <header style={{ marginBottom: 20 }}>
+        <div className="ap-eyebrow" style={{ marginBottom: 8 }}>
+          PRE-FLIGHT LEARN
+        </div>
+        <h1
+          className="ap-display"
+          style={{
+            margin: '0 0 8px',
+            fontSize: 36,
+            fontWeight: 700,
+            color: T.text,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          A library for vibers building vibeware.
+        </h1>
+        <p style={{ fontSize: 14, color: T.textDim, lineHeight: 1.7, margin: 0, maxWidth: 720 }}>
+          Pre-Flight catches security issues. This is where we explain them — the patterns we look
+          for, the real-world incidents behind the threat-intel, and the architecture shapes that
+          shape (or break) your security posture. Read once, build safer forever.
+        </p>
+      </header>
+
+      <nav
+        aria-label="Learn sub-sections"
+        style={{
+          display: 'flex',
+          gap: 4,
+          background: T.panel,
+          border: `1px solid ${T.border}`,
+          padding: 4,
+          marginBottom: 24,
+          overflowX: 'auto',
+        }}
+      >
+        {SUB_TABS.map(({ to, label, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            style={({ isActive }) => ({
+              padding: '8px 14px',
+              color: isActive ? T.bg : T.textDim,
+              background: isActive ? T.accent : 'transparent',
+              border: 'none',
+              fontFamily: fontMono,
+              fontSize: 11,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              cursor: 'pointer',
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              minHeight: 24,
+              display: 'inline-flex',
+              alignItems: 'center',
+              fontFamilyFallback: fontEyebrow,
+            })}
+          >
+            {label}
+          </NavLink>
+        ))}
+      </nav>
+
+      <Outlet />
+    </div>
+  );
+}

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: CC-BY-4.0
+// (c) 2026 Mid-Atlantic AI. Attribution required — see LICENSE-DATA in the repo root.
+//
 // src/data/compromised-packages.js
 // Threat-intel manifest exported as a JS module (rather than .json) so it imports
 // cleanly from Vite, Vitest, ESLint, and bare Node without needing the ES2025

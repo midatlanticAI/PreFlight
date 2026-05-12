@@ -64,6 +64,9 @@ export function attachStableIds(findings, files) {
 // These aren't severity. A 'critical' + 'heuristic' finding still demands attention; the
 // tag just tells the user "look at this twice before acting." A 'low' + 'mechanical' finding
 // is the 30-second win that's worth doing before merge.
+// `learn_more_slug` (optional) — when set, FindingCard renders a "Learn more about
+// this pattern →" link to /learn/patterns/<slug> IF the markdown file exists AND
+// is not a draft. Graceful fallback: missing or draft file = link hidden.
 export const PROBE_META = {
   // Deterministic + mechanical: drop-in patches
   'Env File Hygiene': { confidence: 'high', autofix: 'mechanical' },
@@ -73,9 +76,21 @@ export const PROBE_META = {
   'Slopsquat / Typosquat': { confidence: 'high', autofix: 'mechanical' },
 
   // Deterministic + needs-review: clear fix but requires looking around
-  'Secret Scanner': { confidence: 'high', autofix: 'review-needed' },
-  'NEXT_PUBLIC_ Misuse': { confidence: 'high', autofix: 'review-needed' },
-  'Compromised Packages': { confidence: 'high', autofix: 'review-needed' },
+  'Secret Scanner': {
+    confidence: 'high',
+    autofix: 'review-needed',
+    learn_more_slug: 'secret-scanner',
+  },
+  'NEXT_PUBLIC_ Misuse': {
+    confidence: 'high',
+    autofix: 'review-needed',
+    learn_more_slug: 'next-public-misuse',
+  },
+  'Compromised Packages': {
+    confidence: 'high',
+    autofix: 'review-needed',
+    learn_more_slug: 'package-json-supply-chain',
+  },
   'Malicious Artifacts': { confidence: 'high', autofix: 'manual' },
 
   // Pattern matches: regex + light context
@@ -87,9 +102,17 @@ export const PROBE_META = {
   'GEO Hygiene': { confidence: 'medium', autofix: 'mechanical' },
 
   // Pattern matches that need real fix work
-  'Supabase RLS': { confidence: 'medium', autofix: 'review-needed' },
+  'Supabase RLS': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'supabase-rls',
+  },
   'Firebase Rules': { confidence: 'medium', autofix: 'review-needed' },
-  'Auth Weakness': { confidence: 'medium', autofix: 'review-needed' },
+  'Auth Weakness': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'auth-weakness',
+  },
   'Webhook Validation': { confidence: 'medium', autofix: 'review-needed' },
   'GitHub Actions': { confidence: 'medium', autofix: 'review-needed' },
   'Client Auth Storage': { confidence: 'medium', autofix: 'review-needed' },
@@ -121,6 +144,7 @@ export function attachProbeMeta(findings) {
     if (meta) {
       f.confidence = meta.confidence;
       f.autofix = meta.autofix;
+      if (meta.learn_more_slug) f.learn_more_slug = meta.learn_more_slug;
     } else {
       // Default: treat as medium / manual when we haven't classified a probe yet.
       f.confidence = 'medium';
