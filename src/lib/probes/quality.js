@@ -425,11 +425,22 @@ export function classifyProject(files) {
   return { type, label, summary, signals, largestSourceLines, sourceFileCount: sourceFiles.length };
 }
 
+// Project types where the architecture probe has nothing actionable to emit. For these
+// the classifier ran and tagged the project as "healthy by shape" — surfacing a finding
+// would be pure noise (the user already knows the shape they built). Other probes still
+// run and emit their own findings; the architecture probe just doesn't tax the score
+// with informational cheerleading.
+const HEALTHY_TYPES = new Set(['modular-spa', 'small-spa', 'ssr', 'unknown']);
+
 export function probeArchitecture(files) {
   const findings = [];
   const klass = classifyProject(files);
 
-  // Always emit a classification finding (info) so users see what the tool thinks they have.
+  // Skip the architecture probe entirely when the classifier says we're in a healthy state.
+  // The shape is information; if there's nothing to act on, no finding.
+  if (HEALTHY_TYPES.has(klass.type)) return findings;
+
+  // Type-detected-as-suboptimal — emit the classification + the type-specific teaching.
   findings.push({
     id: `arch-classify-${klass.type}`,
     probe: 'Architecture',
@@ -526,27 +537,8 @@ Anti-pattern: a monorepo where every service still ships independently with no s
     });
   }
 
-  if (klass.type === 'modular-spa' || klass.type === 'small-spa') {
-    findings.push({
-      id: 'arch-modular-teach',
-      probe: 'Architecture',
-      title: 'Modular SPA — keep the discipline',
-      severity: 'info',
-      category: 'Misconfiguration',
-      cwe: 'INFO-architecture',
-      file: 'src/',
-      line: 1,
-      evidence: `${klass.sourceFileCount} source files, largest ${klass.largestSourceLines} lines`,
-      remediation: `What a senior engineer watches for in a modular SPA:
-• File size cap: aim for < 400 lines per file. Past 800 it's almost always doing two unrelated things.
-• Import depth: ../../../foo is a smell. Use path aliases (vite.config: resolve.alias) or move the file closer.
-• Barrel files (index.ts re-exporting a directory) are good for public surfaces, bad for internal ones — they tank tree-shaking.
-• Components should be presentational by default. Business logic lives in plain functions in lib/ or hooks.
-• Shared state goes in one place (Zustand / Redux / context) — not duplicated across components.
-
-When in doubt, ask: if I deleted this file, how many other files would I need to touch? Less than 2 = clean. More than 5 = consider splitting.`,
-    });
-  }
+  // (Removed: modular-spa / small-spa teaching. HEALTHY_TYPES gate above returns
+  // before reaching here, so emitting this would be unreachable code.)
 
   if (klass.type === 'ssr') {
     findings.push({

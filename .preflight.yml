@@ -22,6 +22,14 @@
 # fix in code. Stale entries (where the underlying code was fixed) are deleted, not
 # left lying around. If you find an entry here that no longer matches any finding,
 # delete it — keeping noop suppressions makes it impossible to tell intent from rot.
+#
+# Currently empty: as of the file-split refactor, all previously-suppressed findings
+# (the App.jsx + probes.js file-size warnings and the architecture classifier on a
+# monolithic SPA) no longer fire — the underlying code was actually fixed (both
+# files dropped under the 1500-line warn threshold, classifier was updated to skip
+# emitting on healthy modular-SPA shape). The `suppress:` block is intentionally
+# empty so the workflow's documentation value is preserved even when nothing is
+# being suppressed.
 
 schema: preflight/v1
 
@@ -29,35 +37,4 @@ self_domains:
   - preflight.midatlantic.ai
   - midatlantic.ai
 
-suppress:
-  # --- Architecture / Code Quality: known monolith debt, tracked separately ---
-  # The fix is the multi-hour split of App.jsx and probes.js. Suppressed with a hard
-  # expiry so the deadline survives any later edit to this file.
-  - probe: Architecture
-    file: 'src/ (root)'
-    title-pattern: 'consider splitting'
-    disposition: wont-fix
-    reason: 'App.jsx (~4100 lines) tracked as known debt — split planned alongside next major feature.'
-    expires: '2026-09-01'
-  - probe: Code Quality
-    file: src/App.jsx
-    title-pattern: 'consider splitting'
-    disposition: wont-fix
-    reason: 'See arch-monolith-split note. Same root cause.'
-    expires: '2026-09-01'
-  - probe: Code Quality
-    file: src/lib/probes.js
-    title-pattern: 'consider splitting'
-    disposition: wont-fix
-    reason: 'Manifest extraction (compromised-packages.json, typosquats.json) is the natural first cut; planned alongside next probe additions.'
-    expires: '2026-09-01'
-
-  # --- Architecture classifier informational ---
-  # Always-emits info finding that reports the inferred project type so the type-specific
-  # advice below it makes sense. Not actionable; suppression is the right answer until
-  # the probe is restructured to emit this as scan metadata rather than as a finding.
-  - probe: Architecture
-    file: project root
-    title-pattern: 'Detected: Monolithic SPA'
-    disposition: accepted-risk
-    reason: 'Architecture classifier output is informational. The split-recommendation finding above already tracks the actionable part.'
+suppress: []

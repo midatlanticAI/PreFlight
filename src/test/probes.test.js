@@ -973,7 +973,12 @@ describe('classifyProject + probeArchitecture', () => {
     expect(k.type).toBe('cli');
   });
 
-  it('probeArchitecture always emits a classification info finding', () => {
+  // probeArchitecture only emits findings when the classifier flags a non-ideal shape
+  // (static-html, monolithic-spa, monorepo, static-html-build). Healthy shapes
+  // (modular-spa, small-spa, ssr, unknown) return no findings — surfacing "you have
+  // a healthy SPA" as a finding is informational noise that costs score points for
+  // nothing.
+  it('probeArchitecture emits a classification info finding for non-ideal shape', () => {
     const f = probeArchitecture([file('index.html', '<html></html>')]);
     expect(f.find((x) => x.title.toLowerCase().includes('detected'))).toBeDefined();
   });
@@ -985,6 +990,47 @@ describe('classifyProject + probeArchitecture', () => {
       file('src/App.jsx', huge),
     ]);
     expect(f.find((x) => x.title.toLowerCase().includes('consider splitting'))).toBeDefined();
+  });
+
+  it('probeArchitecture emits NO findings for a healthy modular SPA', () => {
+    const tiny = 'export default function X(){return null}';
+    const f = probeArchitecture([
+      file('package.json', JSON.stringify({ dependencies: { react: '18' } })),
+      ...Array.from({ length: 8 }, (_, i) => file(`src/c${i}.jsx`, tiny)),
+    ]);
+    expect(f).toEqual([]);
+  });
+
+  it('probeArchitecture emits NO findings for a healthy small SPA', () => {
+    const tiny = 'export default function X(){return null}';
+    const f = probeArchitecture([
+      file('package.json', JSON.stringify({ dependencies: { react: '18' } })),
+      file('src/App.jsx', tiny),
+      file('src/main.jsx', tiny),
+    ]);
+    expect(f).toEqual([]);
+  });
+
+  it('probeArchitecture emits NO findings for a healthy SSR (Next) app', () => {
+    const f = probeArchitecture([
+      file('package.json', JSON.stringify({ dependencies: { next: '14', react: '18' } })),
+    ]);
+    expect(f).toEqual([]);
+  });
+
+  it('probeArchitecture emits NO findings when classifier returns unknown', () => {
+    const f = probeArchitecture([file('README.md', '# nothing here')]);
+    expect(f).toEqual([]);
+  });
+
+  it('probeArchitecture emits findings for a monorepo (boundary discipline reminder)', () => {
+    const f = probeArchitecture([
+      file('package.json', '{}'),
+      file('packages/ui/package.json', JSON.stringify({ name: 'ui' })),
+      file('packages/api/package.json', JSON.stringify({ name: 'api' })),
+    ]);
+    expect(f.length).toBeGreaterThan(0);
+    expect(f.find((x) => x.title.toLowerCase().includes('monorepo'))).toBeDefined();
   });
 });
 
