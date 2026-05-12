@@ -216,13 +216,11 @@ export const LEARN_PARSE_ERRORS = [];
 function recordError(path, reason, err) {
   const msg = err?.message ? `${reason}: ${err.message}` : reason;
   LEARN_PARSE_ERRORS.push({ path, reason: msg, ts: Date.now() });
-  // log.error (not log.warn) so the Diagnostics tab surfaces this as red.
+  // log.error routes to the in-memory diagnostics buffer AND emits to the
+  // browser console at error level (see logger.js around line 100). So one
+  // log.error call covers both DevTools visibility and the in-app Diagnostics
+  // tab. No bare console.* call needed.
   log.error(`[learn] ${path}: ${msg}`, { path, reason: msg, stack: err?.stack });
-  // Also write to console at error level. log.error writes to the in-memory
-  // buffer; the console line is what shows up in DevTools the moment the page
-  // loads, which is where the user actually looks first.
-   
-  if (typeof console !== 'undefined') console.error(`[learn] ${path}: ${msg}`);
 }
 
 function parseEntry(path, raw) {
@@ -301,10 +299,12 @@ export const LEARN_HEALTH = {
 };
 
 if (!LEARN_HEALTH.ok) {
-  const msg = `[learn] critical: glob found ${LEARN_HEALTH.filesFound} markdown file(s) but 0 entries parsed. The Learn surface is empty in production.`;
-  log.error(msg, LEARN_HEALTH);
-   
-  if (typeof console !== 'undefined') console.error(msg, LEARN_HEALTH);
+  // log.error covers both DevTools and the in-app Diagnostics surface; see
+  // recordError() above for the rationale.
+  log.error(
+    `[learn] critical: glob found ${LEARN_HEALTH.filesFound} markdown file(s) but 0 entries parsed. The Learn surface is empty in production.`,
+    LEARN_HEALTH
+  );
 }
 
 // Helpers that the index views and the per-slug page use.

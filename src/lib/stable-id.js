@@ -68,12 +68,37 @@ export function attachStableIds(findings, files) {
 // this pattern →" link to /learn/patterns/<slug> IF the markdown file exists AND
 // is not a draft. Graceful fallback: missing or draft file = link hidden.
 export const PROBE_META = {
+  // Every probe entry below now declares learn_more_slug pointing at the
+  // matching pattern under src/learn/patterns/. resolvePatternForProbe() in
+  // learn-content.js gates the link on draft:false, so a draft pattern won't
+  // produce a broken "Learn more" link.
+
   // Deterministic + mechanical: drop-in patches
-  'Env File Hygiene': { confidence: 'high', autofix: 'mechanical' },
-  'AI Rules Files': { confidence: 'high', autofix: 'mechanical' },
-  'Trojan Source': { confidence: 'high', autofix: 'mechanical' },
-  'Package Manager Hardening': { confidence: 'high', autofix: 'mechanical' },
-  'Slopsquat / Typosquat': { confidence: 'high', autofix: 'mechanical' },
+  'Env File Hygiene': {
+    confidence: 'high',
+    autofix: 'mechanical',
+    learn_more_slug: 'env-file-hygiene',
+  },
+  'AI Rules Files': {
+    confidence: 'high',
+    autofix: 'mechanical',
+    learn_more_slug: 'ai-rules-files',
+  },
+  'Trojan Source': {
+    confidence: 'high',
+    autofix: 'mechanical',
+    learn_more_slug: 'trojan-source',
+  },
+  'Package Manager Hardening': {
+    confidence: 'high',
+    autofix: 'mechanical',
+    learn_more_slug: 'package-json-supply-chain',
+  },
+  'Slopsquat / Typosquat': {
+    confidence: 'high',
+    autofix: 'mechanical',
+    learn_more_slug: 'slopsquat-typosquat',
+  },
 
   // Deterministic + needs-review: clear fix but requires looking around
   'Secret Scanner': {
@@ -91,15 +116,39 @@ export const PROBE_META = {
     autofix: 'review-needed',
     learn_more_slug: 'package-json-supply-chain',
   },
-  'Malicious Artifacts': { confidence: 'high', autofix: 'manual' },
+  'Malicious Artifacts': {
+    confidence: 'high',
+    autofix: 'manual',
+    learn_more_slug: 'malicious-artifacts',
+  },
 
   // Pattern matches: regex + light context
-  CORS: { confidence: 'medium', autofix: 'mechanical' },
-  'Cookie Security': { confidence: 'medium', autofix: 'mechanical' },
-  'HTML Hygiene': { confidence: 'medium', autofix: 'mechanical' },
-  'A11y Landmarks': { confidence: 'medium', autofix: 'mechanical' },
-  'SEO Hygiene': { confidence: 'medium', autofix: 'mechanical' },
-  'GEO Hygiene': { confidence: 'medium', autofix: 'mechanical' },
+  CORS: { confidence: 'medium', autofix: 'mechanical', learn_more_slug: 'cors' },
+  'Cookie Security': {
+    confidence: 'medium',
+    autofix: 'mechanical',
+    learn_more_slug: 'cookie-security',
+  },
+  'HTML Hygiene': {
+    confidence: 'medium',
+    autofix: 'mechanical',
+    learn_more_slug: 'html-hygiene',
+  },
+  'A11y Landmarks': {
+    confidence: 'medium',
+    autofix: 'mechanical',
+    learn_more_slug: 'a11y-landmarks',
+  },
+  'SEO Hygiene': {
+    confidence: 'medium',
+    autofix: 'mechanical',
+    learn_more_slug: 'seo-hygiene',
+  },
+  'GEO Hygiene': {
+    confidence: 'medium',
+    autofix: 'mechanical',
+    learn_more_slug: 'geo-hygiene',
+  },
 
   // Pattern matches that need real fix work
   'Supabase RLS': {
@@ -107,35 +156,106 @@ export const PROBE_META = {
     autofix: 'review-needed',
     learn_more_slug: 'supabase-rls',
   },
-  'Firebase Rules': { confidence: 'medium', autofix: 'review-needed' },
+  'Firebase Rules': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'firebase-rules',
+  },
   'Auth Weakness': {
     confidence: 'medium',
     autofix: 'review-needed',
     learn_more_slug: 'auth-weakness',
   },
-  'Webhook Validation': { confidence: 'medium', autofix: 'review-needed' },
-  'GitHub Actions': { confidence: 'medium', autofix: 'review-needed' },
-  'Client Auth Storage': { confidence: 'medium', autofix: 'review-needed' },
-  'SSRF / Open Redirect': { confidence: 'medium', autofix: 'review-needed' },
-  'MCP Security': { confidence: 'medium', autofix: 'review-needed' },
-  'URL Reputation': { confidence: 'medium', autofix: 'manual' },
-  'AI Code Smells': { confidence: 'medium', autofix: 'review-needed' },
-  'Code Correctness': { confidence: 'high', autofix: 'mechanical' },
+  'Webhook Validation': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'webhook-validation',
+  },
+  'GitHub Actions': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'github-actions',
+  },
+  'Client Auth Storage': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'client-auth-storage',
+  },
+  'SSRF / Open Redirect': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'ssrf-open-redirect',
+  },
+  'MCP Security': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'mcp-security',
+  },
+  'URL Reputation': {
+    confidence: 'medium',
+    autofix: 'manual',
+    learn_more_slug: 'url-reputation',
+  },
+  'AI Code Smells': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'ai-code-smells',
+  },
+  'Code Correctness': {
+    confidence: 'high',
+    autofix: 'mechanical',
+    learn_more_slug: 'code-correctness',
+  },
 
   // Heuristics that benefit from manual scrutiny
-  'Admin Route Exposure': { confidence: 'heuristic', autofix: 'manual' },
-  'API Route Auth': { confidence: 'heuristic', autofix: 'manual' },
-  'Security Headers': { confidence: 'medium', autofix: 'review-needed' },
-  'LLM Security': { confidence: 'heuristic', autofix: 'review-needed' },
-  'Code Quality': { confidence: 'medium', autofix: 'manual' },
+  'Admin Route Exposure': {
+    confidence: 'heuristic',
+    autofix: 'manual',
+    learn_more_slug: 'admin-route-exposure',
+  },
+  'API Route Auth': {
+    confidence: 'heuristic',
+    autofix: 'manual',
+    learn_more_slug: 'api-route-auth',
+  },
+  'Security Headers': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'security-headers',
+  },
+  'LLM Security': {
+    confidence: 'heuristic',
+    autofix: 'review-needed',
+    learn_more_slug: 'llm-security',
+  },
+  'Code Quality': {
+    confidence: 'medium',
+    autofix: 'manual',
+    learn_more_slug: 'code-quality',
+  },
 
-  // Architectural classification — informational, no autofix
+  // Architectural classification — informational, no autofix, no dedicated pattern.
+  // Architecture findings are themselves shape descriptions; the per-shape Learn
+  // pages under /learn/shapes/ are the natural destination but those don't map
+  // 1:1 to a single slug.
   Architecture: { confidence: 'heuristic', autofix: 'manual' },
 
-  // Package.json supply-chain hooks (catch-all)
-  'Package.json': { confidence: 'medium', autofix: 'mechanical' },
-  'Supply Chain': { confidence: 'medium', autofix: 'mechanical' },
-  'Code Injection': { confidence: 'medium', autofix: 'review-needed' },
+  // Package.json catch-all + supply-chain-related aliases.
+  'Package.json': {
+    confidence: 'medium',
+    autofix: 'mechanical',
+    learn_more_slug: 'package-json-supply-chain',
+  },
+  'Supply Chain': {
+    confidence: 'medium',
+    autofix: 'mechanical',
+    learn_more_slug: 'package-json-supply-chain',
+  },
+  'Code Injection': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'auth-weakness',
+  },
 };
 
 // Attach probe-level confidence and autofix metadata to each finding.
