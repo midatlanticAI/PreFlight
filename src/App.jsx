@@ -200,6 +200,10 @@ const ManifestoView = lazyNamed(
 );
 const IndexView = lazyNamed(() => import('./components/learn/IndexView.jsx'), 'IndexView');
 const EntryView = lazyNamed(() => import('./components/learn/EntryView.jsx'), 'EntryView');
+const ResourcesView = lazyNamed(
+  () => import('./components/learn/ResourcesView.jsx'),
+  'ResourcesView'
+);
 const SettingsPage = lazyNamed(
   () => import('./components/settings/SettingsPage.jsx'),
   'SettingsPage'
@@ -893,6 +897,7 @@ export default function App() {
               <Route path="incidents/:slug" element={<EntryView />} />
               <Route path="shapes" element={<IndexView type="shape" />} />
               <Route path="shapes/:slug" element={<EntryView />} />
+              <Route path="resources" element={<ResourcesView />} />
             </Route>
             <Route path="/settings" element={<SettingsPage />}>
               <Route index element={<GeneralTab />} />
