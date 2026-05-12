@@ -1434,6 +1434,7 @@ import {
   probeA11yLandmarks,
 } from './probes/web.js';
 import { probeCodeQuality, classifyProject, probeArchitecture } from './probes/quality.js';
+import { probeCodeCorrectness } from './probes/code-correctness.js';
 export {
   probeExternalURLs,
   probeHTML,
@@ -1443,6 +1444,7 @@ export {
   probeCodeQuality,
   classifyProject,
   probeArchitecture,
+  probeCodeCorrectness,
 };
 export const PROBES = [
   { name: 'Architecture', fn: probeArchitecture },
@@ -1476,5 +1478,6 @@ export const PROBES = [
   { name: 'GEO Hygiene', fn: probeGEOHygiene },
   { name: 'A11y Landmarks', fn: probeA11yLandmarks },
   { name: 'Code Quality', fn: probeCodeQuality },
+  { name: 'Code Correctness', fn: probeCodeCorrectness },
   { name: 'Package Manager Hardening', fn: probeNpmrcHygiene },
 ];

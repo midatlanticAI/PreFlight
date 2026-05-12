@@ -120,6 +120,7 @@ export const PROBE_META = {
   'MCP Security': { confidence: 'medium', autofix: 'review-needed' },
   'URL Reputation': { confidence: 'medium', autofix: 'manual' },
   'AI Code Smells': { confidence: 'medium', autofix: 'review-needed' },
+  'Code Correctness': { confidence: 'high', autofix: 'mechanical' },
 
   // Heuristics that benefit from manual scrutiny
   'Admin Route Exposure': { confidence: 'heuristic', autofix: 'manual' },
