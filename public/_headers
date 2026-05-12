@@ -1,0 +1,13 @@
+# Cloudflare Pages headers file. Applied to every response served by Pages.
+# Docs: https://developers.cloudflare.com/pages/configuration/headers/
+#
+# We deliver `frame-ancestors` via HTTP header here because the browser ignores it
+# when set via <meta> (the policy spec explicitly disallows the directive in meta
+# tags). The Content-Security-Policy <meta> in index.html handles the rest.
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
+  Content-Security-Policy: frame-ancestors 'none'
