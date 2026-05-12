@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "og": "node scripts/generate-og.mjs"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
@@ -37,6 +38,7 @@
     "globals": "^17.6.0",
     "jsdom": "^25.0.1",
     "prettier": "^3.8.3",
+    "sharp": "^0.34.5",
     "vite": "^5.4.11",
     "vitest": "^2.1.9"
   }

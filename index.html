@@ -53,31 +53,39 @@
     <meta property="og:site_name" content="Mid-Atlantic AI" />
     <meta
       property="og:title"
-      content="Pre-Flight Audit Tool — static security review for vibe-coded apps"
+      content="Pre-Flight — Educational Audit for Vibers Building Vibeware"
     />
     <meta
       property="og:description"
       content="Free, in-browser security audit for AI-built apps. Explains every finding so you learn the pattern, not just the fix. By Mid-Atlantic AI."
     />
     <meta property="og:url" content="https://preflight.midatlantic.ai/" />
-    <meta property="og:image" content="https://preflight.midatlantic.ai/maai-logo.svg" />
-    <meta property="og:image:width" content="1280" />
-    <meta property="og:image:height" content="720" />
+    <!-- 1200×630 PNG per Facebook / LinkedIn / iMessage recommended dimensions. Most social
+         platforms refuse to render SVG og:image, so the source SVG (og-card.svg) lives next
+         to this PNG in /public and the PNG is regenerated via `npm run og` whenever the SVG
+         design changes. -->
+    <meta property="og:image" content="https://preflight.midatlantic.ai/og-card.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="Mid-Atlantic AI logo — friendly robot mascot with circuit lines"
+      content="Pre-Flight — An educational audit tool for vibers building vibeware. Free, in-browser. By Mid-Atlantic AI."
     />
     <meta property="og:locale" content="en_US" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Pre-Flight Audit Tool · Mid-Atlantic AI" />
+    <meta name="twitter:title" content="Pre-Flight — Educational Audit for Vibers Building Vibeware" />
     <meta
       name="twitter:description"
       content="Free, in-browser security audit for AI-built apps. Explains every finding so you learn the pattern, not just the fix. By Mid-Atlantic AI."
     />
-    <meta name="twitter:image" content="https://preflight.midatlantic.ai/maai-logo.svg" />
-    <meta name="twitter:image:alt" content="Mid-Atlantic AI logo" />
+    <meta name="twitter:image" content="https://preflight.midatlantic.ai/og-card.png" />
+    <meta
+      name="twitter:image:alt"
+      content="Pre-Flight — An educational audit tool for vibers building vibeware."
+    />
 
     <!-- Brand fonts: preconnect to cut connection-setup latency, then a regular stylesheet
          link. The non-blocking preload-swap pattern requires an inline event handler, which
