@@ -33,7 +33,26 @@ describe('LEARN_ENTRIES', () => {
       expect(Array.isArray(e.related_incident_slugs)).toBe(true);
       expect(Array.isArray(e.sources)).toBe(true);
       expect(typeof e.body).toBe('string');
+      // Incident-specific structured fields — all optional, but must be either the
+      // correct primitive type or null. The parser guards against bad-shape values.
+      expect(e.cve === null || typeof e.cve === 'string').toBe(true);
+      expect(e.cvss === null || typeof e.cvss === 'number').toBe(true);
+      expect(e.campaign === null || typeof e.campaign === 'string').toBe(true);
+      expect(e.threat_actor === null || typeof e.threat_actor === 'string').toBe(true);
+      expect(e.attack_date === null || typeof e.attack_date === 'string').toBe(true);
     }
+  });
+
+  it('the published TanStack field report populates the incident metadata fields', () => {
+    // Guards against schema drift — if any of these get silently dropped by the parser,
+    // the EntryView's incident-metadata header stops rendering them.
+    const tanstack = LEARN_ENTRIES.find((e) => e.slug === 'mini-shai-hulud-tanstack-2026-05');
+    expect(tanstack).toBeDefined();
+    expect(tanstack.cve).toBe('CVE-2026-45321');
+    expect(tanstack.cvss).toBe(9.6);
+    expect(tanstack.campaign).toBe('Mini Shai-Hulud');
+    expect(tanstack.threat_actor).toBe('TeamPCP');
+    expect(tanstack.attack_date).toBe('2026-05-11');
   });
 
   it('slugs are unique across the whole registry', () => {

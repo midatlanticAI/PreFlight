@@ -49,6 +49,117 @@ export function EntryView() {
   return <EntryBody entry={entry} />;
 }
 
+// Does this entry have any incident-specific structured metadata worth surfacing?
+// We only show the metadata header when at least one of the five optional fields is
+// populated, so a stub field report without these doesn't render an empty card.
+function hasIncidentMeta(entry) {
+  return !!(entry.cve || entry.cvss || entry.campaign || entry.threat_actor || entry.attack_date);
+}
+
+// Map a CVSS score to a severity tier color. Mirrors the CVSS 3.1 / 4.0 bands:
+//   9.0 - 10.0  critical
+//   7.0 - 8.9   high
+//   4.0 - 6.9   medium
+//   0.1 - 3.9   low
+// The label text is derived too so we stay readable even when the score is borderline.
+function cvssTier(score) {
+  if (typeof score !== 'number') return null;
+  if (score >= 9.0)
+    return {
+      label: 'CRITICAL',
+      color: T.sev.critical.fg,
+      bg: T.sev.critical.bg,
+      border: T.sev.critical.border,
+    };
+  if (score >= 7.0)
+    return { label: 'HIGH', color: T.sev.high.fg, bg: T.sev.high.bg, border: T.sev.high.border };
+  if (score >= 4.0)
+    return {
+      label: 'MEDIUM',
+      color: T.sev.medium.fg,
+      bg: T.sev.medium.bg,
+      border: T.sev.medium.border,
+    };
+  return { label: 'LOW', color: T.sev.low.fg, bg: T.sev.low.bg, border: T.sev.low.border };
+}
+
+function IncidentMetaHeader({ entry }) {
+  const tier = cvssTier(entry.cvss);
+  const items = [];
+  if (entry.cve) items.push({ label: 'CVE', value: entry.cve, mono: true });
+  if (entry.attack_date) items.push({ label: 'ATTACK DATE', value: entry.attack_date, mono: true });
+  if (entry.threat_actor)
+    items.push({ label: 'THREAT ACTOR', value: entry.threat_actor, mono: false });
+  if (entry.campaign) items.push({ label: 'CAMPAIGN', value: entry.campaign, mono: false });
+
+  return (
+    <div
+      className="ap-card"
+      style={{
+        padding: 16,
+        marginBottom: 16,
+        background: T.bg,
+        borderLeft: `3px solid ${tier ? tier.color : T.borderAlt}`,
+        display: 'flex',
+        alignItems: 'flex-start',
+        flexWrap: 'wrap',
+        gap: 18,
+      }}
+    >
+      {tier && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span className="ap-eyebrow" style={{ fontSize: 10, color: T.textMuted }}>
+            CVSS
+          </span>
+          <span
+            style={{
+              fontFamily: fontMono,
+              fontSize: 22,
+              fontWeight: 700,
+              color: tier.color,
+              lineHeight: 1,
+            }}
+          >
+            {entry.cvss.toFixed(1)}
+          </span>
+          <span
+            style={{
+              fontFamily: fontMono,
+              fontSize: 10,
+              color: tier.color,
+              background: tier.bg,
+              border: `1px solid ${tier.border}`,
+              padding: '2px 6px',
+              letterSpacing: '0.1em',
+              alignSelf: 'flex-start',
+              marginTop: 2,
+            }}
+          >
+            {tier.label}
+          </span>
+        </div>
+      )}
+      {items.map((it) => (
+        <div key={it.label} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span className="ap-eyebrow" style={{ fontSize: 10, color: T.textMuted }}>
+            {it.label}
+          </span>
+          <span
+            style={{
+              fontFamily: it.mono ? fontMono : 'inherit',
+              fontSize: 13,
+              fontWeight: 600,
+              color: T.text,
+            }}
+          >
+            {it.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Extracted so ManifestoView can render the manifesto entry without going through useParams.
 export function EntryBody({ entry }) {
   const segment = SEGMENT_FOR[entry.type] ?? '';
@@ -99,6 +210,8 @@ export function EntryBody({ entry }) {
           </span>
         )}
       </header>
+
+      {entry.type === 'incident' && hasIncidentMeta(entry) && <IncidentMetaHeader entry={entry} />}
 
       <div
         className="ap-card"

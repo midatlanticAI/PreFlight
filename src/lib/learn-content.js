@@ -59,6 +59,15 @@ function parseEntry(path, raw) {
         ? data.related_incident_slugs
         : [],
       sources: Array.isArray(data.sources) ? data.sources : [],
+      // Incident-specific structured metadata. All optional; used by EntryView to render
+      // a metadata header on type=incident pages (CVE pill, CVSS badge, threat-actor /
+      // campaign / attack-date attribution). Pattern + shape pages can use them too if
+      // the content type evolves, but only incidents render the header today.
+      cve: typeof data.cve === 'string' ? data.cve : null,
+      cvss: typeof data.cvss === 'number' ? data.cvss : null,
+      campaign: typeof data.campaign === 'string' ? data.campaign : null,
+      threat_actor: typeof data.threat_actor === 'string' ? data.threat_actor : null,
+      attack_date: typeof data.attack_date === 'string' ? data.attack_date : null,
       body: content.trim(),
       _path: path,
     };
