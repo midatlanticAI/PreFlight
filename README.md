@@ -6,14 +6,16 @@ Free, in-browser static security audit for apps built with AI coding tools (Lova
 
 ## What it does
 
-29 probes covering:
+33 probes covering:
 
 - **OWASP Top 10 2025** — secrets, broken auth, SSRF, open redirects, CORS, missing security headers.
 - **OWASP LLM Top 10 2025** — prompt injection, system-prompt leakage, excessive agency, unbounded consumption.
-- **2025–2026 supply-chain incidents** — Shai-Hulud, Axios / Sapphire Sleet, Mini Shai-Hulud, Bitwarden CLI compromise, by exact version.
+- **2025–2026 supply-chain incidents** — Shai-Hulud, Axios / Sapphire Sleet, Mini Shai-Hulud SAP, Bitwarden CLI compromise, and the May 11, 2026 Mini Shai-Hulud TanStack worm by TeamPCP (~170 hard-coded compromised versions).
+- **Post-infection IOC detection** — `.claude/router_runtime.js`, `__DAEMONIZED` guards, Session-messenger exfil endpoints, `gh-token-monitor` dead-man-switch, spoofed Claude commit author.
 - **MCP security** — shell-spawning servers, public binds, vulnerable mcp-server-git versions.
 - **AI-tooling rules-file backdoors** — Cursor / Copilot / Windsurf hidden-Unicode injection.
 - **Slopsquatting** — LLM-hallucinated package names.
+- **AST code-correctness** — acorn-powered undeclared-identifier check. Catches the class of bug that ships when a refactor leaves a dangling reference (`return urlHighlight;` with no `urlHighlight` declared anywhere).
 - **SEO + GEO + WCAG 2.2 a11y** — meta tags, JSON-LD schema drift, AI-bot allowlist, target size, focus indicators.
 - **Architecture classification** — detects monolithic-SPA / static-HTML / SSR / SSG / monorepo / CLI / mobile / desktop / notebook with teaching content per type.
 - **Code quality** — console.log in production, file size, unhandled promises, async without try.
@@ -25,7 +27,7 @@ All scanning runs in your browser. No upload, no signup, no data collection.
 ```bash
 npm ci
 npm run dev      # vite dev server on :5173
-npm test         # vitest (211 unit tests + 6 self-audit tests)
+npm test         # vitest (411 tests across 19 files)
 npm run build    # production build → dist/
 ```
 
@@ -44,28 +46,33 @@ If we don't pass our own audit, CI fails. Dogfooding.
 
 ```
 src/
-├── App.jsx              ← main React component + helpers
-├── ErrorBoundary.jsx    ← React class boundary with diagnostics export
-├── main.jsx             ← entry point
+├── App.jsx                 ← orchestrator (~920 lines): state, scan flow, routing shell
+├── ErrorBoundary.jsx       ← React class boundary with diagnostics export
+├── main.jsx                ← entry point
+├── components/
+│   ├── HomeView.jsx        ← landing route
+│   ├── AuditView.jsx       ← scan UI + results dashboard
+│   ├── learn/              ← Learn route (patterns / incidents / shapes)
+│   └── ...                 ← shared UI (FindingCard, IncidentMetaHeader, etc.)
 ├── lib/
-│   ├── probes.js        ← all 29 probes + threat-intel constants + PROBES registry
-│   ├── logger.js        ← structured logger with HMR-safe window listeners
-│   └── analytics.js     ← privacy-preserving counter analytics (counts only, no PII)
-└── test/
-    ├── probes.test.js   ← 117 unit tests for probes
-    ├── formatters.test.js  ← 16 tests for JSON / Markdown / agent-prompt / PR-comment exporters
-    ├── history.test.js  ← 10 tests for localStorage history + diff
-    ├── snippet.test.js  ← 10 tests for ±5-line code snapshot builder
-    ├── scoring.test.js  ← 32 tests for severity weighting + risk tier
-    ├── logger.test.js   ← 10 tests including circular-context regression
-    ├── analytics.test.js  ← 10 tests for counter analytics privacy invariants
-    └── self-audit.test.js  ← dogfooding: scan our own dist/
+│   ├── probes.js           ← 33-probe registry + threat-intel constants (~1,480 lines)
+│   ├── probes/
+│   │   └── code-correctness.js  ← AST-based undeclared-identifier probe (acorn + acorn-jsx)
+│   ├── stable-id.js        ← cross-scan finding IDs + PROBE_META (confidence / autofix / learn slug)
+│   ├── learn-content.js    ← markdown loader + frontmatter parser for Learn pages
+│   ├── logger.js           ← structured logger with HMR-safe window listeners
+│   └── analytics.js        ← privacy-preserving counter analytics (counts only, no PII)
+├── learn/
+│   ├── patterns/*.md       ← published pattern explainers
+│   ├── incidents/*.md      ← field reports (CVE / CVSS / campaign / actor / date)
+│   └── shapes/*.md         ← architectural-shape explainers
+└── test/                   ← 411 tests across 19 files (vitest + jsdom)
 
 public/
 ├── maai-logo.svg
-├── robots.txt           ← explicit allow for GPTBot, ClaudeBot, PerplexityBot, etc.
+├── robots.txt              ← explicit allow for GPTBot, ClaudeBot, PerplexityBot, etc.
 ├── sitemap.xml
-└── llms.txt             ← per llmstxt.org — AI-search index of the site
+└── llms.txt                ← per llmstxt.org — AI-search index of the site
 ```
 
 ## License

@@ -1,12 +1,12 @@
 # Pre-Flight Audit Tool
 
-> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 32 probes covering OWASP Top 10 2025, OWASP LLM Top 10, 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, and conventional SAST checks. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
+> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 33 probes covering OWASP Top 10 2025, OWASP LLM Top 10, 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, and conventional SAST checks. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
 
 The Pre-Flight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai). Contact: John@midatlantic.ai. License: free for individual and team use.
 
 ## What it does
 
-The tool extracts text from selected files or a public GitHub repository and runs 26 pure-function probes against the content. Each probe emits zero or more findings with severity (critical / high / medium / low / info), a CWE reference, a file path and line number, evidence, and a remediation block. Findings are aggregated into a risk score out of 100 with a tier label (LOW / MODERATE / HIGH / CRITICAL RISK).
+The tool extracts text from selected files or a public GitHub repository and runs 33 pure-function probes against the content. Each probe emits zero or more findings with severity (critical / high / medium / low / info), a CWE reference, a file path and line number, evidence, and a remediation block. Findings are aggregated into a risk score out of 100 with a tier label (LOW / MODERATE / HIGH / CRITICAL RISK).
 
 ## Input modes
 
@@ -21,35 +21,43 @@ The tool extracts text from selected files or a public GitHub repository and run
 - Baseline diff vs. prior scan of the same source (introduced / fixed / persisted findings, score delta).
 - Diagnostics drawer with structured logs (debug / info / warn / error filterable, copy / save / clear).
 
-## The 32 probes
+## The 33 probes
 
-1. **Secret Scanner** — AWS keys, Stripe keys (live + test), OpenAI, Anthropic, Google, GitHub PAT, Slack tokens, SendGrid, Hugging Face, Replicate, Groq, Perplexity, generic hardcoded secrets, database connection URLs with credentials, private key blocks.
-2. **NEXT_PUBLIC_ Misuse** — server secrets exposed via `NEXT_PUBLIC_` prefix in Next.js apps.
-3. **Supabase RLS** — tables created without `ENABLE ROW LEVEL SECURITY`; permissive `USING (true)` policies. Case-insensitive table-name matching.
-4. **Firebase Rules** — `allow read: if true`, storage rules that allow any authenticated user.
-5. **Package.json** — suspicious postinstall hooks (curl/wget), non-registry dependencies (git+ / http: / file:), floating versions (* / latest).
-6. **Env File Hygiene** — `.env` files tracked in repo (vs. `.env.example`).
-7. **Auth Weakness** — JWT `algorithm: none` (quoted or unquoted), `jwt.verify` without a secret argument, `eval()`, `dangerouslySetInnerHTML`. Comment-aware (won't fire on `// TODO: never use eval()`).
-8. **Admin Route Exposure** — admin / dashboard / internal routes relying on client-only auth hooks (`useUser`, `useSession`). Excludes marketing-preview paths.
-9. **Security Headers** — missing `headers()` function in `next.config`, missing `headers` array in `vercel.json`.
-10. **CORS** — wildcard `Access-Control-Allow-Origin: *`.
-11. **LLM Security** (OWASP LLM Top 10 2025) — prompt injection (user input interpolated into prompts), LLM API calls from client components (key exposure / LLM02), LLM output rendered as raw HTML (LLM05), dangerous LangChain tools (`PythonREPL`, `ShellTool`, `RequestsTool` — LLM06), destructively-named tools, system prompts embedded in client bundles (LLM07), unbounded `max_tokens` (LLM10).
-12. **Webhook Validation** — Stripe webhooks without `constructEvent` signature verification, GitHub webhooks without `X-Hub-Signature-256` HMAC check.
-13. **GitHub Actions** — `pull_request_target` workflows that check out untrusted PR code (privilege-escalation pattern), actions pinned to mutable refs (branches/tags) instead of SHA.
-14. **Client Auth Storage** — auth / JWT / session / access_token / refresh_token stored in `localStorage`.
-15. **SSRF / Open Redirect** — redirect target from user input (CWE-601), server-side fetch with user-controlled URL (CWE-918).
-16. **Cookie Security** — auth cookies missing `httpOnly`, `secure`, or `sameSite` attributes.
-17. **API Route Auth** — sensitive API routes without auth-function call; destructive HTTP handlers (DELETE/PUT/PATCH) without auth check. Recognizes only `jwt.verify(token, secret)` with 2+ args as actual auth (lone `jwt.verify(token)` is flagged).
-18. **Compromised Packages** — known-malicious versions from 2025–2026, ~170+ entries hard-coded against named incidents: Axios 1.14.1 / 0.30.4 (Sapphire Sleet DPRK, March 2026), Bitwarden CLI 2026.4.0 (April 2026), Intercom-client 7.0.4-7.0.5 (Mini Shai-Hulud SAP, April 2026), and the May 11, 2026 Mini Shai-Hulud "TheBeautifulSandsOfTime" worm by TeamPCP — 42 @tanstack/* packages (router, react-router, vue-router, solid-router, start, devtools, plugins; @tanstack/react-router alone has 12M+ weekly downloads), @mistralai/mistralai, @mistralai/mistralai-azure, @mistralai/mistralai-gcp, @opensearch-project/opensearch, the entire @squawk/* and @uipath/* scopes, @beproduct/nestjs-auth, @tallyui/*, @mesadev/*, plus unscoped victims (cmux-agent-mcp, git-branch-selector, ts-dna, etc.). Plus @cap-js/sqlite, @cap-js/db-service, lightning 2.6.2-2.6.3 (PyPI variant), plain-crypto-js (any version).
-19. **Slopsquat / Typosquat** — LLM-hallucinated and typosquatted package names (`lodahs`, `expreess`, `reactt`, etc.) plus generic-shape heuristic for `auth-tool` / `api-helper` patterns common in AI hallucinations.
-20. **MCP Security** — Model Context Protocol servers spawning shell interpreters (`bash -c`, `sh -e`, `powershell -Command`), `mcp-server-git` versions pre-Dec 2025 (indirect prompt injection via README/issue), MCP servers binding to 0.0.0.0 or `::` (April 2026 OX Security advisory: ~200K MCP servers internet-exposed with command-execution flaws). Traverses `mcpServers`, `servers`, `tools`, and nested `mcp.servers` config keys.
-21. **Trojan Source** — bidirectional Unicode control characters (U+202A-U+202E, U+2066-U+2069; CVE-2021-42574).
-22. **AI Rules Files** — hidden bidi Unicode in `.cursorrules` / `.cursor/rules/*` / `.windsurfrules` / `CLAUDE.md` (the 2026 "rules file backdoor" attacks against Cursor and GitHub Copilot demonstrated by Pillar Security); instruction-override language (`ignore previous instructions`, `disregard system`).
-23. **Malicious Artifacts** — post-infection IOCs from the May 11, 2026 Mini Shai-Hulud TanStack worm. Flags `.claude/router_runtime.js`, `.claude/setup.mjs`, `.vscode/setup.mjs`, `tanstack_runner.js`, `router_init.js` as critical drop-files (the worm writes itself there to survive `npm uninstall`); flags content IOCs in any scanned file: `__DAEMONIZED` guard, `filev2.getsession.org` / `seed{1,2,3}.getsession.org` Session-messenger exfil endpoints, `gh-token-monitor` dead-man-switch handler (`com.user.gh-token-monitor` LaunchAgent / systemd user service that runs `rm -rf ~/` if the stolen GitHub token returns 40x), spoofed `claude@users.noreply.github.com` commit author, and the malicious `@tanstack/setup` commit-SHA pin.
-24. **AI Code Smells** — empty `catch {}` blocks (industry studies: ~45% of AI code samples introduce OWASP Top 10 issues), heavy `any` type usage (correlates with missing input validation).
-24. **Package Manager Hardening** — missing `.npmrc`, missing `min-release-age` cooldown directive (recommended ≥7 days after Shai-Hulud, Axios, and Mini Shai-Hulud worm windows).
-25. **URL Reputation** — extracts external HTTP/HTTPS URLs from source, applies heuristics (raw IP, suspicious TLDs like .tk/.xyz/.gq, URL shorteners, http-only), produces info/low/medium findings with click-through links to VirusTotal, urlhaus.abuse.ch, and whois lookups.
-26. **HTML Hygiene** — inline event handlers (`onclick=`), `target="_blank"` without `rel="noopener"` (tabnabbing), mixed-content `http://` scripts on HTTPS pages, `eval()` / `new Function()` inside `<script>`, forms posting over HTTP, inline `<script>` without a CSP meta tag.
+In registry order (matches `src/lib/probes.js` PROBES array):
+
+1. **Architecture** — classifies the project shape (monolithic-SPA / static-HTML / SSR / SSG / monorepo / CLI / mobile / desktop / notebook) and emits informational findings tailored to that shape.
+2. **Secret Scanner** — AWS keys, Stripe keys (live + test), OpenAI, Anthropic, Google, GitHub PAT, Slack tokens, SendGrid, Hugging Face, Replicate, Groq, Perplexity, generic hardcoded secrets, database connection URLs with credentials, private key blocks.
+3. **NEXT_PUBLIC_ Misuse** — server secrets exposed via `NEXT_PUBLIC_` prefix in Next.js apps.
+4. **Supabase RLS** — tables created without `ENABLE ROW LEVEL SECURITY`; permissive `USING (true)` policies. Case-insensitive table-name matching.
+5. **Firebase Rules** — `allow read: if true`, storage rules that allow any authenticated user.
+6. **Package.json** — suspicious postinstall hooks (curl/wget), non-registry dependencies (git+ / http: / file:), floating versions (* / latest).
+7. **Env File Hygiene** — `.env` files tracked in repo (vs. `.env.example`).
+8. **Auth Weakness** — JWT `algorithm: none` (quoted or unquoted), `jwt.verify` without a secret argument, `eval()`, `dangerouslySetInnerHTML`. Comment-aware (won't fire on `// TODO: never use eval()`).
+9. **Admin Route Exposure** — admin / dashboard / internal routes relying on client-only auth hooks (`useUser`, `useSession`). Excludes marketing-preview paths.
+10. **Security Headers** — missing `headers()` function in `next.config`, missing `headers` array in `vercel.json`.
+11. **CORS** — wildcard `Access-Control-Allow-Origin: *`.
+12. **LLM Security** (OWASP LLM Top 10 2025) — prompt injection (user input interpolated into prompts), LLM API calls from client components (key exposure / LLM02), LLM output rendered as raw HTML (LLM05), dangerous LangChain tools (`PythonREPL`, `ShellTool`, `RequestsTool` — LLM06), destructively-named tools, system prompts embedded in client bundles (LLM07), unbounded `max_tokens` (LLM10).
+13. **Webhook Validation** — Stripe webhooks without `constructEvent` signature verification, GitHub webhooks without `X-Hub-Signature-256` HMAC check.
+14. **GitHub Actions** — `pull_request_target` workflows that check out untrusted PR code (privilege-escalation pattern), actions pinned to mutable refs (branches/tags) instead of SHA.
+15. **Client Auth Storage** — auth / JWT / session / access_token / refresh_token stored in `localStorage`.
+16. **SSRF / Open Redirect** — redirect target from user input (CWE-601), server-side fetch with user-controlled URL (CWE-918).
+17. **Cookie Security** — auth cookies missing `httpOnly`, `secure`, or `sameSite` attributes.
+18. **API Route Auth** — sensitive API routes without auth-function call; destructive HTTP handlers (DELETE/PUT/PATCH) without auth check. Recognizes only `jwt.verify(token, secret)` with 2+ args as actual auth (lone `jwt.verify(token)` is flagged).
+19. **Compromised Packages** — known-malicious versions from 2025–2026, ~170+ entries hard-coded against named incidents: Axios 1.14.1 / 0.30.4 (Sapphire Sleet DPRK, March 2026), Bitwarden CLI 2026.4.0 (April 2026), Intercom-client 7.0.4-7.0.5 (Mini Shai-Hulud SAP, April 2026), and the May 11, 2026 Mini Shai-Hulud "TheBeautifulSandsOfTime" worm by TeamPCP — 42 @tanstack/* packages (router, react-router, vue-router, solid-router, start, devtools, plugins; @tanstack/react-router alone has 12M+ weekly downloads), @mistralai/mistralai, @mistralai/mistralai-azure, @mistralai/mistralai-gcp, @opensearch-project/opensearch, the entire @squawk/* and @uipath/* scopes, @beproduct/nestjs-auth, @tallyui/*, @mesadev/*, plus unscoped victims (cmux-agent-mcp, git-branch-selector, ts-dna, etc.). Plus @cap-js/sqlite, @cap-js/db-service, lightning 2.6.2-2.6.3 (PyPI variant), plain-crypto-js (any version).
+20. **Slopsquat / Typosquat** — LLM-hallucinated and typosquatted package names (`lodahs`, `expreess`, `reactt`, etc.) plus generic-shape heuristic for `auth-tool` / `api-helper` patterns common in AI hallucinations.
+21. **MCP Security** — Model Context Protocol servers spawning shell interpreters (`bash -c`, `sh -e`, `powershell -Command`), `mcp-server-git` versions pre-Dec 2025 (indirect prompt injection via README/issue), MCP servers binding to 0.0.0.0 or `::` (April 2026 OX Security advisory: ~200K MCP servers internet-exposed with command-execution flaws). Traverses `mcpServers`, `servers`, `tools`, and nested `mcp.servers` config keys.
+22. **Trojan Source** — bidirectional Unicode control characters (U+202A-U+202E, U+2066-U+2069; CVE-2021-42574).
+23. **AI Rules Files** — hidden bidi Unicode in `.cursorrules` / `.cursor/rules/*` / `.windsurfrules` / `CLAUDE.md` (the 2026 "rules file backdoor" attacks against Cursor and GitHub Copilot demonstrated by Pillar Security); instruction-override language (`ignore previous instructions`, `disregard system`).
+24. **Malicious Artifacts** — post-infection IOCs from the May 11, 2026 Mini Shai-Hulud TanStack worm. Flags `.claude/router_runtime.js`, `.claude/setup.mjs`, `.vscode/setup.mjs`, `tanstack_runner.js`, `router_init.js` as critical drop-files (the worm writes itself there to survive `npm uninstall`); flags content IOCs in any scanned file: `__DAEMONIZED` guard, `filev2.getsession.org` / `seed{1,2,3}.getsession.org` Session-messenger exfil endpoints, `gh-token-monitor` dead-man-switch handler (`com.user.gh-token-monitor` LaunchAgent / systemd user service that runs `rm -rf ~/` if the stolen GitHub token returns 40x), spoofed `claude@users.noreply.github.com` commit author, and the malicious `@tanstack/setup` commit-SHA pin.
+25. **AI Code Smells** — empty `catch {}` blocks (industry studies: ~45% of AI code samples introduce OWASP Top 10 issues), heavy `any` type usage (correlates with missing input validation).
+26. **URL Reputation** — extracts external HTTP/HTTPS URLs from source, applies heuristics (raw IP, suspicious TLDs like .tk/.xyz/.gq, URL shorteners, http-only), produces info/low/medium findings with click-through links to VirusTotal, urlhaus.abuse.ch, and whois lookups.
+27. **HTML Hygiene** — inline event handlers (`onclick=`), `target="_blank"` without `rel="noopener"` (tabnabbing), mixed-content `http://` scripts on HTTPS pages, `eval()` / `new Function()` inside `<script>`, forms posting over HTTP, inline `<script>` without a CSP meta tag.
+28. **SEO Hygiene** — missing canonical / OG / Twitter meta tags, missing JSON-LD schema, robots.txt drift, sitemap.xml drift.
+29. **GEO Hygiene** (Generative-Engine Optimization) — missing AI-bot allowlist in robots.txt (GPTBot / ClaudeBot / PerplexityBot / etc.), missing llms.txt for AI-search indexing.
+30. **A11y Landmarks** — WCAG 2.2 landmark / target-size / focus-indicator drift on rendered HTML.
+31. **Code Quality** — `console.log` in production paths, oversized source files, unhandled promise rejections, `async` without `try`.
+32. **Code Correctness** — AST-based undeclared-identifier check using acorn + acorn-jsx. Walks each `.js` / `.jsx` / `.mjs` / `.cjs` file's syntax tree, collects every name with a binding in this file (imports, var/let/const, function/class decls, params, destructuring, catch clauses, re-exports), then flags identifier references that aren't in the bindings set or the built-in / browser / Node / test-runner / React globals allowlist. Catches the class of bug that ships when a refactor leaves a dangling reference (`return urlHighlight;` with no `urlHighlight` declared anywhere). v1 skips `.ts` / `.tsx` (separate parser needed; deferred to v0.5).
+33. **Package Manager Hardening** — missing `.npmrc`, missing `min-release-age` cooldown directive (recommended ≥7 days after Shai-Hulud, Axios, and Mini Shai-Hulud worm windows).
 
 ## What it does NOT do
 
@@ -70,7 +78,7 @@ The tool extracts text from selected files or a public GitHub repository and run
 
 ## Architecture
 
-Single-page React 18 application, Vite-built, no backend. Source code is in a single `App.jsx` file (~3500 lines) with extracted modules for logger, analytics, and ErrorBoundary. All probes are pure functions exported from `App.jsx` and tested individually. 164 unit tests covering probes, formatters, history, scoring, snippet rendering, and logger behavior.
+Single-page React 18 application, Vite-built, react-router-dom v6 for routing, no backend. `App.jsx` (~920 lines) orchestrates state; probes live in `src/lib/probes.js` (~1,480 lines, 33 pure-function probes) plus dedicated modules under `src/lib/probes/` for the AST-based Code Correctness probe. Learn content lives under `src/learn/{patterns,incidents,shapes}/*.md` (YAML frontmatter + Markdown body, parsed at runtime with gray-matter). 411 tests across 19 files covering probes, formatters, history, scoring, snippet rendering, logger behavior, Learn content shape, suppression workflow, .preflight.yml schema, and the AST probe.
 
 Stack:
 - React 18 + Vite 5
@@ -92,7 +100,7 @@ Stack:
 ## Versioning + freshness
 
 - Schema version: `midatlantic-audit/v1` (JSON export).
-- Probe set last expanded: 2026-05-12 (Malicious Artifacts probe added).
+- Probe set last expanded: 2026-05-12 (AST-based Code Correctness probe added — acorn + acorn-jsx undeclared-identifier check).
 - Threat intel last updated: 2026-05-12 (Mini Shai-Hulud TanStack "TheBeautifulSandsOfTime" campaign by TeamPCP — 170+ packages across @tanstack, @mistralai, @opensearch-project, @uipath, @squawk, and unscoped victims).
 - Brand: Mid-Atlantic AI — palette navy `#0a1226` / orange `#f26b1f` / mint `#9fe5dd`.
 
