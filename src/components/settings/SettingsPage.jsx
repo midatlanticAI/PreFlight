@@ -11,7 +11,7 @@
 
 import { NavLink, Outlet } from 'react-router-dom';
 import { Sliders, MessageSquare, Github, Activity, Info } from 'lucide-react';
-import { T, fontMono } from '../../lib/theme.js';
+import { T, fontUI } from '../../lib/theme.js';
 
 const SETTINGS_TABS = [
   { to: '/settings', label: 'General', icon: Sliders, end: true },
@@ -50,7 +50,7 @@ export function SettingsPage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '220px minmax(0, 1fr)',
+          gridTemplateColumns: '240px minmax(0, 1fr)',
           gap: 24,
           alignItems: 'start',
         }}
@@ -77,21 +77,20 @@ export function SettingsPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 10,
-                padding: '10px 12px',
-                color: isActive ? T.bg : T.textDim,
+                padding: '12px 14px',
+                color: isActive ? T.bg : T.text,
                 background: isActive ? T.accent : 'transparent',
                 border: 'none',
-                fontFamily: fontMono,
-                fontSize: 11,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
+                fontFamily: fontUI,
+                fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
                 textDecoration: 'none',
-                minHeight: 24,
+                minHeight: 44, // WCAG 2.5.5 AAA touch target
               })}
+              className="ap-settings-tab"
             >
-              <Icon size={12} aria-hidden="true" />
+              <Icon size={16} aria-hidden="true" />
               {label}
             </NavLink>
           ))}
@@ -110,6 +109,12 @@ export function SettingsPage() {
           .ap-settings-sidebar {
             flex-direction: row !important;
             overflow-x: auto;
+            scrollbar-width: thin;
+          }
+          .ap-settings-tab {
+            white-space: nowrap;
+            padding: 10px 12px !important;
+            font-size: 13px !important;
           }
         }
       `}</style>

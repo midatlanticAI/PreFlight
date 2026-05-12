@@ -81,8 +81,8 @@ export function AuditView({
           ResultsView component takes over and we skip the hero so the user gets straight to
           their score / findings instead of reading marketing copy again. */}
       {!results && (
-        <header style={{ marginBottom: 36 }}>
-          <div className="ap-eyebrow" style={{ marginBottom: 12 }}>
+        <header style={{ marginBottom: 36 }} className="ap-hero">
+          <div className="ap-eyebrow" style={{ marginBottom: 12, fontSize: 12 }}>
             <span style={{ color: T.accent }}>MID-ATLANTIC AI</span>
             <span style={{ color: T.textMuted }}> · PRE-FLIGHT AUDIT TOOL</span>
           </div>
@@ -90,7 +90,10 @@ export function AuditView({
             className="ap-display"
             style={{
               margin: 0,
-              fontSize: 56,
+              // Fluid type via clamp(min, preferred, max) — scales from 32 px on phones
+              // up to 56 px on desktop without manual breakpoints, keeping the wordmark
+              // readable everywhere.
+              fontSize: 'clamp(32px, 7vw, 56px)',
               fontWeight: 700,
               letterSpacing: '-0.02em',
               lineHeight: 1.05,
@@ -99,7 +102,15 @@ export function AuditView({
           >
             <span style={{ fontStyle: 'italic', color: T.accent }}>Pre-Flight</span>
             <br />
-            <span style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.15 }}>
+            <span
+              style={{
+                fontSize: 'clamp(20px, 4vw, 32px)',
+                fontWeight: 700,
+                lineHeight: 1.2,
+                display: 'inline-block',
+                marginTop: 4,
+              }}
+            >
               An educational audit tool for vibers
               <br />
               building vibeware.
@@ -108,8 +119,8 @@ export function AuditView({
           <p
             style={{
               maxWidth: 620,
-              marginTop: 18,
-              fontSize: 14,
+              marginTop: 20,
+              fontSize: 15,
               color: T.textDim,
               lineHeight: 1.75,
               fontFamily: fontUI,
@@ -124,7 +135,7 @@ export function AuditView({
           <p
             style={{
               marginTop: 14,
-              fontSize: 11,
+              fontSize: 12,
               color: T.textMuted,
               fontFamily: fontMono,
             }}

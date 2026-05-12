@@ -13,7 +13,7 @@
 //   /learn/shapes/:slug             → EntryView
 
 import { NavLink, Outlet } from 'react-router-dom';
-import { T, fontEyebrow, fontMono } from '../../lib/theme.js';
+import { T, fontUI } from '../../lib/theme.js';
 
 const SUB_TABS = [
   { to: '/learn', label: 'Vibe-Aware', end: true },
@@ -58,7 +58,9 @@ export function LearnPage() {
           padding: 4,
           marginBottom: 24,
           overflowX: 'auto',
+          scrollbarWidth: 'thin',
         }}
+        className="ap-learn-subnav"
       >
         {SUB_TABS.map(({ to, label, end }) => (
           <NavLink
@@ -66,28 +68,33 @@ export function LearnPage() {
             to={to}
             end={end}
             style={({ isActive }) => ({
-              padding: '8px 14px',
-              color: isActive ? T.bg : T.textDim,
+              padding: '12px 16px',
+              color: isActive ? T.bg : T.text,
               background: isActive ? T.accent : 'transparent',
               border: 'none',
-              fontFamily: fontMono,
-              fontSize: 11,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
+              fontFamily: fontUI,
+              fontSize: 14,
               fontWeight: 600,
               cursor: 'pointer',
               textDecoration: 'none',
               whiteSpace: 'nowrap',
-              minHeight: 24,
+              minHeight: 44, // WCAG 2.5.5 AAA touch target
               display: 'inline-flex',
               alignItems: 'center',
-              fontFamilyFallback: fontEyebrow,
             })}
           >
             {label}
           </NavLink>
         ))}
       </nav>
+      <style>{`
+        @media (max-width: 480px) {
+          .ap-learn-subnav a {
+            padding: 10px 12px !important;
+            font-size: 13px !important;
+          }
+        }
+      `}</style>
 
       <Outlet />
     </div>

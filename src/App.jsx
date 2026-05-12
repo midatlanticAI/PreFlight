@@ -765,9 +765,15 @@ export default function App() {
       <a href="#main" className="ap-skip-link">
         Skip to main content
       </a>
-      <main id="main" style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 24px 80px' }}>
-        {/* TOP NAV: appears on every route. */}
+      <main
+        id="main"
+        className="ap-main"
+        style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 24px 80px' }}
+      >
+        {/* TOP NAV: appears on every route. Below 640 px the logo row and the Nav stack
+            vertically (rule in GlobalStyle.jsx → .ap-app-header) so neither overflows. */}
         <div
+          className="ap-app-header"
           style={{
             display: 'flex',
             alignItems: 'center',

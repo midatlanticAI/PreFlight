@@ -202,6 +202,31 @@ export function GlobalStyle() {
       .ap-display { font-family: ${fontDisplay}; font-weight: 700; font-style: normal; }
       .ap-condensed { font-family: ${fontCondensed}; }
       .ap-mono { font-family: ${fontMono}; }
+
+      /* Mobile / narrow-viewport rules. Tightens container padding below 480 px so the
+         hero copy + cards don't feel cramped against the screen edge, and wraps the top
+         nav row so the logo block and primary nav stack vertically when there's no room
+         to keep them on one line. Keeps tap targets at ≥ 44 px — never shrink interactive
+         elements below the WCAG 2.5.5 AAA touch-target floor. */
+      @media (max-width: 480px) {
+        .ap-main {
+          padding: 24px 16px 64px !important;
+        }
+        .ap-eyebrow {
+          /* prevent the long brand+tagline line from forcing a horizontal scroll */
+          font-size: 11px;
+          letter-spacing: 0.14em;
+        }
+      }
+      @media (max-width: 640px) {
+        .ap-app-header {
+          flex-direction: column !important;
+          align-items: stretch !important;
+        }
+        .ap-app-header > * {
+          width: 100%;
+        }
+      }
     `}</style>
   );
 }

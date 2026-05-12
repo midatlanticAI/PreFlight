@@ -1,11 +1,18 @@
 // src/components/Nav.jsx
 // Top nav bar with three destinations: Audit (`/`), Learn (`/learn`), Settings (`/settings`).
 // Uses react-router's NavLink so the active route gets the brand-orange treatment
-// automatically. Collapses to icon-only labels below 640 px.
+// automatically.
+//
+// WCAG 2.2 sizing:
+//   - 44×44 px touch target (WCAG 2.5.5 AAA / 2.5.8 AA + plenty of buffer)
+//   - 14 px mixed-case label (was 11 px uppercase letterspaced — eye-fatigue heavy)
+//   - 0 letter-spacing, regular UI font — readable at glance
+//   - Labels visible at every viewport. Below 480 px the icons shrink slightly and the
+//     padding tightens but labels never disappear (mystery-meat icon nav fails 3.2.3).
 
 import { NavLink } from 'react-router-dom';
 import { ShieldCheck, BookOpen, Settings as SettingsIcon } from 'lucide-react';
-import { T, fontEyebrow, fontMono } from '../lib/theme.js';
+import { T, fontUI } from '../lib/theme.js';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Audit', icon: ShieldCheck, end: true },
@@ -25,44 +32,35 @@ export function Nav() {
         border: `1px solid ${T.border}`,
         padding: 4,
       }}
+      className="ap-primary-nav"
     >
       {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}
           end={end}
-          aria-label={label}
           style={({ isActive }) => ({
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 8,
-            padding: '8px 14px',
-            color: isActive ? T.bg : T.textDim,
+            gap: 10,
+            padding: '12px 18px',
+            color: isActive ? T.bg : T.text,
             background: isActive ? T.accent : 'transparent',
             border: 'none',
-            fontFamily: fontMono,
-            fontSize: 11,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
+            fontFamily: fontUI,
+            fontSize: 14,
             fontWeight: 600,
             cursor: 'pointer',
             textDecoration: 'none',
             transition: 'background 0.12s ease, color 0.12s ease',
-            minHeight: 24,
+            minHeight: 44, // WCAG 2.5.5 AAA touch-target
           })}
+          aria-current={undefined /* NavLink injects this automatically when active */}
         >
           {({ isActive }) => (
             <>
-              <Icon size={12} aria-hidden="true" />
-              <span
-                style={{
-                  fontFamily: fontEyebrow,
-                  fontSize: 12,
-                  letterSpacing: '0.14em',
-                }}
-                className="ap-nav-label"
-                aria-current={isActive ? 'page' : undefined}
-              >
+              <Icon size={16} aria-hidden="true" />
+              <span className="ap-nav-label" aria-current={isActive ? 'page' : undefined}>
                 {label}
               </span>
             </>
@@ -70,8 +68,12 @@ export function Nav() {
         </NavLink>
       ))}
       <style>{`
-        @media (max-width: 640px) {
-          .ap-nav-label { display: none; }
+        @media (max-width: 480px) {
+          .ap-primary-nav a {
+            padding: 10px 12px !important;
+            font-size: 13px !important;
+            gap: 6px !important;
+          }
         }
       `}</style>
     </nav>
