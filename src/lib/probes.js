@@ -5,7 +5,7 @@
 // This module is pure: every export is a plain function or data structure. No React,
 // no DOM, no localStorage. The audit-app App component imports from here.
 
-import compromisedPackagesManifest from '../data/compromised-packages.json';
+import compromisedPackagesManifest from '../data/compromised-packages.js';
 
 // ==========================================================================
 // DETECTION PATTERNS
