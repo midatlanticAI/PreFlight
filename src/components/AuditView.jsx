@@ -120,17 +120,29 @@ export function AuditView({
             style={{
               maxWidth: 620,
               marginTop: 20,
+              fontSize: 16,
+              color: T.text,
+              lineHeight: 1.6,
+              fontFamily: fontUI,
+              fontWeight: 600,
+            }}
+          >
+            Pre-Flight catches what your AI probably missed:
+          </p>
+          <p
+            style={{
+              maxWidth: 620,
+              marginTop: 8,
               fontSize: 15,
               color: T.textDim,
               lineHeight: 1.75,
               fontFamily: fontUI,
             }}
           >
-            A friendly second set of eyes for projects shipped through Lovable, Cursor, Bolt,
-            Replit, Claude Code, or any AI tool. Pre-Flight catches what the polish layer hides —
-            exposed secrets, misconfigured RLS, supply-chain compromises, unprotected admin routes —
-            and explains each finding so you learn the pattern, not just the fix. All scanning runs
-            locally in this tab.
+            Exposed secrets, misconfigured RLS, supply-chain compromises, unprotected admin routes.
+            Then we explain each finding so you can learn why it matters and how to avoid it in the
+            future. All scanning runs locally in browser and is only saved in your browser, it never
+            goes anywhere else.
           </p>
           <p
             style={{
