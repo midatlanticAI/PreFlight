@@ -1049,6 +1049,145 @@ const FIXTURES = {
     ],
   },
 
+  // v0.5 additions
+  'SQL Injection': {
+    positive: [
+      {
+        desc: 'db.query with template interpolation',
+        files: [
+          file(
+            'src/api/users.js',
+            'await db.query(`SELECT * FROM users WHERE id = ${userId}`);'
+          ),
+        ],
+      },
+    ],
+    negative: [
+      {
+        desc: 'parameterized sql`...` tagged template',
+        files: [
+          file('src/api/users.js', 'const rows = await sql`SELECT * FROM users WHERE id = ${id}`;'),
+        ],
+      },
+      {
+        desc: 'db.query with no interpolation',
+        files: [file('src/api/users.js', 'await db.query(`SELECT 1`);')],
+      },
+    ],
+  },
+
+  'Path Traversal': {
+    positive: [
+      {
+        desc: 'fs.readFile with req.body input',
+        files: [
+          file(
+            'src/api/download.js',
+            'const { name } = req.body;\nconst c = await fs.readFile(path.join("/var/uploads", name));'
+          ),
+        ],
+      },
+    ],
+    negative: [
+      {
+        desc: 'fs.readFile against hardcoded path',
+        files: [
+          file('src/api/cfg.js', 'const c = await fs.readFile("/etc/config.json");'),
+        ],
+      },
+    ],
+  },
+
+  'Weak Randomness': {
+    positive: [
+      {
+        desc: 'Math.random near token-generation function name',
+        files: [
+          file(
+            'src/auth/reset.js',
+            'function generateResetToken() { return Math.random().toString(36).slice(2); }'
+          ),
+        ],
+      },
+    ],
+    negative: [
+      {
+        desc: 'Math.random in animation jitter context',
+        files: [
+          file(
+            'src/anim.js',
+            'function jitter() { const delay = Math.random() * 200; return delay; }'
+          ),
+        ],
+      },
+    ],
+    gap: [
+      {
+        desc: 'Math.random with no semantic context (insufficient signal to fire today)',
+        files: [file('src/x.js', 'const r = Math.random();')],
+      },
+    ],
+  },
+
+  'Stack Trace Leaks': {
+    positive: [
+      {
+        desc: 'res.json with err.stack',
+        files: [
+          file(
+            'src/api/route.js',
+            'app.use((err, req, res) => { res.status(500).json({ error: err.message, stack: err.stack }); });'
+          ),
+        ],
+      },
+    ],
+    negative: [
+      {
+        desc: 'err.stack behind NODE_ENV !== "production" guard',
+        files: [
+          file(
+            'src/api/route.js',
+            `app.use((err, req, res, next) => {
+              const body = { error: 'Internal Server Error' };
+              if (process.env.NODE_ENV !== 'production') body.stack = err.stack;
+              res.status(500).json(body);
+            });`
+          ),
+        ],
+      },
+    ],
+  },
+
+  'Subresource Integrity': {
+    positive: [
+      {
+        desc: 'cross-origin script with no integrity',
+        files: [file('index.html', '<script src="https://cdn.example/lib.js"></script>')],
+      },
+      {
+        desc: 'cross-origin stylesheet with no integrity',
+        files: [
+          file('index.html', '<link rel="stylesheet" href="https://cdn.example/style.css">'),
+        ],
+      },
+    ],
+    negative: [
+      {
+        desc: 'cross-origin script WITH integrity',
+        files: [
+          file(
+            'index.html',
+            '<script src="https://cdn.example/lib.js" integrity="sha384-abc" crossorigin="anonymous"></script>'
+          ),
+        ],
+      },
+      {
+        desc: 'same-origin script (no SRI required)',
+        files: [file('index.html', '<script src="/static/app.js"></script>')],
+      },
+    ],
+  },
+
   // Architecture is a classifier, not a vulnerability finder. It emits
   // informational shape-aware findings when the project shape suggests them,
   // and silently no-ops when it has nothing shape-specific to say. The probe

@@ -234,6 +234,33 @@ export const PROBE_META = {
     learn_more_slug: 'code-quality',
   },
 
+  // v0.5 OWASP-framed additions
+  'SQL Injection': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'sql-injection',
+  },
+  'Path Traversal': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'path-traversal',
+  },
+  'Weak Randomness': {
+    confidence: 'medium',
+    autofix: 'mechanical',
+    learn_more_slug: 'weak-randomness',
+  },
+  'Stack Trace Leaks': {
+    confidence: 'medium',
+    autofix: 'mechanical',
+    learn_more_slug: 'stack-trace-leaks',
+  },
+  'Subresource Integrity': {
+    confidence: 'high',
+    autofix: 'mechanical',
+    learn_more_slug: 'subresource-integrity',
+  },
+
   // Architectural classification — informational, no autofix, no dedicated pattern.
   // Architecture findings are themselves shape descriptions; the per-shape Learn
   // pages under /learn/shapes/ are the natural destination but those don't map

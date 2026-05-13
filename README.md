@@ -12,7 +12,7 @@ No signup, no backend, no analytics beacons. All scanning runs in your browser t
 
 ## What it does
 
-33 probes covering OWASP Top 10 2025, OWASP LLM Top 10 2025, and current threat intel:
+38 probes covering OWASP Top 10 2025, OWASP LLM Top 10 2025, and current threat intel:
 
 - **Hardcoded secrets** — AWS, Stripe live + test, OpenAI, Anthropic, Google, GitHub PAT, Slack, SendGrid, Hugging Face, Replicate, Groq, Perplexity, generic high-entropy keys, private RSA blocks, db connection strings with embedded credentials.
 - **NEXT_PUBLIC_ misuse** — server secrets exposed via Next.js public env prefix.
@@ -213,7 +213,7 @@ src/
 │   ├── learn/              ← LearnPage, IndexView, EntryView, ManifestoView
 │   └── settings/           ← SettingsPage + GeneralTab, ExplainVerifyTab, PrivateReposTab, DiagnosticsTab, AboutTab
 ├── lib/
-│   ├── probes.js           ← 33-probe registry + threat-intel + most probe implementations
+│   ├── probes.js           ← 38-probe registry + threat-intel + most probe implementations
 │   ├── probes/
 │   │   ├── code-correctness.js   ← acorn + acorn-jsx AST probe (undeclared identifiers)
 │   │   ├── web.js                ← URL reputation, HTML hygiene, SEO, GEO, A11y landmarks

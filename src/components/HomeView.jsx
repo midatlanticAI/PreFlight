@@ -324,7 +324,7 @@ export function HomeView({
             ))}
           </div>
           <div style={{ marginTop: 18, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
-            v0.4 release. Static analysis only. 33 probes covering OWASP Top 10 2025 + OWASP LLM Top
+            v0.4 release. Static analysis only. 38 probes covering OWASP Top 10 2025 + OWASP LLM Top
             10 2025 + 2026 supply-chain incidents (Shai-Hulud, Axios/Sapphire Sleet, Mini Shai-Hulud
             TanStack) + MCP attack surface + AI-tooling rules-file injection + post-infection
             malicious-artifact detection. Does not perform live endpoint probing, IDOR testing, or
@@ -366,7 +366,7 @@ export function HomeView({
               },
               {
                 q: 'What does the Pre-Flight Audit Tool check?',
-                a: '33 probes covering hardcoded secrets (AWS, Stripe, OpenAI, Anthropic, GitHub, etc.), NEXT_PUBLIC_ leak of server secrets, Supabase Row-Level-Security misconfigurations, Firebase permissive rules, JWT alg-none unsigned tokens, package.json supply-chain hooks, 170+ known-compromised package versions including the May 11, 2026 Mini Shai-Hulud TanStack worm by TeamPCP (42 @tanstack/* packages plus @mistralai, @opensearch-project, @uipath, @squawk and others), post-infection IOCs the same worm drops on disk (the Claude Code / VS Code config-hijack files, the GitHub-token-monitor dead-man-switch service, the daemon-guard variable, and Session-messenger exfil endpoints), typosquatted and LLM-hallucinated package names, MCP server command-injection patterns, Cursor / Copilot rules-file backdoors, Trojan Source Unicode, prompt-injection sinks, system-prompt leakage to client bundles, missing security headers, CORS wildcards, SSRF and open-redirect patterns, and HTML hygiene.',
+                a: '38 probes covering hardcoded secrets (AWS, Stripe, OpenAI, Anthropic, GitHub, etc.), NEXT_PUBLIC_ leak of server secrets, Supabase Row-Level-Security misconfigurations, Firebase permissive rules, JWT alg-none unsigned tokens, package.json supply-chain hooks, 170+ known-compromised package versions including the May 11, 2026 Mini Shai-Hulud TanStack worm by TeamPCP (42 @tanstack/* packages plus @mistralai, @opensearch-project, @uipath, @squawk and others), post-infection IOCs the same worm drops on disk (the Claude Code / VS Code config-hijack files, the GitHub-token-monitor dead-man-switch service, the daemon-guard variable, and Session-messenger exfil endpoints), typosquatted and LLM-hallucinated package names, MCP server command-injection patterns, Cursor / Copilot rules-file backdoors, Trojan Source Unicode, prompt-injection sinks, system-prompt leakage to client bundles, missing security headers, CORS wildcards, SSRF and open-redirect patterns, and HTML hygiene.',
               },
               {
                 q: 'Is the Pre-Flight Audit Tool free?',

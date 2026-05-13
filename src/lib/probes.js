@@ -1436,6 +1436,13 @@ import {
 } from './probes/web.js';
 import { probeCodeQuality, classifyProject, probeArchitecture } from './probes/quality.js';
 import { probeCodeCorrectness } from './probes/code-correctness.js';
+import {
+  probeSQLInjectionTemplateLiterals,
+  probePathTraversal,
+  probeWeakRandomness,
+  probeStackTraceLeaks,
+  probeSubresourceIntegrity,
+} from './probes/v05.js';
 export {
   probeExternalURLs,
   probeHTML,
@@ -1446,6 +1453,11 @@ export {
   classifyProject,
   probeArchitecture,
   probeCodeCorrectness,
+  probeSQLInjectionTemplateLiterals,
+  probePathTraversal,
+  probeWeakRandomness,
+  probeStackTraceLeaks,
+  probeSubresourceIntegrity,
 };
 export const PROBES = [
   { name: 'Architecture', fn: probeArchitecture },
@@ -1481,4 +1493,10 @@ export const PROBES = [
   { name: 'Code Quality', fn: probeCodeQuality },
   { name: 'Code Correctness', fn: probeCodeCorrectness },
   { name: 'Package Manager Hardening', fn: probeNpmrcHygiene },
+  // v0.5 OWASP-framed additions
+  { name: 'SQL Injection', fn: probeSQLInjectionTemplateLiterals },
+  { name: 'Path Traversal', fn: probePathTraversal },
+  { name: 'Weak Randomness', fn: probeWeakRandomness },
+  { name: 'Stack Trace Leaks', fn: probeStackTraceLeaks },
+  { name: 'Subresource Integrity', fn: probeSubresourceIntegrity },
 ];
