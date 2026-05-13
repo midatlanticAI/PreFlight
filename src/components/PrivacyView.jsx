@@ -106,16 +106,28 @@ export function PrivacyView() {
         What our infrastructure does see
       </h2>
       <p style={{ color: T.textDim, marginBottom: 12 }}>
-        Pre-Flight is hosted on Cloudflare Pages. Cloudflare logs standard server-access data for
-        every static asset request (your IP address, the file path you requested, the user agent,
-        a timestamp). Pre-Flight cannot read those logs in any actionable form; they are operated
-        by Cloudflare for reliability, abuse prevention, and DDoS mitigation. The same logging
-        happens for every site hosted on Cloudflare.
+        Pre-Flight is hosted on Cloudflare Pages. At the edge, Cloudflare records standard
+        server-access data for every static asset request (your IP address, the file path you
+        requested, the user agent, a timestamp). This logging happens for every site hosted on
+        Cloudflare and exists for reliability, abuse prevention, and DDoS mitigation. We do not
+        operate or have direct access to the raw logs; they live with Cloudflare under their own
+        operational controls.
+      </p>
+      <p style={{ color: T.textDim, marginBottom: 12 }}>
+        Cloudflare aggregates that data into a site-metrics dashboard the Pre-Flight maintainers
+        can view. The dashboard shows aggregate counts: page views per path (e.g., how many people
+        opened <code className="ap-mono">/learn/glossary</code> last week), bandwidth used, country-
+        level geographic distribution, top referring domains, HTTP status codes. We use it to
+        answer questions like "is the site being used" and "which Learn pages do people actually
+        open." We do not use it, and cannot use it, to identify individual users, follow
+        sessions, build behavior funnels, or correlate visits across time.
       </p>
       <p style={{ color: T.textDim, marginBottom: 22 }}>
-        We do not have an analytics or business-intelligence tool layered on top of those access
-        logs. We do not correlate IP addresses to identities. We do not retain or share access-log
-        data with third parties beyond Cloudflare’s own operational use.
+        Pre-Flight has not added any analytics JavaScript to the page. There is no Google
+        Analytics, no Plausible, no Fathom, no third-party tracking SDK, no fingerprinting library.
+        The aggregation in the paragraph above happens at Cloudflare’s edge from the access logs
+        they already generate. Your browser does not run any tracking code that Pre-Flight
+        installed.
       </p>
 
       <h2 className="ap-display" style={{ fontSize: 20, marginTop: 28, marginBottom: 10 }}>
