@@ -208,6 +208,10 @@ const OwaspCoverageView = lazyNamed(
   () => import('./components/learn/OwaspCoverageView.jsx'),
   'OwaspCoverageView'
 );
+const GlossaryView = lazyNamed(
+  () => import('./components/learn/GlossaryView.jsx'),
+  'GlossaryView'
+);
 const SettingsPage = lazyNamed(
   () => import('./components/settings/SettingsPage.jsx'),
   'SettingsPage'
@@ -903,6 +907,7 @@ export default function App() {
               <Route path="shapes/:slug" element={<EntryView />} />
               <Route path="resources" element={<ResourcesView />} />
               <Route path="owasp" element={<OwaspCoverageView />} />
+              <Route path="glossary" element={<GlossaryView />} />
             </Route>
             <Route path="/settings" element={<SettingsPage />}>
               <Route index element={<GeneralTab />} />
