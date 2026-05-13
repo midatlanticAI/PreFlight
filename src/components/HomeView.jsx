@@ -361,28 +361,28 @@ export function HomeView({
           <dl style={{ margin: 0, padding: 0 }}>
             {[
               {
-                q: 'Does the Pre-Flight Audit Tool send my source code to a server?',
-                a: "No. All scanning happens in your browser tab. When you select files or a folder, contents are read locally with the File API and never uploaded. When you scan a public GitHub URL, the tool fetches raw blobs from raw.githubusercontent.com directly from your browser — the tool's origin never sees them. No analytics beacons, no remote storage.",
+                q: 'Does Pre-Flight send my source code to a server?',
+                a: "No. All scanning happens in your browser tab. When you select files or a folder, contents are read locally with the File API and never uploaded. When you scan a public GitHub URL, the tool fetches raw blobs from raw.githubusercontent.com directly from your browser. The tool's origin never sees them. No analytics beacons, no remote storage.",
               },
               {
-                q: 'What does the Pre-Flight Audit Tool check?',
+                q: 'What does Pre-Flight check?',
                 a: '43 probes covering hardcoded secrets (AWS, Stripe, OpenAI, Anthropic, GitHub, etc.), NEXT_PUBLIC_ leak of server secrets, Supabase Row-Level-Security misconfigurations, Firebase permissive rules, JWT alg-none unsigned tokens, package.json supply-chain hooks, 170+ known-compromised package versions including the May 11, 2026 Mini Shai-Hulud TanStack worm by TeamPCP (42 @tanstack/* packages plus @mistralai, @opensearch-project, @uipath, @squawk and others), post-infection IOCs the same worm drops on disk (the Claude Code / VS Code config-hijack files, the GitHub-token-monitor dead-man-switch service, the daemon-guard variable, and Session-messenger exfil endpoints), typosquatted and LLM-hallucinated package names, MCP server command-injection patterns, Cursor / Copilot rules-file backdoors, Trojan Source Unicode, prompt-injection sinks, system-prompt leakage to client bundles, missing security headers, CORS wildcards, SSRF and open-redirect patterns, and HTML hygiene.',
               },
               {
-                q: 'Is the Pre-Flight Audit Tool free?',
-                a: 'Yes. No signup, no credit card, no usage limits. Free forever for the browser tool itself.',
+                q: 'Is Pre-Flight free?',
+                a: 'Yes. No signup, no credit card, no usage limits. Free forever for the browser tool itself. Optional AI features (Explain & Verify, agent-prompt formatting) require you to bring your own API key; whatever the AI provider charges goes to them, not to us.',
               },
               {
-                q: 'What kind of tool is this — and what is it NOT?',
-                a: 'This is a free, in-browser static security audit. You drop in a folder or paste a GitHub URL; you get a report. It focuses on the failure modes specific to AI-generated code — prompt-injection sinks, MCP server misconfig, Cursor/Copilot rules-file backdoors, slopsquatted packages, system prompts leaked to client bundles — plus 2025-2026 supply-chain incidents (Shai-Hulud, Axios / Sapphire Sleet, Mini Shai-Hulud) by exact version. It is NOT a continuously-running enterprise AppSec platform with seat counts, dashboards, ticket integrations, and runtime protection. It is a free pre-merge gate you can run before you commit, with no signup and no data leaving your tab.',
+                q: 'What kind of tool is this, and what is it NOT?',
+                a: 'A free, in-browser static security audit. You drop in a folder or paste a GitHub URL. You get a report. It focuses on failure modes specific to AI-generated code (prompt-injection sinks, MCP server misconfig, Cursor / Copilot rules-file backdoors, slopsquatted packages, system prompts leaked to client bundles) plus 2025-2026 supply-chain incidents (Shai-Hulud, Axios / Sapphire Sleet, Mini Shai-Hulud) by exact version. It is NOT a continuously-running enterprise AppSec platform with seat counts, dashboards, ticket integrations, or runtime protection. It is a free pre-merge gate you can run before you commit. No signup. No data leaving your tab.',
               },
               {
-                q: 'Can the tool catch supply-chain attacks from 2025-2026?',
-                a: 'Yes, by exact version. We hard-code known-compromised versions from Shai-Hulud (Sept 2025), Axios / Sapphire Sleet (March 2026), Mini Shai-Hulud (April 2026), Bitwarden CLI 2026.4.0, and more. Sources: CISA, GTIG/Mandiant, Socket, Wiz, Unit 42, OX Security.',
+                q: 'Can Pre-Flight catch supply-chain attacks from 2025-2026?',
+                a: 'Yes, by exact version. We hard-code known-compromised versions from Shai-Hulud (Sept 2025), Axios / Sapphire Sleet (March 2026), Mini Shai-Hulud SAP (April 2026), Bitwarden CLI 2026.4.0, the Mini Shai-Hulud TanStack worm (May 11, 2026), and more. Citations include CISA cybersecurity advisories, GTIG/Mandiant threat intelligence, Microsoft Threat Intelligence, the affected vendors\' own security advisories, and the corresponding GitHub Security Advisory records.',
               },
               {
-                q: 'Does the tool work with apps not built by AI?',
-                a: 'Yes. Most probes are framework-agnostic and apply to any JavaScript, TypeScript, Python, Go, Ruby, HTML, or SQL project. The branding emphasizes "vibe-coded apps" because that cohort has the highest density of the specific vulnerabilities we catch.',
+                q: 'Does Pre-Flight work with apps not built by AI?',
+                a: 'Yes. Most probes are framework-agnostic and apply to any JavaScript, TypeScript, Python, Go, Ruby, HTML, or SQL project. The vibe-coding framing is about who needs the help most, not about what code Pre-Flight is technically capable of scanning.',
               },
             ].map((item, i) => (
               <div

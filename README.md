@@ -1,12 +1,16 @@
 # Pre-Flight Audit Tool
 
+> Pre-Flight catches what your AI probably missed.
+
 Free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code, v0, GitHub Copilot) and any other web application.
 
 **Live:** [preflight.midatlantic.ai](https://preflight.midatlantic.ai/)
 
 Published by [Mid-Atlantic AI](https://midatlantic.ai). Contact: [John@midatlantic.ai](mailto:John@midatlantic.ai). Code MIT, threat-intel data CC-BY-4.0.
 
-No signup, no backend, no analytics beacons. All scanning runs in your browser tab and stays there.
+No signup. No backend. No analytics beacons. All scanning runs in your browser tab and stays there. Nothing leaves your machine.
+
+The full philosophy is at [`src/learn/manifesto.md`](./src/learn/manifesto.md) and rendered at [`/learn`](https://preflight.midatlantic.ai/learn) on the deployed site. Voice and contribution guidance for AI coding assistants is in [`CLAUDE.md`](./CLAUDE.md).
 
 ---
 

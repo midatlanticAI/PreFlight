@@ -6,7 +6,7 @@ The Pre-Flight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.a
 
 ## What it does
 
-The tool extracts text from selected files or a public GitHub repository and runs 33 pure-function probes against the content. Each probe emits zero or more findings with severity (critical / high / medium / low / info), a CWE reference, a file path and line number, evidence, and a remediation block. Findings are aggregated into a risk score out of 100 with a tier label (LOW / MODERATE / HIGH / CRITICAL RISK).
+The tool extracts text from selected files or a public GitHub repository and runs 43 pure-function probes against the content. Each probe emits zero or more findings with severity (critical / high / medium / low / info), a CWE reference, a file path and line number, evidence, and a remediation block. Findings are aggregated into a risk score out of 100 with a tier label (LOW / MODERATE / HIGH / CRITICAL RISK).
 
 ## Input modes
 

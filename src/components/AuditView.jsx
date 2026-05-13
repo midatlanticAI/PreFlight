@@ -141,8 +141,7 @@ export function AuditView({
           >
             Exposed secrets, misconfigured RLS, supply-chain compromises, unprotected admin routes.
             Then we explain each finding so you can learn why it matters and how to avoid it in the
-            future. All scanning runs locally in browser and is only saved in your browser, it never
-            goes anywhere else, ever.
+            future. All scanning runs locally in your browser. Nothing leaves your machine. Ever.
           </p>
           <p
             style={{

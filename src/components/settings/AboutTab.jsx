@@ -8,9 +8,12 @@ import { T, fontMono } from '../../lib/theme.js';
 
 const RESOURCES = [
   { label: 'Mid-Atlantic AI', url: 'https://midatlantic.ai' },
-  { label: 'Vibe-Aware learning site', url: null }, // coming soon
+  { label: 'Vibe-Aware (in-app Learn corpus)', url: '/learn' },
+  { label: 'OWASP coverage mapping', url: '/learn/owasp' },
+  { label: 'Resources & best practices', url: '/learn/resources' },
   { label: 'OWASP Top 10 2025', url: 'https://owasp.org/Top10/' },
-  { label: 'OWASP LLM Top 10 2025', url: 'https://genai.owasp.org' },
+  { label: 'OWASP LLM Top 10 2025', url: 'https://genai.owasp.org/llm-top-10/' },
+  { label: 'GitHub repo (MIT)', url: 'https://github.com/midatlanticAI/PreFlight' },
 ];
 
 export function AboutTab() {
@@ -22,8 +25,8 @@ export function AboutTab() {
 
       <div className="ap-card" style={{ padding: 18, marginBottom: 14 }}>
         <p style={{ margin: '0 0 12px', fontSize: 15, color: T.textDim, lineHeight: 1.75 }}>
-          Pre-Flight is built and maintained by Johnathan Viruet at Mid-Atlantic AI. No tracking, no
-          analytics beacons, no account required. All scanning runs in your browser tab.
+          I built and maintain Pre-Flight at Mid-Atlantic AI. No tracking, no analytics beacons, no
+          account required. Everything runs in your browser tab. Nothing leaves your machine.
         </p>
         <ul
           style={{
@@ -89,7 +92,25 @@ export function AboutTab() {
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {RESOURCES.map(({ label, url }) => (
             <li key={label} style={{ marginBottom: 8 }}>
-              {url ? (
+              {/* Internal /learn routes get a same-tab Link-style anchor (no target=_blank, no
+                  external-link icon). External URLs open in a new tab. The distinction matters
+                  for accessibility: internal navigation should not surprise the user with a new
+                  tab. */}
+              {url.startsWith('/') ? (
+                <a
+                  href={url}
+                  className="ap-mono"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    color: T.accent,
+                    fontSize: 14,
+                  }}
+                >
+                  {label}
+                </a>
+              ) : (
                 <a
                   href={url}
                   target="_blank"
@@ -106,20 +127,6 @@ export function AboutTab() {
                   {label}
                   <ExternalLink size={10} aria-hidden="true" />
                 </a>
-              ) : (
-                <span style={{ color: T.textMuted, fontSize: 14, fontFamily: fontMono }}>
-                  {label}{' '}
-                  <span
-                    style={{
-                      fontStyle: 'italic',
-                      fontSize: 12,
-                      marginLeft: 4,
-                      color: T.textMuted,
-                    }}
-                  >
-                    (coming soon)
-                  </span>
-                </span>
               )}
             </li>
           ))}
