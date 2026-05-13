@@ -1443,6 +1443,13 @@ import {
   probeStackTraceLeaks,
   probeSubresourceIntegrity,
 } from './probes/v05.js';
+import {
+  probeSourceMapExposure,
+  probeIframeSandbox,
+  probeSecurityLogging,
+  probeRAGIngestion,
+  probeVectorEmbeddingWeaknesses,
+} from './probes/v05b.js';
 export {
   probeExternalURLs,
   probeHTML,
@@ -1458,6 +1465,11 @@ export {
   probeWeakRandomness,
   probeStackTraceLeaks,
   probeSubresourceIntegrity,
+  probeSourceMapExposure,
+  probeIframeSandbox,
+  probeSecurityLogging,
+  probeRAGIngestion,
+  probeVectorEmbeddingWeaknesses,
 };
 export const PROBES = [
   { name: 'Architecture', fn: probeArchitecture },
@@ -1493,10 +1505,16 @@ export const PROBES = [
   { name: 'Code Quality', fn: probeCodeQuality },
   { name: 'Code Correctness', fn: probeCodeCorrectness },
   { name: 'Package Manager Hardening', fn: probeNpmrcHygiene },
-  // v0.5 OWASP-framed additions
+  // v0.5 OWASP-framed additions (wave 1)
   { name: 'SQL Injection', fn: probeSQLInjectionTemplateLiterals },
   { name: 'Path Traversal', fn: probePathTraversal },
   { name: 'Weak Randomness', fn: probeWeakRandomness },
   { name: 'Stack Trace Leaks', fn: probeStackTraceLeaks },
   { name: 'Subresource Integrity', fn: probeSubresourceIntegrity },
+  // v0.5 OWASP-framed additions (wave 2)
+  { name: 'Source Map Exposure', fn: probeSourceMapExposure },
+  { name: 'Iframe Sandbox', fn: probeIframeSandbox },
+  { name: 'Security Logging', fn: probeSecurityLogging },
+  { name: 'RAG Ingestion', fn: probeRAGIngestion },
+  { name: 'Vector Embedding Weaknesses', fn: probeVectorEmbeddingWeaknesses },
 ];

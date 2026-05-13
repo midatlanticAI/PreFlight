@@ -1188,6 +1188,128 @@ const FIXTURES = {
     ],
   },
 
+  // v0.5 wave 2 additions
+  'Source Map Exposure': {
+    positive: [
+      {
+        desc: 'Vite config with sourcemap: true',
+        files: [file('vite.config.js', 'export default { build: { sourcemap: true } };')],
+      },
+    ],
+    negative: [
+      {
+        desc: 'Vite config with sourcemap: false',
+        files: [file('vite.config.js', 'export default { build: { sourcemap: false } };')],
+      },
+    ],
+  },
+
+  'Iframe Sandbox': {
+    positive: [
+      {
+        desc: 'cross-origin iframe without sandbox',
+        files: [file('index.html', '<iframe src="https://embed.example.com/widget"></iframe>')],
+      },
+    ],
+    negative: [
+      {
+        desc: 'cross-origin iframe WITH sandbox',
+        files: [
+          file(
+            'index.html',
+            '<iframe src="https://embed.example.com" sandbox="allow-scripts"></iframe>'
+          ),
+        ],
+      },
+    ],
+  },
+
+  'Security Logging': {
+    positive: [
+      {
+        desc: 'auth handler with no log calls',
+        files: [
+          file(
+            'src/api/auth/login.js',
+            `export async function POST(req) {
+               const user = await db.users.findOne({});
+               return new Response('ok');
+             }`
+          ),
+        ],
+      },
+    ],
+    negative: [
+      {
+        desc: 'auth handler that uses log.info',
+        files: [
+          file(
+            'src/api/auth/login.js',
+            `import { log } from '@/lib/logger';
+             export async function POST(req) {
+               log.info({ event: 'login' });
+               return new Response('ok');
+             }`
+          ),
+        ],
+      },
+    ],
+  },
+
+  'RAG Ingestion': {
+    positive: [
+      {
+        desc: 'embeddings.create on user-uploaded content with no sanitization',
+        files: [
+          file(
+            'src/api/ingest.js',
+            `const userDoc = await req.formData().then(f => f.get('file').text());
+             await openai.embeddings.create({ input: userDoc });`
+          ),
+        ],
+      },
+    ],
+    negative: [
+      {
+        desc: 'embeddings.create with sanitize nearby',
+        files: [
+          file(
+            'src/api/ingest.js',
+            `const userDoc = await req.formData().then(f => f.get('file').text());
+             const clean = sanitizeDocument(userDoc);
+             await openai.embeddings.create({ input: clean });`
+          ),
+        ],
+      },
+    ],
+  },
+
+  'Vector Embedding Weaknesses': {
+    positive: [
+      {
+        desc: 'pinecone.query with no namespace or tenant scope',
+        files: [
+          file(
+            'src/api/search.js',
+            'const results = await pinecone.query({ vector: emb, topK: 5 });'
+          ),
+        ],
+      },
+    ],
+    negative: [
+      {
+        desc: 'pinecone.query scoped by namespace',
+        files: [
+          file(
+            'src/api/search.js',
+            `const tenantId = req.user.tenantId;
+             const results = await pinecone.query({ namespace: tenantId, vector: emb, topK: 5 });`
+          ),
+        ],
+      },
+    ],
+  },
+
   // Architecture is a classifier, not a vulnerability finder. It emits
   // informational shape-aware findings when the project shape suggests them,
   // and silently no-ops when it has nothing shape-specific to say. The probe

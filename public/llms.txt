@@ -1,6 +1,6 @@
 # Pre-Flight Audit Tool
 
-> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 38 probes covering OWASP Top 10 2025, OWASP LLM Top 10, 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, and conventional SAST checks. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
+> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 43 probes covering OWASP Top 10 2025, OWASP LLM Top 10, 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, and conventional SAST checks. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
 
 The Pre-Flight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai). Contact: John@midatlantic.ai. License: free for individual and team use.
 
@@ -21,9 +21,11 @@ The tool extracts text from selected files or a public GitHub repository and run
 - Baseline diff vs. prior scan of the same source (introduced / fixed / persisted findings, score delta).
 - Diagnostics drawer with structured logs (debug / info / warn / error filterable, copy / save / clear).
 
-## The 38 probes
+## The 43 probes
 
-(33 v0.4 probes plus 5 v0.5 OWASP-framed additions: SQL Injection, Path Traversal, Weak Randomness, Stack Trace Leaks, Subresource Integrity.)
+(33 v0.4 probes plus 10 v0.5 OWASP-framed additions:
+wave 1 — SQL Injection, Path Traversal, Weak Randomness, Stack Trace Leaks, Subresource Integrity;
+wave 2 — Source Map Exposure, Iframe Sandbox, Security Logging, RAG Ingestion, Vector Embedding Weaknesses.)
 
 In registry order (matches `src/lib/probes.js` PROBES array):
 

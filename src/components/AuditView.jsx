@@ -152,7 +152,7 @@ export function AuditView({
               fontFamily: fontMono,
             }}
           >
-            <time dateTime="2026-05-12">Updated 2026-05-12</time> · 38 probes · v0.4 · Free, no
+            <time dateTime="2026-05-12">Updated 2026-05-12</time> · 43 probes · v0.5 · Free, no
             signup
           </p>
         </header>

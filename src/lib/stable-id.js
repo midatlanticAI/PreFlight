@@ -261,6 +261,33 @@ export const PROBE_META = {
     learn_more_slug: 'subresource-integrity',
   },
 
+  // v0.5 wave 2 OWASP-framed additions
+  'Source Map Exposure': {
+    confidence: 'high',
+    autofix: 'mechanical',
+    learn_more_slug: 'source-map-exposure',
+  },
+  'Iframe Sandbox': {
+    confidence: 'high',
+    autofix: 'mechanical',
+    learn_more_slug: 'iframe-sandbox',
+  },
+  'Security Logging': {
+    confidence: 'heuristic',
+    autofix: 'review-needed',
+    learn_more_slug: 'security-logging',
+  },
+  'RAG Ingestion': {
+    confidence: 'heuristic',
+    autofix: 'review-needed',
+    learn_more_slug: 'rag-ingestion',
+  },
+  'Vector Embedding Weaknesses': {
+    confidence: 'heuristic',
+    autofix: 'review-needed',
+    learn_more_slug: 'vector-embedding-weaknesses',
+  },
+
   // Architectural classification — informational, no autofix, no dedicated pattern.
   // Architecture findings are themselves shape descriptions; the per-shape Learn
   // pages under /learn/shapes/ are the natural destination but those don't map
