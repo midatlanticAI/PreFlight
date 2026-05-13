@@ -14,6 +14,9 @@ No signup, no backend, no analytics beacons. All scanning runs in your browser t
 
 43 probes covering OWASP Top 10 2025, OWASP LLM Top 10 2025, and current threat intel:
 
+Every finding carries the OWASP category code(s) it maps to. The full mapping is at [`/learn/owasp`](https://preflight.midatlantic.ai/learn/owasp) in the deployed app, with the source-of-truth dictionary in [`src/lib/stable-id.js`](./src/lib/stable-id.js).
+
+
 - **Hardcoded secrets** — AWS, Stripe live + test, OpenAI, Anthropic, Google, GitHub PAT, Slack, SendGrid, Hugging Face, Replicate, Groq, Perplexity, generic high-entropy keys, private RSA blocks, db connection strings with embedded credentials.
 - **NEXT_PUBLIC_ misuse** — server secrets exposed via Next.js public env prefix.
 - **Supabase + Firebase rules** — tables without RLS, permissive `USING (true)`, `allow read: if true`.

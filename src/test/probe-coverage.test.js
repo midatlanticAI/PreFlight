@@ -8,7 +8,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { PROBES } from '../lib/probes.js';
-import { PROBE_META } from '../lib/stable-id.js';
+import {
+  PROBE_META,
+  PROBE_OWASP_MAP,
+  OWASP_LABELS,
+  OWASP_BY_PROBE,
+  attachProbeMeta,
+} from '../lib/stable-id.js';
 import { LEARN_ENTRIES, resolvePatternForProbe } from '../lib/learn-content.js';
 
 // Probes that intentionally have no dedicated pattern page. Each must carry a
@@ -77,5 +83,62 @@ describe('probe coverage', () => {
       const stillRegistered = PROBES.some((p) => p.name === name);
       expect(stillRegistered).toBe(true);
     }
+  });
+});
+
+// ---- OWASP coverage contract ----
+//
+// Every probe named inside PROBE_OWASP_MAP must be a registered probe. Every
+// OWASP code that has probes mapped to it must have a human-readable label.
+// attachProbeMeta() must attach the owasp array to a finding whose probe name
+// appears in the mapping.
+
+describe('OWASP coverage mapping', () => {
+  it('every PROBE_OWASP_MAP entry references a registered probe', () => {
+    const registered = new Set(PROBES.map((p) => p.name));
+    const unknown = [];
+    for (const [code, probes] of Object.entries(PROBE_OWASP_MAP)) {
+      for (const probe of probes) {
+        if (!registered.has(probe)) {
+          unknown.push(`${code} -> ${probe}`);
+        }
+      }
+    }
+    expect(unknown).toEqual([]);
+  });
+
+  it('every OWASP code in PROBE_OWASP_MAP has a label in OWASP_LABELS', () => {
+    const missing = Object.keys(PROBE_OWASP_MAP).filter((code) => !OWASP_LABELS[code]);
+    expect(missing).toEqual([]);
+  });
+
+  it('every label in OWASP_LABELS is used (no dead entries)', () => {
+    const used = new Set(Object.keys(PROBE_OWASP_MAP));
+    const unused = Object.keys(OWASP_LABELS).filter((code) => !used.has(code));
+    expect(unused).toEqual([]);
+  });
+
+  it('attachProbeMeta attaches the owasp array to findings whose probe maps', () => {
+    const findings = [
+      { probe: 'SQL Injection', severity: 'critical', title: 't', file: 'a.js' },
+      { probe: 'Path Traversal', severity: 'high', title: 't', file: 'a.js' },
+      { probe: 'Architecture', severity: 'info', title: 't', file: 'a.js' },
+    ];
+    attachProbeMeta(findings);
+    expect(findings[0].owasp).toContain('A03');
+    expect(findings[1].owasp).toContain('A01');
+    // Architecture is intentionally not OWASP-mapped (it's a classifier).
+    expect(findings[2].owasp).toBeUndefined();
+  });
+
+  it('every security-class probe has at least one OWASP mapping (or is in EXEMPT)', () => {
+    // Probes that are intentionally not OWASP-mapped: discoverability (SEO,
+    // GEO), accessibility (A11y), or pure classifiers (Architecture).
+    const NON_OWASP_PROBES = new Set(['SEO Hygiene', 'GEO Hygiene', 'A11y Landmarks', 'Architecture']);
+    const unmapped = PROBES.filter((p) => {
+      if (NON_OWASP_PROBES.has(p.name)) return false;
+      return !OWASP_BY_PROBE[p.name] || OWASP_BY_PROBE[p.name].length === 0;
+    }).map((p) => p.name);
+    expect(unmapped).toEqual([]);
   });
 });

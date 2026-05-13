@@ -71,6 +71,23 @@ export function FindingCard({
             <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
               {finding.cwe}
             </span>
+            {finding.owasp && finding.owasp.length > 0 && (
+              <span
+                className="ap-mono"
+                title={`Maps to OWASP ${finding.owasp.join(', ')}`}
+                style={{
+                  fontSize: 11,
+                  color: T.textDim,
+                  background: T.panelAlt,
+                  border: `1px solid ${T.border}`,
+                  padding: '1px 6px',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                OWASP {finding.owasp.join(', ')}
+              </span>
+            )}
             {finding.confidence && (
               <span
                 className="ap-mono"

@@ -312,6 +312,70 @@ export const PROBE_META = {
   },
 };
 
+// OWASP category mapping per probe. Grouped by category so a reader can scan
+// "which probes cover A03" at once. Probes may map to multiple categories
+// (e.g., Auth Weakness covers both A03 injection via eval and A07 broken auth
+// via JWT). The mapping is the source of truth for /learn/owasp-coverage and
+// for the OWASP category chip rendered in FindingCard.
+//
+// Reference: OWASP Top 10 2025 (https://owasp.org/Top10/) and
+//            OWASP LLM Top 10 2025 (https://genai.owasp.org/llm-top-10/).
+export const PROBE_OWASP_MAP = {
+  // OWASP Top 10 2025
+  'A01': ['Admin Route Exposure', 'API Route Auth', 'Supabase RLS', 'Firebase Rules', 'Path Traversal'],
+  'A02': ['Secret Scanner', 'NEXT_PUBLIC_ Misuse', 'Env File Hygiene', 'Weak Randomness', 'Client Auth Storage', 'Cookie Security'],
+  'A03': ['Auth Weakness', 'SQL Injection', 'HTML Hygiene'],
+  'A04': ['AI Code Smells', 'Stack Trace Leaks', 'Code Correctness'],
+  'A05': ['Security Headers', 'CORS', 'Source Map Exposure', 'Iframe Sandbox'],
+  'A06': ['Compromised Packages', 'Slopsquat / Typosquat', 'Package Manager Hardening'],
+  'A07': ['Auth Weakness', 'Webhook Validation'],
+  'A08': ['Trojan Source', 'AI Rules Files', 'Malicious Artifacts', 'Subresource Integrity', 'Package.json', 'GitHub Actions', 'URL Reputation'],
+  'A09': ['Security Logging', 'Code Quality'],
+  'A10': ['SSRF / Open Redirect'],
+
+  // OWASP LLM Top 10 2025
+  'LLM01': ['LLM Security'],
+  'LLM02': ['LLM Security'],
+  'LLM04': ['RAG Ingestion'],
+  'LLM06': ['LLM Security', 'MCP Security'],
+  'LLM07': ['LLM Security'],
+  'LLM08': ['Vector Embedding Weaknesses'],
+};
+
+// Human-readable label for each OWASP code. Used by the OWASP coverage page
+// and by the FindingCard tooltip.
+export const OWASP_LABELS = {
+  A01: 'A01: Broken Access Control',
+  A02: 'A02: Cryptographic Failures',
+  A03: 'A03: Injection',
+  A04: 'A04: Insecure Design',
+  A05: 'A05: Security Misconfiguration',
+  A06: 'A06: Vulnerable and Outdated Components',
+  A07: 'A07: Identification and Authentication Failures',
+  A08: 'A08: Software and Data Integrity Failures',
+  A09: 'A09: Security Logging and Monitoring Failures',
+  A10: 'A10: Server-Side Request Forgery',
+  LLM01: 'LLM01: Prompt Injection',
+  LLM02: 'LLM02: Sensitive Information Disclosure',
+  LLM04: 'LLM04: Data and Model Poisoning',
+  LLM06: 'LLM06: Excessive Agency',
+  LLM07: 'LLM07: System Prompt Leakage',
+  LLM08: 'LLM08: Vector and Embedding Weaknesses',
+};
+
+// Inverse index: probe name -> array of OWASP codes the probe covers.
+// Built lazily from PROBE_OWASP_MAP at module load.
+export const OWASP_BY_PROBE = (() => {
+  const inverse = {};
+  for (const [code, probes] of Object.entries(PROBE_OWASP_MAP)) {
+    for (const probe of probes) {
+      if (!inverse[probe]) inverse[probe] = [];
+      inverse[probe].push(code);
+    }
+  }
+  return inverse;
+})();
+
 // Attach probe-level confidence and autofix metadata to each finding.
 export function attachProbeMeta(findings) {
   findings.forEach((f) => {
@@ -321,6 +385,16 @@ export function attachProbeMeta(findings) {
       f.autofix = meta.autofix;
       if (meta.learn_more_slug) f.learn_more_slug = meta.learn_more_slug;
     } else {
+      /* fall through to default below */
+    }
+    // OWASP categories the finding's probe maps to. Attached for every
+    // finding regardless of whether PROBE_META had an entry, so the FindingCard
+    // OWASP chip is consistent.
+    const owasp = OWASP_BY_PROBE[f.probe];
+    if (owasp && owasp.length > 0) {
+      f.owasp = owasp;
+    }
+    if (!meta) {
       // Default: treat as medium / manual when we haven't classified a probe yet.
       f.confidence = 'medium';
       f.autofix = 'manual';
