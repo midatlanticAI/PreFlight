@@ -30,6 +30,12 @@ export function isScannerSelfSource(path) {
   // would otherwise flag against themselves.
   if (/(^|\/)src\/lib\/probes\.[jt]sx?$/i.test(path)) return true;
   if (/(^|\/)src\/lib\/probes\//i.test(path)) return true;
+  // Breakers catalogue: by definition full of attack-shaped payload strings
+  // (SQL injection literals, traversal paths, eval examples, JWT alg-none
+  // tokens, bidi control characters). Excluded from pattern-matching probes
+  // so Pre-Flight scanning its own source doesn't false-positive on the
+  // adversarial-input catalogue it ships to users.
+  if (/(^|\/)src\/lib\/breakers\.[jt]sx?$/i.test(path)) return true;
   if (/(^|\/)src\/lib\/threat-intel\.[jt]sx?$/i.test(path)) return true;
   if (/(^|\/)src\/lib\/file-filter\.[jt]sx?$/i.test(path)) return true;
   if (/(^|\/)src\/lib\/stable-id\.[jt]sx?$/i.test(path)) return true;
