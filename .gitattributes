@@ -1,0 +1,87 @@
+# Pre-Flight line-ending rules.
+#
+# Why this file exists:
+#   Git on Windows defaults to core.autocrlf=true, which silently converts
+#   LF -> CRLF on checkout and CRLF -> LF on commit, and prints a warning
+#   every time it touches a file ("LF will be replaced by CRLF..."). The
+#   warnings are noisy and the silent conversion can confuse tools that
+#   expect deterministic byte content (Prettier, ESLint, hashes in tests).
+#
+# What this file does:
+#   1. Pins every text file to LF endings in the repository AND in the
+#      working copy. No conversion happens on checkout or commit.
+#   2. Prevents Git from misclassifying binary assets (SVGs treated as
+#      text but PNG / WOFF / TTF treated as binary).
+#   3. Applies for every contributor regardless of their local
+#      core.autocrlf setting — .gitattributes always wins.
+#
+# After this file lands, run `git add --renormalize .` once to re-stage
+# every tracked file with the new rules. Future commits stay clean.
+
+# --- Default: treat as text, normalize to LF on commit AND checkout ---
+* text=auto eol=lf
+
+# --- Source files: explicit LF ---
+*.js          text eol=lf
+*.jsx         text eol=lf
+*.mjs         text eol=lf
+*.cjs         text eol=lf
+*.ts          text eol=lf
+*.tsx         text eol=lf
+*.json        text eol=lf
+*.html        text eol=lf
+*.css         text eol=lf
+*.scss        text eol=lf
+*.md          text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
+*.toml        text eol=lf
+*.svg         text eol=lf
+*.txt         text eol=lf
+*.sh          text eol=lf
+
+# --- Config files (root-level, no extension) ---
+.gitignore    text eol=lf
+.gitattributes text eol=lf
+.eslintrc*    text eol=lf
+.prettierrc*  text eol=lf
+.editorconfig text eol=lf
+.npmrc        text eol=lf
+.env*         text eol=lf
+LICENSE       text eol=lf
+LICENSE-DATA  text eol=lf
+README        text eol=lf
+CLAUDE        text eol=lf
+
+# --- Cloudflare Pages routing files ---
+_redirects    text eol=lf
+_headers      text eol=lf
+
+# --- Binaries: never normalize ---
+*.png         binary
+*.jpg         binary
+*.jpeg        binary
+*.gif         binary
+*.ico         binary
+*.webp        binary
+*.avif        binary
+*.woff        binary
+*.woff2       binary
+*.ttf         binary
+*.otf         binary
+*.eot         binary
+*.mp3         binary
+*.mp4         binary
+*.webm        binary
+*.pdf         binary
+*.zip         binary
+*.tar.gz      binary
+*.tgz         binary
+
+# --- Linguist hints (GitHub's language-detection on the repo page) ---
+# Mark the Learn corpus as documentation so it doesn't dominate the
+# "this repo is mostly Markdown" language stat. The repo is a JS app
+# that happens to ship documentation; the stat should reflect that.
+src/learn/**/*.md linguist-documentation
+docs/**/*.md      linguist-documentation
+*.md              linguist-documentation
