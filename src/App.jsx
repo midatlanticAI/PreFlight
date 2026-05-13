@@ -212,6 +212,8 @@ const GlossaryView = lazyNamed(
   () => import('./components/learn/GlossaryView.jsx'),
   'GlossaryView'
 );
+const PrivacyView = lazyNamed(() => import('./components/PrivacyView.jsx'), 'PrivacyView');
+const TermsView = lazyNamed(() => import('./components/TermsView.jsx'), 'TermsView');
 const SettingsPage = lazyNamed(
   () => import('./components/settings/SettingsPage.jsx'),
   'SettingsPage'
@@ -916,6 +918,8 @@ export default function App() {
               <Route path="diagnostics" element={<DiagnosticsTab />} />
               <Route path="about" element={<AboutTab />} />
             </Route>
+            <Route path="/privacy" element={<PrivacyView />} />
+            <Route path="/terms" element={<TermsView />} />
             <Route path="*" element={<NotFoundView />} />
           </Routes>
         </React.Suspense>

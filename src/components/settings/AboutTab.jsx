@@ -7,9 +7,12 @@ import { Github, Mail, ExternalLink } from 'lucide-react';
 import { T, fontMono } from '../../lib/theme.js';
 
 const RESOURCES = [
+  { label: 'Privacy', url: '/privacy' },
+  { label: 'Terms', url: '/terms' },
   { label: 'Mid-Atlantic AI', url: 'https://midatlantic.ai' },
   { label: 'Vibe-Aware (in-app Learn corpus)', url: '/learn' },
   { label: 'OWASP coverage mapping', url: '/learn/owasp' },
+  { label: 'Glossary', url: '/learn/glossary' },
   { label: 'Resources & best practices', url: '/learn/resources' },
   { label: 'OWASP Top 10 2025', url: 'https://owasp.org/Top10/' },
   { label: 'OWASP LLM Top 10 2025', url: 'https://genai.owasp.org/llm-top-10/' },

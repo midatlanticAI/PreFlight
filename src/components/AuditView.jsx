@@ -585,14 +585,32 @@ export function AuditView({
           Static security review for vibe-coded apps. All scanning runs in your browser — no upload,
           no signup.
         </div>
-        <nav aria-label="Footer links" style={{ display: 'flex', gap: 18 }}>
+        <nav
+          aria-label="Footer links"
+          style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}
+        >
+          <a href="/privacy" style={{ color: T.textDim, textDecoration: 'none' }}>
+            Privacy
+          </a>
+          <a href="/terms" style={{ color: T.textDim, textDecoration: 'none' }}>
+            Terms
+          </a>
           <a href="mailto:John@midatlantic.ai" style={{ color: T.textDim, textDecoration: 'none' }}>
             Contact
           </a>
           <a
-            href="https://midatlantic.ai"
-            style={{ color: T.textDim, textDecoration: 'none' }}
+            href="https://github.com/midatlanticAI/PreFlight"
+            target="_blank"
             rel="noopener noreferrer"
+            style={{ color: T.textDim, textDecoration: 'none' }}
+          >
+            GitHub
+          </a>
+          <a
+            href="https://midatlantic.ai"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: T.textDim, textDecoration: 'none' }}
           >
             Mid-Atlantic AI
           </a>
