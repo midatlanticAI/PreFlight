@@ -13,6 +13,7 @@ import { log } from '../lib/logger.js';
 import { copyToClipboard, timeAgo } from '../lib/clipboard.js';
 import { snippetToText } from '../lib/snippet.js';
 import { SeverityChip } from './ScoreDisplay.jsx';
+import { BreakersPanel } from './BreakersPanel.jsx';
 
 export function FindingCard({
   finding,
@@ -297,6 +298,11 @@ export function FindingCard({
           <div style={{ fontSize: 14, color: T.textDim, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
             {finding.remediation}
           </div>
+          {/* Breakers — adversarial inputs (v1, feature/breakers-v1 branch).
+              Static-only display of what an attacker would type to exploit this finding.
+              Pre-Flight never executes the payloads; they ship as strings with copy buttons
+              and explanations of where and how the input is processed. */}
+          <BreakersPanel probeName={finding.probe} />
           {/* Explain & Verify — BYOK AI feature.
               The button calls the user's chosen provider with the user's key. The response is
               visually segregated (panel-alt background, provider eyebrow) so users always know
