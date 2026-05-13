@@ -27,17 +27,36 @@ const CATEGORY_FRAMING = {
   A08: 'Trust placed in components, packages, or supply-chain artifacts that have not been verified.',
   A09: 'Security-relevant events that happen without leaving a log entry. The blind spot in every incident response.',
   A10: 'Server fetches a URL the client supplies. Used to talk to internal services that should not be reachable from outside.',
-  LLM01: 'User input flows into a prompt without isolation. The LLM follows the user instead of the system.',
-  LLM02: 'LLM completions surface data the calling user should not see (cross-tenant leakage, system-prompt disclosure).',
-  LLM04: 'User-uploaded documents become future system-prompt content. Indirect prompt injection at the data layer.',
-  LLM06: 'Agent tools (PythonREPL, ShellTool, MCP servers) that let the LLM take actions beyond the intended scope.',
+  LLM01:
+    'User input flows into a prompt without isolation. The LLM follows the user instead of the system.',
+  LLM02:
+    'LLM completions surface data the calling user should not see (cross-tenant leakage, system-prompt disclosure).',
+  LLM04:
+    'User-uploaded documents become future system-prompt content. Indirect prompt injection at the data layer.',
+  LLM06:
+    'Agent tools (PythonREPL, ShellTool, MCP servers) that let the LLM take actions beyond the intended scope.',
   LLM07: 'System prompts embedded in client bundles or surfaced through error responses.',
-  LLM08: 'Vector similarity search without scope filtering. Tenant A asks a question, the answer is built from tenant B\'s notes.',
+  LLM08:
+    "Vector similarity search without scope filtering. Tenant A asks a question, the answer is built from tenant B's notes.",
 };
 
 const ORDERED_CATEGORIES = [
-  'A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10',
-  'LLM01', 'LLM02', 'LLM04', 'LLM06', 'LLM07', 'LLM08',
+  'A01',
+  'A02',
+  'A03',
+  'A04',
+  'A05',
+  'A06',
+  'A07',
+  'A08',
+  'A09',
+  'A10',
+  'LLM01',
+  'LLM02',
+  'LLM04',
+  'LLM06',
+  'LLM07',
+  'LLM08',
 ];
 
 const OWASP_TOP10_URL = 'https://owasp.org/Top10/';
@@ -182,9 +201,9 @@ export function OwaspCoverageView() {
           lineHeight: 1.6,
         }}
       >
-        Pre-Flight's 43 probes map to {totalCategories} OWASP categories. {totalProbes}{' '}
-        probes carry at least one OWASP code; the rest cover discoverability,
-        accessibility, or supply-chain hygiene outside the OWASP scope.
+        Pre-Flight's 43 probes map to {totalCategories} OWASP categories. {totalProbes} probes carry
+        at least one OWASP code; the rest cover discoverability, accessibility, or supply-chain
+        hygiene outside the OWASP scope.
       </p>
       <p
         style={{
@@ -284,8 +303,8 @@ export function OwaspCoverageView() {
         }}
       >
         Mapping source-of-truth lives in <code>src/lib/stable-id.js</code> (PROBE_OWASP_MAP +
-        OWASP_LABELS). A coverage test in <code>src/test/probe-coverage.test.js</code> asserts
-        every PROBE_OWASP_MAP entry references a real probe.
+        OWASP_LABELS). A coverage test in <code>src/test/probe-coverage.test.js</code> asserts every
+        PROBE_OWASP_MAP entry references a real probe.
       </p>
     </section>
   );

@@ -41,9 +41,9 @@ Without `SameSite`: a malicious site can make the user's browser send a request 
 Pre-Flight scans server-side cookie-setting code for cookies whose name matches an auth signal (`session`, `auth`, `token`, `jwt`, `csrf`) and which are set without all three flags:
 
 ```ts
-res.cookie('session', token);  // all three missing — critical
-res.cookie('auth', token, { secure: true });  // httpOnly + sameSite missing
-res.cookie('jwt', token, { httpOnly: true, secure: true });  // sameSite missing
+res.cookie('session', token); // all three missing — critical
+res.cookie('auth', token, { secure: true }); // httpOnly + sameSite missing
+res.cookie('jwt', token, { httpOnly: true, secure: true }); // sameSite missing
 ```
 
 ## What the fix looks like
@@ -54,7 +54,7 @@ Set all three flags on every auth cookie. The boilerplate:
 res.cookie('session', token, {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',           // 'strict' if you don't need cross-site form posts
+  sameSite: 'lax', // 'strict' if you don't need cross-site form posts
   maxAge: 60 * 60 * 24 * 30, // 30 days; rotate often
   path: '/',
 });

@@ -34,7 +34,9 @@ The probe excludes test files and explicit debug paths.
 **Unhandled promise rejections.** A promise without a `.catch()` or `await` inside `try {}`:
 
 ```ts
-fetch('/api/foo').then(r => r.json()).then(processData);
+fetch('/api/foo')
+  .then((r) => r.json())
+  .then(processData);
 // network error or processData throws? Unhandled rejection.
 ```
 
@@ -44,7 +46,7 @@ Unhandled rejections cause silent data loss in browsers and process crashes in N
 
 ```ts
 async function handle(req) {
-  const data = await fetch('/api/foo').then(r => r.json());
+  const data = await fetch('/api/foo').then((r) => r.json());
   return data.value;
 }
 ```
@@ -72,7 +74,7 @@ Pre-Flight scans for:
 
 ```ts
 import { log } from '@/lib/logger';
-log.debug('charging', { amount });  // dev only
+log.debug('charging', { amount }); // dev only
 ```
 
 Or in Vite:
@@ -90,9 +92,9 @@ define: {
 
 ```ts
 fetch('/api/foo')
-  .then(r => r.json())
+  .then((r) => r.json())
   .then(processData)
-  .catch(e => log.error('foo fetch failed', e));
+  .catch((e) => log.error('foo fetch failed', e));
 ```
 
 Or:

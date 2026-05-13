@@ -23,14 +23,14 @@ summary: Two unsafe GitHub Actions patterns: `pull_request_target` workflows tha
 **`pull_request_target` checking out PR head:**
 
 ```yaml
-on: pull_request_target  # runs in the BASE repo context with secrets
+on: pull_request_target # runs in the BASE repo context with secrets
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}  # untrusted code
+          ref: ${{ github.event.pull_request.head.sha }} # untrusted code
       - run: npm test
 ```
 
@@ -39,9 +39,9 @@ jobs:
 **Mutable ref pinning:**
 
 ```yaml
-- uses: actions/checkout@main          # main is mutable
-- uses: actions/checkout@v4            # v4 tag is mutable
-- uses: third-party/action@latest      # latest is mutable
+- uses: actions/checkout@main # main is mutable
+- uses: actions/checkout@v4 # v4 tag is mutable
+- uses: third-party/action@latest # latest is mutable
 ```
 
 A maintainer of the action (or anyone who compromises the maintainer's account) can update the underlying commit at any time. Every workflow run after the update executes the new code. This is the supply chain attack pattern that has hit `tj-actions/changed-files` and others.
@@ -69,7 +69,7 @@ Pre-Flight scans `.github/workflows/*.yml` for:
 **Pin every action to a SHA, not a tag or branch.**
 
 ```yaml
-- uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.7
+- uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.7
 ```
 
 Use the comment to track which tag the SHA corresponds to. Bots like `dependabot` can update the SHA + comment together when the maintainer publishes a new tag, giving you the supply-chain pin without the manual lookup.
@@ -93,12 +93,12 @@ jobs:
   test-pr:
     runs-on: ubuntu-latest
     permissions:
-      contents: read  # minimal permissions; no token write access
+      contents: read # minimal permissions; no token write access
     steps:
       - uses: actions/checkout@<sha>
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - run: npm test  # runs in an isolated job with no secrets
+      - run: npm test # runs in an isolated job with no secrets
 ```
 
 The two-job pattern keeps the credentials out of any job that executes PR code.

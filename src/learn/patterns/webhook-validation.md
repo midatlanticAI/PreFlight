@@ -25,7 +25,10 @@ A webhook handler that processes events without checking who sent them:
 export async function POST(req: Request) {
   const event = await req.json();
   if (event.type === 'payment_intent.succeeded') {
-    await db.orders.update({ where: { id: event.data.object.metadata.orderId }, data: { paid: true } });
+    await db.orders.update({
+      where: { id: event.data.object.metadata.orderId },
+      data: { paid: true },
+    });
   }
   return new Response('ok');
 }

@@ -59,7 +59,9 @@ describe('probe coverage', () => {
       if (!slug) continue;
       const resolved = resolvePatternForProbe(slug);
       if (!resolved) {
-        failures.push(`${probe.name} → ${slug} (entry exists but is draft, wrong type, or missing)`);
+        failures.push(
+          `${probe.name} → ${slug} (entry exists but is draft, wrong type, or missing)`
+        );
       }
     }
     expect(failures).toEqual([]);
@@ -134,7 +136,12 @@ describe('OWASP coverage mapping', () => {
   it('every security-class probe has at least one OWASP mapping (or is in EXEMPT)', () => {
     // Probes that are intentionally not OWASP-mapped: discoverability (SEO,
     // GEO), accessibility (A11y), or pure classifiers (Architecture).
-    const NON_OWASP_PROBES = new Set(['SEO Hygiene', 'GEO Hygiene', 'A11y Landmarks', 'Architecture']);
+    const NON_OWASP_PROBES = new Set([
+      'SEO Hygiene',
+      'GEO Hygiene',
+      'A11y Landmarks',
+      'Architecture',
+    ]);
     const unmapped = PROBES.filter((p) => {
       if (NON_OWASP_PROBES.has(p.name)) return false;
       return !OWASP_BY_PROBE[p.name] || OWASP_BY_PROBE[p.name].length === 0;

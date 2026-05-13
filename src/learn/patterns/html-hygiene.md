@@ -61,7 +61,7 @@ Inline scripts work, but they make CSP impossible to tighten. If there's no CSP,
 **Forms posting over HTTP:**
 
 ```html
-<form action="http://api.example/login" method="POST">
+<form action="http://api.example/login" method="POST"></form>
 ```
 
 Credentials submitted in cleartext over the wire. Any network observer reads them.
@@ -100,7 +100,7 @@ Pre-Flight scans HTML and JSX/TSX for the six patterns. JSX uses the same DOM at
 Or in JSX:
 
 ```tsx
-<button onClick={doThing}>click</button>  // function reference, not string
+<button onClick={doThing}>click</button> // function reference, not string
 ```
 
 **`target="_blank"`:** add `rel="noopener noreferrer"`.

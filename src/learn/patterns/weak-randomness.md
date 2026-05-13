@@ -36,6 +36,7 @@ If the function above generates a password-reset token, an attacker who has obse
 The class of vulnerability turns "guess the token" from an exhaustive search into a one-time math problem. Token spaces that look enormous (`36^11` for an 11-character base-36 string) shrink to essentially nothing once the PRNG state is known.
 
 The pattern shows up in:
+
 - Password reset codes.
 - Email verification tokens.
 - Magic-link URLs.
@@ -81,14 +82,14 @@ function generateResetToken() {
 const id = crypto.randomUUID();
 
 // Or for a bounded integer:
-const otp = crypto.randomInt(100000, 1000000).toString();  // 6-digit OTP
+const otp = crypto.randomInt(100000, 1000000).toString(); // 6-digit OTP
 ```
 
 **Cross-platform via uuid library:**
 
 ```ts
 import { v4 as uuidv4 } from 'uuid';
-const id = uuidv4();  // backed by crypto.getRandomValues / randomBytes
+const id = uuidv4(); // backed by crypto.getRandomValues / randomBytes
 ```
 
 The substitution is mechanical: same call shape, different primitive. The CSPRNG output is statistically indistinguishable from true random within any feasible computational budget.

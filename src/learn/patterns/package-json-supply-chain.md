@@ -32,10 +32,10 @@ Your `package.json` has a field called `"scripts"`. Inside it can sit any of:
 ```json
 {
   "scripts": {
-    "preinstall":  "...",
-    "install":     "...",
+    "preinstall": "...",
+    "install": "...",
     "postinstall": "...",
-    "prepare":     "..."
+    "prepare": "..."
   }
 }
 ```
@@ -46,7 +46,7 @@ The problem is that the same execution surface is what every recent npm supply-c
 
 - Shai-Hulud (Sept 2025): postinstall hook ran a payload that stole maintainer tokens and republished to other packages the maintainer owned.
 - Mini Shai-Hulud SAP / Bitwarden CLI (April 2026): same family of postinstall script, different drop-files.
-- Mini Shai-Hulud TanStack (May 11, 2026): worm published 84 malicious versions across 42 @tanstack/* packages in six minutes. The postinstall scripts wrote `tanstack_runner.js`, `.claude/router_runtime.js`, and a `gh-token-monitor` dead-man-switch to disk.
+- Mini Shai-Hulud TanStack (May 11, 2026): worm published 84 malicious versions across 42 @tanstack/\* packages in six minutes. The postinstall scripts wrote `tanstack_runner.js`, `.claude/router_runtime.js`, and a `gh-token-monitor` dead-man-switch to disk.
 
 In every case, anyone who ran `npm install` against an affected version executed attacker code with their own user permissions. CI runners. Developer laptops. Build pipelines. Each install is a fresh execution.
 
@@ -55,10 +55,10 @@ There's a second execution surface in the same file: where a dependency comes fr
 ```json
 {
   "dependencies": {
-    "ok-pkg":     "1.2.3",
-    "git-pkg":    "git+https://example.com/repo.git",
-    "http-pkg":   "http://example.com/tarball.tgz",
-    "file-pkg":   "file:../local"
+    "ok-pkg": "1.2.3",
+    "git-pkg": "git+https://example.com/repo.git",
+    "http-pkg": "http://example.com/tarball.tgz",
+    "file-pkg": "file:../local"
   }
 }
 ```

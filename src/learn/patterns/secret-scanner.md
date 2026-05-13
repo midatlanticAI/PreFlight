@@ -28,9 +28,9 @@ summary: AWS, Stripe, OpenAI, Anthropic, GitHub, and private-key material commit
 A secret in source is an API key, token, password, or private key written as a literal string inside a file that gets committed to version control. The most common shapes:
 
 ```js
-const STRIPE = "sk_live_<your-key-here>"; // production charge access
-const OPENAI = "sk-proj-Abc1234567890DEFGHijklmno";
-const SUPABASE = "postgres://admin:hunter2@db.internal:5432/prod";
+const STRIPE = 'sk_live_<your-key-here>'; // production charge access
+const OPENAI = 'sk-proj-Abc1234567890DEFGHijklmno';
+const SUPABASE = 'postgres://admin:hunter2@db.internal:5432/prod';
 ```
 
 ```python
@@ -60,21 +60,21 @@ Three reasons in order of immediacy:
 
 The shapes Pre-Flight scans for:
 
-| Provider | Shape | Notes |
-|---|---|---|
-| AWS access key ID | `AKIA[0-9A-Z]{16}` | Always paired with a secret key in any real config |
-| AWS secret key | base64-shaped, 40 chars | Often near "secret_access_key" or in env vars |
-| Stripe live | `sk_live_[A-Za-z0-9]{24,}` | Production charge access |
-| Stripe test | `sk_test_...` | Can still touch a live data set if test mode was misconfigured |
-| OpenAI | `sk-[A-Za-z0-9]{20,}` or `sk-proj-...` | Modern format is `sk-proj-` |
-| Anthropic | `sk-ant-[A-Za-z0-9_-]{20,}` | Distinguishable by the `-ant-` segment |
-| Google | `AIza[A-Za-z0-9_-]{30,}` | Maps API, Gemini API, and others |
-| GitHub PAT | `ghp_[A-Za-z0-9]{36}` (classic) or `gho_` (OAuth) | Newer fine-grained tokens are `github_pat_` |
-| Slack | `xox[bpas]-...` | Bot, user, admin variants by prefix |
-| Hugging Face | `hf_[A-Za-z0-9]{30,}` | Model + inference access |
-| Replicate | `r8_[A-Za-z0-9]{30,}` | API access |
-| Database URL with creds | `postgres://user:pass@host` | `mysql://`, `mongodb://`, and others follow the same pattern |
-| Private key block | `-----BEGIN ... PRIVATE KEY-----` | RSA, EC, PGP, OpenSSH all match |
+| Provider                | Shape                                             | Notes                                                          |
+| ----------------------- | ------------------------------------------------- | -------------------------------------------------------------- |
+| AWS access key ID       | `AKIA[0-9A-Z]{16}`                                | Always paired with a secret key in any real config             |
+| AWS secret key          | base64-shaped, 40 chars                           | Often near "secret_access_key" or in env vars                  |
+| Stripe live             | `sk_live_[A-Za-z0-9]{24,}`                        | Production charge access                                       |
+| Stripe test             | `sk_test_...`                                     | Can still touch a live data set if test mode was misconfigured |
+| OpenAI                  | `sk-[A-Za-z0-9]{20,}` or `sk-proj-...`            | Modern format is `sk-proj-`                                    |
+| Anthropic               | `sk-ant-[A-Za-z0-9_-]{20,}`                       | Distinguishable by the `-ant-` segment                         |
+| Google                  | `AIza[A-Za-z0-9_-]{30,}`                          | Maps API, Gemini API, and others                               |
+| GitHub PAT              | `ghp_[A-Za-z0-9]{36}` (classic) or `gho_` (OAuth) | Newer fine-grained tokens are `github_pat_`                    |
+| Slack                   | `xox[bpas]-...`                                   | Bot, user, admin variants by prefix                            |
+| Hugging Face            | `hf_[A-Za-z0-9]{30,}`                             | Model + inference access                                       |
+| Replicate               | `r8_[A-Za-z0-9]{30,}`                             | API access                                                     |
+| Database URL with creds | `postgres://user:pass@host`                       | `mysql://`, `mongodb://`, and others follow the same pattern   |
+| Private key block       | `-----BEGIN ... PRIVATE KEY-----`                 | RSA, EC, PGP, OpenSSH all match                                |
 
 Pre-Flight skips files it can identify as deliberate test fixtures (paths matching `*.test.*`, `*.spec.*`, `tests/`, `__tests__/`), markdown documentation files where the key is part of an example, and Pre-Flight's own threat-intel manifests (where the patterns are listed as detection rules, not as live keys).
 
@@ -140,7 +140,7 @@ A second layer is a CI step that runs the same check on the PR diff, so a develo
 
 ## Related
 
-- [NEXT_PUBLIC_ misuse](/learn/patterns/next-public-misuse) explains the specific Next.js footgun for client-bundle key exposure.
+- [NEXT*PUBLIC* misuse](/learn/patterns/next-public-misuse) explains the specific Next.js footgun for client-bundle key exposure.
 - [package.json supply-chain hooks](/learn/patterns/package-json-supply-chain) covers the install-time execution surface that compromised packages use to steal keys after a successful key leak.
 - [Sapphire Sleet axios incident](/learn/incidents/sapphire-sleet-axios-2026-03) is the March 2026 case where a compromised npm package exfiltrated npm + GitHub tokens via a postinstall script.
 

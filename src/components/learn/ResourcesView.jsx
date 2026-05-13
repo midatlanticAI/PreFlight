@@ -51,7 +51,7 @@ const SECTIONS = [
     id: 'security',
     title: 'Application security',
     intro:
-      'The authoritative references behind most of Pre-Flight\'s probes. Read OWASP first; everything else makes more sense after it.',
+      "The authoritative references behind most of Pre-Flight's probes. Read OWASP first; everything else makes more sense after it.",
     links: [
       {
         title: 'OWASP Top 10 (2025)',
@@ -109,22 +109,22 @@ const SECTIONS = [
       {
         title: 'Material Design 3',
         url: 'https://m3.material.io/',
-        note: 'A complete design system with research-backed defaults. Even if you don\'t adopt it wholesale, the rationale per component is valuable.',
+        note: "A complete design system with research-backed defaults. Even if you don't adopt it wholesale, the rationale per component is valuable.",
       },
       {
         title: 'Apple Human Interface Guidelines',
         url: 'https://developer.apple.com/design/human-interface-guidelines',
-        note: 'Apple\'s reference for what good UI feels like across their platforms. Free.',
+        note: "Apple's reference for what good UI feels like across their platforms. Free.",
       },
       {
         title: 'IBM Carbon Design System',
         url: 'https://carbondesignsystem.com/',
-        note: 'IBM\'s open-source design system. Tokens, components, patterns, all documented.',
+        note: "IBM's open-source design system. Tokens, components, patterns, all documented.",
       },
       {
         title: 'Atlassian Design System',
         url: 'https://atlassian.design/',
-        note: 'Atlassian\'s design system. Strong on collaboration / workflow patterns.',
+        note: "Atlassian's design system. Strong on collaboration / workflow patterns.",
       },
     ],
   },
@@ -172,7 +172,7 @@ const SECTIONS = [
       {
         title: 'The Algorithms (GitHub)',
         url: 'https://github.com/TheAlgorithms',
-        note: 'Reference implementations of every standard algorithm in every common language. Read, don\'t paste.',
+        note: "Reference implementations of every standard algorithm in every common language. Read, don't paste.",
       },
       {
         title: 'freeCodeCamp',
@@ -193,14 +193,14 @@ const SECTIONS = [
       'Once you have more than one moving part, you need a vocabulary for how the pieces fit. Free references; the field has more good free writing than good paid books.',
     links: [
       {
-        title: 'Martin Fowler\'s bliki',
+        title: "Martin Fowler's bliki",
         url: 'https://martinfowler.com/bliki/',
-        note: 'Martin Fowler\'s long-running architecture blog. Microservices, CQRS, event sourcing, the original sources for many terms.',
+        note: "Martin Fowler's long-running architecture blog. Microservices, CQRS, event sourcing, the original sources for many terms.",
       },
       {
         title: 'Software Engineering at Google (free PDF)',
         url: 'https://abseil.io/resources/swe-book',
-        note: 'O\'Reilly published it as a book; Google posts the full PDF free. How engineering works at scale.',
+        note: "O'Reilly published it as a book; Google posts the full PDF free. How engineering works at scale.",
       },
       {
         title: 'Google SRE books (free online)',
@@ -210,12 +210,12 @@ const SECTIONS = [
       {
         title: 'AWS Well-Architected Framework',
         url: 'https://aws.amazon.com/architecture/well-architected/',
-        note: 'AWS\'s framework for designing reliable, secure, efficient, sustainable workloads. Vendor-flavored but transferable.',
+        note: "AWS's framework for designing reliable, secure, efficient, sustainable workloads. Vendor-flavored but transferable.",
       },
       {
         title: 'Microsoft Azure Architecture Center',
         url: 'https://learn.microsoft.com/en-us/azure/architecture/',
-        note: 'Microsoft\'s catalog of architecture patterns with worked examples per pattern. Free.',
+        note: "Microsoft's catalog of architecture patterns with worked examples per pattern. Free.",
       },
       {
         title: 'High Scalability',
@@ -228,7 +228,7 @@ const SECTIONS = [
         note: 'A community curating classic and current CS papers. Distributed systems, databases, programming languages, security.',
       },
       {
-        title: 'Pat Helland\'s papers',
+        title: "Pat Helland's papers",
         url: 'https://www.microsoft.com/en-us/research/people/phelland/',
         note: 'One of the clearest writers in distributed systems. "Life Beyond Distributed Transactions" is mandatory.',
       },
@@ -243,7 +243,7 @@ const SECTIONS = [
     id: 'deep-learning',
     title: 'Deep learning and AI engineering',
     intro:
-      'If you\'re shipping AI features, this is the ground floor. All free, all from the people actually building the field.',
+      "If you're shipping AI features, this is the ground floor. All free, all from the people actually building the field.",
     links: [
       {
         title: 'fast.ai',
@@ -258,7 +258,7 @@ const SECTIONS = [
       {
         title: 'Andrej Karpathy — Neural Networks: Zero to Hero',
         url: 'https://karpathy.ai/zero-to-hero.html',
-        note: 'A free YouTube series that builds up to GPT-style models from scratch. The closest to first-principles you\'ll find.',
+        note: "A free YouTube series that builds up to GPT-style models from scratch. The closest to first-principles you'll find.",
       },
       {
         title: 'Deep Learning (Goodfellow, Bengio, Courville)',
@@ -283,12 +283,12 @@ const SECTIONS = [
       {
         title: 'Stanford CS231n / CS229 / CS224N',
         url: 'https://cs231n.stanford.edu/',
-        note: 'Stanford\'s computer-vision, ML, and NLP courses. Lecture videos and assignments posted free.',
+        note: "Stanford's computer-vision, ML, and NLP courses. Lecture videos and assignments posted free.",
       },
       {
         title: 'MIT 6.S191 — Introduction to Deep Learning',
         url: 'http://introtodeeplearning.com/',
-        note: 'MIT\'s intro DL course. New videos each year, all free, with labs.',
+        note: "MIT's intro DL course. New videos each year, all free, with labs.",
       },
       {
         title: 'Anthropic Cookbook',
@@ -298,7 +298,7 @@ const SECTIONS = [
       {
         title: 'OpenAI Cookbook',
         url: 'https://cookbook.openai.com/',
-        note: 'OpenAI\'s recipes for embeddings, RAG, function calling, fine-tuning, evaluation. Free.',
+        note: "OpenAI's recipes for embeddings, RAG, function calling, fine-tuning, evaluation. Free.",
       },
       {
         title: 'LangChain documentation',
@@ -311,7 +311,7 @@ const SECTIONS = [
     id: 'accessibility',
     title: 'Accessibility',
     intro:
-      '15-20% of users need accessibility considerations. The guidelines below are what regulators look at and what assistive tech expects. Pre-Flight\'s A11y Landmarks probe surfaces a subset.',
+      "15-20% of users need accessibility considerations. The guidelines below are what regulators look at and what assistive tech expects. Pre-Flight's A11y Landmarks probe surfaces a subset.",
     links: [
       {
         title: 'WCAG 2.2',
@@ -372,7 +372,7 @@ const SECTIONS = [
       {
         title: 'CNCF Supply Chain Security Whitepaper',
         url: 'https://github.com/cncf/tag-security/tree/main/community/working-groups/supply-chain-security',
-        note: 'The cloud-native ecosystem\'s framing of supply-chain risk. Vendor-neutral.',
+        note: "The cloud-native ecosystem's framing of supply-chain risk. Vendor-neutral.",
       },
       {
         title: 'OpenSSF Best Practices Badge',
@@ -418,22 +418,22 @@ const SECTIONS = [
       {
         title: 'Anthropic — Engineering with Claude',
         url: 'https://www.anthropic.com/engineering',
-        note: 'Anthropic\'s own writing on how Claude is built and how to use it well.',
+        note: "Anthropic's own writing on how Claude is built and how to use it well.",
       },
       {
         title: 'OpenAI — Best Practices for Production',
         url: 'https://platform.openai.com/docs/guides/production-best-practices',
-        note: 'OpenAI\'s production guidance for API consumers. Rate limits, retries, prompt design.',
+        note: "OpenAI's production guidance for API consumers. Rate limits, retries, prompt design.",
       },
       {
         title: 'simonwillison.net — LLM tag',
         url: 'https://simonwillison.net/tags/llms/',
-        note: 'Simon Willison\'s ongoing notes on LLM tooling. Detailed, pragmatic, well-cited.',
+        note: "Simon Willison's ongoing notes on LLM tooling. Detailed, pragmatic, well-cited.",
       },
       {
         title: 'Model Context Protocol Specification',
         url: 'https://modelcontextprotocol.io/',
-        note: 'The MCP spec, the same one Pre-Flight\'s MCP Security probe references.',
+        note: "The MCP spec, the same one Pre-Flight's MCP Security probe references.",
       },
     ],
   },
@@ -441,11 +441,7 @@ const SECTIONS = [
 
 function Section({ section }) {
   return (
-    <section
-      id={section.id}
-      aria-labelledby={`${section.id}-heading`}
-      style={{ marginBottom: 32 }}
-    >
+    <section id={section.id} aria-labelledby={`${section.id}-heading`} style={{ marginBottom: 32 }}>
       <h2
         id={`${section.id}-heading`}
         className="ap-display"
@@ -522,7 +518,15 @@ export function ResourcesView() {
       >
         Resources
       </h1>
-      <p style={{ color: T.textMuted, fontSize: 14, margin: '0 0 8px', maxWidth: 720, lineHeight: 1.6 }}>
+      <p
+        style={{
+          color: T.textMuted,
+          fontSize: 14,
+          margin: '0 0 8px',
+          maxWidth: 720,
+          lineHeight: 1.6,
+        }}
+      >
         Curated external references. The first place to go for each discipline, picked for being
         authoritative and freely readable. Every link opens in a new tab.
       </p>
@@ -538,9 +542,9 @@ export function ResourcesView() {
       >
         Inclusion criterion: free or zero-friction free tier. No paywalled books, no "free trial
         that converts to paid", no marketing-gated PDFs. If a course costs money for the certificate
-        but is free to audit, it's listed. If a book has its full text online for free, it's
-        listed; if it doesn't, it isn't. The bar is "a viber on hopes and dreams and empty wallets
-        can use this today."
+        but is free to audit, it's listed. If a book has its full text online for free, it's listed;
+        if it doesn't, it isn't. The bar is "a viber on hopes and dreams and empty wallets can use
+        this today."
       </p>
 
       {/* Anchor nav: quick links to sections without scrolling. */}

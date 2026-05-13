@@ -253,8 +253,8 @@ export function GlossaryView() {
           className="ap-card"
           style={{ padding: 24, color: T.textMuted, fontSize: 13, textAlign: 'center' }}
         >
-          No glossary entries match &quot;{query}&quot;. Try a shorter prefix or check the full
-          list below.
+          No glossary entries match &quot;{query}&quot;. Try a shorter prefix or check the full list
+          below.
         </div>
       )}
 

@@ -30,10 +30,7 @@ describe('probeSourceMapExposure', () => {
   it('flags JS file with sourceMappingURL comment', () => {
     // Use a non-dist path so the scanner-self-source exclusion doesn't skip it.
     const f = probeSourceMapExposure([
-      file(
-        'static/bundle.js',
-        'console.log("hello");\n//# sourceMappingURL=bundle.js.map'
-      ),
+      file('static/bundle.js', 'console.log("hello");\n//# sourceMappingURL=bundle.js.map'),
     ]);
     expect(f.length).toBeGreaterThan(0);
   });
@@ -46,9 +43,7 @@ describe('probeSourceMapExposure', () => {
   });
 
   it('does NOT flag in test files', () => {
-    const f = probeSourceMapExposure([
-      file('src/test/foo.test.js', 'build: { sourcemap: true }'),
-    ]);
+    const f = probeSourceMapExposure([file('src/test/foo.test.js', 'build: { sourcemap: true }')]);
     expect(f).toEqual([]);
   });
 });
@@ -64,9 +59,7 @@ describe('probeIframeSandbox', () => {
   });
 
   it('flags same-origin iframe without sandbox at lower severity', () => {
-    const f = probeIframeSandbox([
-      file('index.html', '<iframe src="/preview"></iframe>'),
-    ]);
+    const f = probeIframeSandbox([file('index.html', '<iframe src="/preview"></iframe>')]);
     expect(f.length).toBe(1);
     expect(f[0].severity).toBe('medium');
   });

@@ -208,10 +208,7 @@ const OwaspCoverageView = lazyNamed(
   () => import('./components/learn/OwaspCoverageView.jsx'),
   'OwaspCoverageView'
 );
-const GlossaryView = lazyNamed(
-  () => import('./components/learn/GlossaryView.jsx'),
-  'GlossaryView'
-);
+const GlossaryView = lazyNamed(() => import('./components/learn/GlossaryView.jsx'), 'GlossaryView');
 const PrivacyView = lazyNamed(() => import('./components/PrivacyView.jsx'), 'PrivacyView');
 const TermsView = lazyNamed(() => import('./components/TermsView.jsx'), 'TermsView');
 const SettingsPage = lazyNamed(

@@ -67,7 +67,7 @@ Pick a logger and use it consistently. Every security-sensitive handler emits st
 ```ts
 import pino from 'pino';
 const log = pino({
-  redact: ['req.headers.authorization', 'req.body.password'],  // never log credentials
+  redact: ['req.headers.authorization', 'req.body.password'], // never log credentials
 });
 ```
 

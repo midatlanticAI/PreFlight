@@ -59,19 +59,19 @@ A boilerplate `<head>` for a public page:
 ```html
 <head>
   <title>Page Title — Site Name</title>
-  <meta name="description" content="One-sentence summary of this page's content.">
-  <link rel="canonical" href="https://example.com/this-page">
+  <meta name="description" content="One-sentence summary of this page's content." />
+  <link rel="canonical" href="https://example.com/this-page" />
 
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://example.com/this-page">
-  <meta property="og:title" content="Page Title">
-  <meta property="og:description" content="One-sentence summary">
-  <meta property="og:image" content="https://example.com/og-card.png">
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://example.com/this-page" />
+  <meta property="og:title" content="Page Title" />
+  <meta property="og:description" content="One-sentence summary" />
+  <meta property="og:image" content="https://example.com/og-card.png" />
 
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Page Title">
-  <meta name="twitter:description" content="One-sentence summary">
-  <meta name="twitter:image" content="https://example.com/og-card.png">
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Page Title" />
+  <meta name="twitter:description" content="One-sentence summary" />
+  <meta name="twitter:image" content="https://example.com/og-card.png" />
 
   <script type="application/ld+json">
     {

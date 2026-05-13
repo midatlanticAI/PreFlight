@@ -322,24 +322,45 @@ export const PROBE_META = {
 //            OWASP LLM Top 10 2025 (https://genai.owasp.org/llm-top-10/).
 export const PROBE_OWASP_MAP = {
   // OWASP Top 10 2025
-  'A01': ['Admin Route Exposure', 'API Route Auth', 'Supabase RLS', 'Firebase Rules', 'Path Traversal'],
-  'A02': ['Secret Scanner', 'NEXT_PUBLIC_ Misuse', 'Env File Hygiene', 'Weak Randomness', 'Client Auth Storage', 'Cookie Security'],
-  'A03': ['Auth Weakness', 'SQL Injection', 'HTML Hygiene'],
-  'A04': ['AI Code Smells', 'Stack Trace Leaks', 'Code Correctness'],
-  'A05': ['Security Headers', 'CORS', 'Source Map Exposure', 'Iframe Sandbox'],
-  'A06': ['Compromised Packages', 'Slopsquat / Typosquat', 'Package Manager Hardening'],
-  'A07': ['Auth Weakness', 'Webhook Validation'],
-  'A08': ['Trojan Source', 'AI Rules Files', 'Malicious Artifacts', 'Subresource Integrity', 'Package.json', 'GitHub Actions', 'URL Reputation'],
-  'A09': ['Security Logging', 'Code Quality'],
-  'A10': ['SSRF / Open Redirect'],
+  A01: [
+    'Admin Route Exposure',
+    'API Route Auth',
+    'Supabase RLS',
+    'Firebase Rules',
+    'Path Traversal',
+  ],
+  A02: [
+    'Secret Scanner',
+    'NEXT_PUBLIC_ Misuse',
+    'Env File Hygiene',
+    'Weak Randomness',
+    'Client Auth Storage',
+    'Cookie Security',
+  ],
+  A03: ['Auth Weakness', 'SQL Injection', 'HTML Hygiene'],
+  A04: ['AI Code Smells', 'Stack Trace Leaks', 'Code Correctness'],
+  A05: ['Security Headers', 'CORS', 'Source Map Exposure', 'Iframe Sandbox'],
+  A06: ['Compromised Packages', 'Slopsquat / Typosquat', 'Package Manager Hardening'],
+  A07: ['Auth Weakness', 'Webhook Validation'],
+  A08: [
+    'Trojan Source',
+    'AI Rules Files',
+    'Malicious Artifacts',
+    'Subresource Integrity',
+    'Package.json',
+    'GitHub Actions',
+    'URL Reputation',
+  ],
+  A09: ['Security Logging', 'Code Quality'],
+  A10: ['SSRF / Open Redirect'],
 
   // OWASP LLM Top 10 2025
-  'LLM01': ['LLM Security'],
-  'LLM02': ['LLM Security'],
-  'LLM04': ['RAG Ingestion'],
-  'LLM06': ['LLM Security', 'MCP Security'],
-  'LLM07': ['LLM Security'],
-  'LLM08': ['Vector Embedding Weaknesses'],
+  LLM01: ['LLM Security'],
+  LLM02: ['LLM Security'],
+  LLM04: ['RAG Ingestion'],
+  LLM06: ['LLM Security', 'MCP Security'],
+  LLM07: ['LLM Security'],
+  LLM08: ['Vector Embedding Weaknesses'],
 };
 
 // Human-readable label for each OWASP code. Used by the OWASP coverage page

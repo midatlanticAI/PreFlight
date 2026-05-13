@@ -52,10 +52,7 @@ In any common Node / Express / Next.js / Hono / Cloudflare Worker shape.
 Replace the wildcard with an explicit allowlist:
 
 ```ts
-const ALLOWED_ORIGINS = new Set([
-  'https://app.example.com',
-  'https://example.com',
-]);
+const ALLOWED_ORIGINS = new Set(['https://app.example.com', 'https://example.com']);
 
 export async function handler(req: Request) {
   const origin = req.headers.get('origin');

@@ -75,7 +75,7 @@ Pre-Flight scans Supabase migration files (`supabase/migrations/*.sql`) and the 
 
 **Permissive policy.** A `CREATE POLICY ... USING (true)` is functionally equivalent to no RLS. Same for `WITH CHECK (true)` on insert/update policies.
 
-**Service-role key in client code.** The `service_role` key in `process.env.SUPABASE_SERVICE_ROLE_KEY` is fine on the server. The same key in `NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY` or hardcoded in a `.tsx` file is the entire database to anyone with DevTools. See the [NEXT_PUBLIC_ misuse pattern](/learn/patterns/next-public-misuse) for the broader class.
+**Service-role key in client code.** The `service_role` key in `process.env.SUPABASE_SERVICE_ROLE_KEY` is fine on the server. The same key in `NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY` or hardcoded in a `.tsx` file is the entire database to anyone with DevTools. See the [NEXT*PUBLIC* misuse pattern](/learn/patterns/next-public-misuse) for the broader class.
 
 ## What the fix looks like
 
@@ -144,14 +144,14 @@ The service role bypasses RLS by design. Every server-side action that needs to 
 import { createClient } from '@supabase/supabase-js';
 export const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY  // server-only, NO NEXT_PUBLIC_ prefix
+  process.env.SUPABASE_SERVICE_ROLE_KEY // server-only, NO NEXT_PUBLIC_ prefix
 );
 
 // lib/supabase-browser.ts (client + server, but never receives service role)
 import { createClient } from '@supabase/supabase-js';
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY  // intentionally public
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY // intentionally public
 );
 ```
 
@@ -227,7 +227,7 @@ The pattern: every read path through a foreign key requires that the joined tabl
 
 ## Related
 
-- [NEXT_PUBLIC_ misuse](/learn/patterns/next-public-misuse) covers the service-role-key-in-client-bundle failure mode that breaks RLS even when RLS is configured correctly.
+- [NEXT*PUBLIC* misuse](/learn/patterns/next-public-misuse) covers the service-role-key-in-client-bundle failure mode that breaks RLS even when RLS is configured correctly.
 - [Hardcoded secrets in source](/learn/patterns/secret-scanner) covers the broader class for any credential that leaks via source-tracked files.
 
 ## Sources

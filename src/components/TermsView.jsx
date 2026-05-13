@@ -28,14 +28,17 @@ export function TermsView() {
         Terms
       </h1>
       <p className="ap-mono" style={{ margin: '0 0 28px', fontSize: 12, color: T.textMuted }}>
-        Effective 2026-05-13 · Mid-Atlantic AI · <a href="mailto:john@midatlantic.ai" style={{ color: T.accent }}>john@midatlantic.ai</a>
+        Effective 2026-05-13 · Mid-Atlantic AI ·{' '}
+        <a href="mailto:john@midatlantic.ai" style={{ color: T.accent }}>
+          john@midatlantic.ai
+        </a>
       </p>
 
       <p style={{ fontSize: 16, color: T.text, marginBottom: 24 }}>
-        Pre-Flight is a free, open-source, in-browser static security audit. There is no signup,
-        no payment, no account, and no warranty. The short version of what follows is: use it,
-        learn from it, ship safer code; we don’t guarantee it will catch every issue and we don’t
-        promise it’s suitable for any particular purpose.
+        Pre-Flight is a free, open-source, in-browser static security audit. There is no signup, no
+        payment, no account, and no warranty. The short version of what follows is: use it, learn
+        from it, ship safer code; we don’t guarantee it will catch every issue and we don’t promise
+        it’s suitable for any particular purpose.
       </p>
 
       <h2 className="ap-display" style={{ fontSize: 20, marginTop: 28, marginBottom: 10 }}>
@@ -55,14 +58,14 @@ export function TermsView() {
       </h2>
       <ul style={{ paddingLeft: 22, marginBottom: 22, color: T.textDim }}>
         <li>
-          Don’t use it to audit code you don’t have permission to audit. The fact that public
-          source code is publicly readable doesn’t automatically grant you permission to publish
-          security findings about it.
+          Don’t use it to audit code you don’t have permission to audit. The fact that public source
+          code is publicly readable doesn’t automatically grant you permission to publish security
+          findings about it.
         </li>
         <li>
           Don’t treat findings as a complete security review. Pre-Flight catches common static
-          patterns. It does not perform dynamic testing, business-logic review, or live
-          exploitation testing.
+          patterns. It does not perform dynamic testing, business-logic review, or live exploitation
+          testing.
         </li>
         <li>
           Don’t treat a clean Pre-Flight report as a guarantee of security. The absence of findings
@@ -81,15 +84,15 @@ export function TermsView() {
           <strong style={{ color: T.text }}>Code (MIT License):</strong> everything under{' '}
           <code className="ap-mono">src/</code>, <code className="ap-mono">public/</code>,{' '}
           <code className="ap-mono">.github/</code>, plus the config files and{' '}
-          <code className="ap-mono">package.json</code>. Use it, fork it, integrate it, ship
-          it. No attribution required for the source code itself.
+          <code className="ap-mono">package.json</code>. Use it, fork it, integrate it, ship it. No
+          attribution required for the source code itself.
         </li>
         <li>
           <strong style={{ color: T.text }}>Threat-intel data (CC-BY-4.0):</strong>{' '}
           <code className="ap-mono">src/data/compromised-packages.js</code> and any future{' '}
           <code className="ap-mono">src/data/*-data.{'{js,json}'}</code> manifests. Use the data,
-          integrate it into your own scanner, but credit the source as “Mid-Atlantic AI /
-          Pre-Flight Audit Tool.”
+          integrate it into your own scanner, but credit the source as “Mid-Atlantic AI / Pre-Flight
+          Audit Tool.”
         </li>
       </ul>
 
@@ -100,23 +103,23 @@ export function TermsView() {
         The Explain &amp; Verify and Copy Agent Prompt features are optional. If you use Explain
         &amp; Verify, the AI request goes from your browser directly to the AI provider you
         configured. The provider’s terms govern that interaction. We charge nothing for the use of
-        these features; your AI provider charges you whatever they charge. Pre-Flight has no
-        billing relationship with your AI provider and no visibility into your usage.
+        these features; your AI provider charges you whatever they charge. Pre-Flight has no billing
+        relationship with your AI provider and no visibility into your usage.
       </p>
 
       <h2 className="ap-display" style={{ fontSize: 20, marginTop: 28, marginBottom: 10 }}>
         No warranty
       </h2>
       <p style={{ color: T.textDim, marginBottom: 12 }}>
-        Pre-Flight is provided as-is. We make no warranty that it is fit for any particular
-        purpose, that it will catch every vulnerability in the code you scan, that the threat-intel
-        data is complete or current, or that the application will operate without interruption.
+        Pre-Flight is provided as-is. We make no warranty that it is fit for any particular purpose,
+        that it will catch every vulnerability in the code you scan, that the threat-intel data is
+        complete or current, or that the application will operate without interruption.
       </p>
       <p style={{ color: T.textDim, marginBottom: 22 }}>
         You use Pre-Flight at your own risk. If a Pre-Flight scan says your code is clean and you
         ship it and it turns out to have a serious vulnerability, that is on you, not on us. The
-        same applies in the other direction: if Pre-Flight flags a finding you don’t think is
-        real, the decision to ignore or suppress it is yours.
+        same applies in the other direction: if Pre-Flight flags a finding you don’t think is real,
+        the decision to ignore or suppress it is yours.
       </p>
 
       <h2 className="ap-display" style={{ fontSize: 20, marginTop: 28, marginBottom: 10 }}>
@@ -125,9 +128,9 @@ export function TermsView() {
       <p style={{ color: T.textDim, marginBottom: 22 }}>
         To the maximum extent permitted by law, Mid-Atlantic AI and the contributors to Pre-Flight
         will not be liable for any direct, indirect, incidental, consequential, special, or
-        exemplary damages arising out of your use of Pre-Flight, even where we have been advised
-        of the possibility of such damages. The MIT license terms in the repository’s LICENSE
-        file are the governing terms for the code; this clause is a plain-English summary of them.
+        exemplary damages arising out of your use of Pre-Flight, even where we have been advised of
+        the possibility of such damages. The MIT license terms in the repository’s LICENSE file are
+        the governing terms for the code; this clause is a plain-English summary of them.
       </p>
 
       <h2 className="ap-display" style={{ fontSize: 20, marginTop: 28, marginBottom: 10 }}>
@@ -169,8 +172,14 @@ export function TermsView() {
           fontFamily: fontMono,
         }}
       >
-        See also: <Link to="/privacy" style={{ color: T.accent }}>Privacy</Link> ·{' '}
-        <Link to="/learn" style={{ color: T.accent }}>Manifesto</Link>
+        See also:{' '}
+        <Link to="/privacy" style={{ color: T.accent }}>
+          Privacy
+        </Link>{' '}
+        ·{' '}
+        <Link to="/learn" style={{ color: T.accent }}>
+          Manifesto
+        </Link>
       </p>
     </article>
   );

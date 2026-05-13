@@ -115,13 +115,18 @@ With the matching CSS:
   top: 8px;
 }
 
-button, [role="button"], a, input[type="submit"] {
+button,
+[role='button'],
+a,
+input[type='submit'] {
   min-height: 24px;
   min-width: 24px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
@@ -131,7 +136,7 @@ button, [role="button"], a, input[type="submit"] {
 And the language attribute on `<html>`:
 
 ```html
-<html lang="en">
+<html lang="en"></html>
 ```
 
 ## Related

@@ -38,9 +38,7 @@ describe('probeSQLInjectionTemplateLiterals', () => {
   });
 
   it('does NOT flag db.query with no interpolation', () => {
-    const f = probeSQLInjectionTemplateLiterals([
-      file('src/db.js', 'await db.query(`SELECT 1`);'),
-    ]);
+    const f = probeSQLInjectionTemplateLiterals([file('src/db.js', 'await db.query(`SELECT 1`);')]);
     expect(f).toEqual([]);
   });
 
@@ -55,13 +53,16 @@ describe('probeSQLInjectionTemplateLiterals', () => {
 describe('probePathTraversal', () => {
   it('flags fs.readFile built from req.body input', () => {
     const f = probePathTraversal([
-      file('src/api/download.js', `
+      file(
+        'src/api/download.js',
+        `
         export async function POST(req) {
           const { name } = req.body;
           const content = await fs.readFile(path.join('/var/uploads', name), 'utf8');
           return Response.json({ content });
         }
-      `),
+      `
+      ),
     ]);
     expect(f.length).toBeGreaterThan(0);
     expect(f[0].cwe).toBe('CWE-22');
@@ -76,12 +77,15 @@ describe('probePathTraversal', () => {
 
   it('does NOT flag when path.normalize / allowlist is nearby', () => {
     const f = probePathTraversal([
-      file('src/api/safe.js', `
+      file(
+        'src/api/safe.js',
+        `
         const ALLOWED = new Set(['a.md', 'b.md']);
         const { name } = req.body;
         if (!ALLOWED.has(name)) return new Response('not found', { status: 404 });
         const c = await fs.readFile(path.join('/var/docs', name), 'utf8');
-      `),
+      `
+      ),
     ]);
     expect(f).toEqual([]);
   });
@@ -138,9 +142,7 @@ describe('probeWeakRandomness', () => {
   });
 
   it('does NOT flag in test files', () => {
-    const f = probeWeakRandomness([
-      file('src/test/foo.test.js', 'const token = Math.random();'),
-    ]);
+    const f = probeWeakRandomness([file('src/test/foo.test.js', 'const token = Math.random();')]);
     expect(f).toEqual([]);
   });
 });
@@ -238,9 +240,7 @@ describe('probeSubresourceIntegrity', () => {
   });
 
   it('does NOT flag relative-path scripts', () => {
-    const f = probeSubresourceIntegrity([
-      file('index.html', '<script src="./app.js"></script>'),
-    ]);
+    const f = probeSubresourceIntegrity([file('index.html', '<script src="./app.js"></script>')]);
     expect(f).toEqual([]);
   });
 

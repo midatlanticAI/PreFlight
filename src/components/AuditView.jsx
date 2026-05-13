@@ -585,10 +585,7 @@ export function AuditView({
           Static security review for vibe-coded apps. All scanning runs in your browser — no upload,
           no signup.
         </div>
-        <nav
-          aria-label="Footer links"
-          style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}
-        >
+        <nav aria-label="Footer links" style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
           <a href="/privacy" style={{ color: T.textDim, textDecoration: 'none' }}>
             Privacy
           </a>

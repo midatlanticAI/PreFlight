@@ -99,7 +99,7 @@ import jwt from 'jsonwebtoken';
 const t = jwt.sign(payload, process.env.JWT_SECRET, { algorithm: 'HS256' });
 
 const decoded = jwt.verify(token, process.env.JWT_SECRET, {
-  algorithms: ['HS256'],  // explicit allowlist; rejects any other algorithm including 'none'
+  algorithms: ['HS256'], // explicit allowlist; rejects any other algorithm including 'none'
 });
 ```
 
@@ -168,7 +168,7 @@ Pre-Flight runs the equivalents at scan time, with comment-awareness so a docstr
 ## Related
 
 - [Hardcoded secrets in source](/learn/patterns/secret-scanner) covers the JWT-secret-in-source case from the credential-leak side.
-- [NEXT_PUBLIC_ misuse](/learn/patterns/next-public-misuse) covers the related failure mode where the JWT-signing secret gets exposed via the browser bundle.
+- [NEXT*PUBLIC* misuse](/learn/patterns/next-public-misuse) covers the related failure mode where the JWT-signing secret gets exposed via the browser bundle.
 
 ## Sources
 

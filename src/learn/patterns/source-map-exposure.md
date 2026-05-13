@@ -26,7 +26,9 @@ Useful for the developer. Useful for the attacker.
 
 ```js
 // dist/index-abc123.js (minified, public)
-function n(e){return"sk_live_"===e.slice(0,8)}
+function n(e) {
+  return 'sk_live_' === e.slice(0, 8);
+}
 
 //# sourceMappingURL=index-abc123.js.map
 ```
@@ -86,7 +88,7 @@ export default {
 ```js
 // next.config.js
 export default {
-  productionBrowserSourceMaps: false,  // default, but make it explicit
+  productionBrowserSourceMaps: false, // default, but make it explicit
 };
 ```
 
@@ -96,7 +98,7 @@ export default {
 // webpack.config.js
 export default {
   mode: 'production',
-  devtool: 'hidden-source-map',  // or false to skip emitting entirely
+  devtool: 'hidden-source-map', // or false to skip emitting entirely
 };
 ```
 

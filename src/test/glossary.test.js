@@ -57,15 +57,15 @@ describe('Glossary link policy: free-only', () => {
   // We enforce a subset of that here via a blocklist: domains we know put core
   // content behind a paywall, or marketing pages for paid books.
   const BLOCKED_DOMAIN_FRAGMENTS = [
-    'refactoringui.com',     // paid book
-    'amazon.com/dp/',        // Amazon product / book pages (aws.amazon.com docs are fine)
-    'amazon.com/gp/',        // Amazon product / book pages (gp variant)
-    'manning.com',           // commercial publisher
-    'pragprog.com',          // commercial publisher
-    'pluralsight.com',       // paid course platform
-    'lynda.com',             // legacy paid course platform
-    'oreilly.com/library/',  // paid book detail pages
-    'udemy.com',             // paid course platform
+    'refactoringui.com', // paid book
+    'amazon.com/dp/', // Amazon product / book pages (aws.amazon.com docs are fine)
+    'amazon.com/gp/', // Amazon product / book pages (gp variant)
+    'manning.com', // commercial publisher
+    'pragprog.com', // commercial publisher
+    'pluralsight.com', // paid course platform
+    'lynda.com', // legacy paid course platform
+    'oreilly.com/library/', // paid book detail pages
+    'udemy.com', // paid course platform
   ];
 
   it('no entry links to a known paywalled or paid-book destination', () => {

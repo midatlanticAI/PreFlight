@@ -92,7 +92,7 @@ const WebhookSchema = z.object({
 });
 
 function handleWebhook(payload: unknown) {
-  const validated = WebhookSchema.parse(payload);  // throws on bad shape
+  const validated = WebhookSchema.parse(payload); // throws on bad shape
   await db.orders.update({ id: validated.order.id, paid: validated.order.paid });
 }
 ```

@@ -41,6 +41,7 @@ The reason this works: the database parser sees one big string. It cannot tell w
 SQL injection is one of the oldest vulnerability classes and still in the OWASP Top 10. The blast radius is the whole database the query has access to. For a typical SaaS, that includes every user row, every payment record, every internal table the application user can touch.
 
 In AI-built apps the pattern appears most often because:
+
 - Tutorials use template literals as the shortest example that "works."
 - The model defaults to the same shortest example.
 - The viber pasting the output sees a working endpoint and ships it.
@@ -52,7 +53,7 @@ ORMs (Prisma, Drizzle, Knex) make the correct pattern just as short, but the pat
 Pre-Flight scans `.js` / `.jsx` / `.ts` / `.tsx` / `.py` / `.go` source for two shapes:
 
 - **High-confidence**: `db.query(\`...${...}...\`)`, `client.execute(...)`, `connection.raw(...)`, and similar with template-literal arguments containing interpolations.
-- **Heuristic**: bare `query(\`...\`)` or `execute(\`...\`)` calls where the template contains SQL keywords (`SELECT`, `INSERT`, `UPDATE`, `DELETE`).
+- **Heuristic**: bare `query(\`...\`)`or`execute(\`...\`)` calls where the template contains SQL keywords (`SELECT`, `INSERT`, `UPDATE`, `DELETE`).
 
 Tagged template literals from known parameterizing libraries (the `sql` tag from `postgres`, `slonik`, Drizzle's `sql`) are explicitly allowlisted; those tags do parameterize the interpolations.
 

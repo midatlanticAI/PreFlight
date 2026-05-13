@@ -71,16 +71,13 @@ function transform(content) {
   // clamp() px values inside fontSize / font-size declarations.
   // We need to find each clamp(...) following fontSize: or font-size:, then scale every Npx
   // inside the parens.
-  out = out.replace(
-    /(font[Ss]ize\s*:\s*['"]?)clamp\(([^)]+)\)/g,
-    (match, prefix, args) => {
-      const scaledArgs = args.replace(/(\d+(?:\.\d+)?)px/g, (m, n) => {
-        changed += 1;
-        return `${scalePx(n)}px`;
-      });
-      return `${prefix}clamp(${scaledArgs})`;
-    }
-  );
+  out = out.replace(/(font[Ss]ize\s*:\s*['"]?)clamp\(([^)]+)\)/g, (match, prefix, args) => {
+    const scaledArgs = args.replace(/(\d+(?:\.\d+)?)px/g, (m, n) => {
+      changed += 1;
+      return `${scalePx(n)}px`;
+    });
+    return `${prefix}clamp(${scaledArgs})`;
+  });
 
   return { out, changed };
 }

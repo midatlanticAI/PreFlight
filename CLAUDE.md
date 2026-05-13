@@ -60,24 +60,24 @@ Wired today: Sam SNIPPET is the system prompt for `formatAgentPrompt` (Copy Agen
 
 ## Key paths
 
-| Concern | File |
-|---|---|
-| Probe registry | `src/lib/probes.js#PROBES` |
-| Probe metadata + OWASP map + slug wiring | `src/lib/stable-id.js` |
-| Probe implementations (v0.4) | `src/lib/probes.js` + `src/lib/probes/{web,quality,code-correctness}.js` |
-| Probe implementations (v0.5) | `src/lib/probes/v05.js` + `src/lib/probes/v05b.js` |
-| Threat-intel manifests | `src/lib/threat-intel.js` + `src/data/compromised-packages.js` |
-| File filter + self-source exclusion | `src/lib/file-filter.js` |
-| BYOK providers (9) | `src/lib/ai.js#AI_PROVIDERS` |
-| Personas | `src/lib/personas/{sam,demi,drew,vera}.js` |
-| Learn content | `src/learn/{manifesto.md,patterns/,incidents/,shapes/}` |
-| Learn content loader | `src/lib/learn-content.js` |
-| Hero / scan UI | `src/components/AuditView.jsx` |
-| FAQ + history + probe legend | `src/components/HomeView.jsx` |
-| Per-finding renderer | `src/components/FindingCard.jsx` |
-| OWASP coverage page | `src/components/learn/OwaspCoverageView.jsx` |
-| Resources page | `src/components/learn/ResourcesView.jsx` |
-| Architecture writeup | `docs/preflight-architecture-and-v1.1-plan.md` |
+| Concern                                  | File                                                                     |
+| ---------------------------------------- | ------------------------------------------------------------------------ |
+| Probe registry                           | `src/lib/probes.js#PROBES`                                               |
+| Probe metadata + OWASP map + slug wiring | `src/lib/stable-id.js`                                                   |
+| Probe implementations (v0.4)             | `src/lib/probes.js` + `src/lib/probes/{web,quality,code-correctness}.js` |
+| Probe implementations (v0.5)             | `src/lib/probes/v05.js` + `src/lib/probes/v05b.js`                       |
+| Threat-intel manifests                   | `src/lib/threat-intel.js` + `src/data/compromised-packages.js`           |
+| File filter + self-source exclusion      | `src/lib/file-filter.js`                                                 |
+| BYOK providers (9)                       | `src/lib/ai.js#AI_PROVIDERS`                                             |
+| Personas                                 | `src/lib/personas/{sam,demi,drew,vera}.js`                               |
+| Learn content                            | `src/learn/{manifesto.md,patterns/,incidents/,shapes/}`                  |
+| Learn content loader                     | `src/lib/learn-content.js`                                               |
+| Hero / scan UI                           | `src/components/AuditView.jsx`                                           |
+| FAQ + history + probe legend             | `src/components/HomeView.jsx`                                            |
+| Per-finding renderer                     | `src/components/FindingCard.jsx`                                         |
+| OWASP coverage page                      | `src/components/learn/OwaspCoverageView.jsx`                             |
+| Resources page                           | `src/components/learn/ResourcesView.jsx`                                 |
+| Architecture writeup                     | `docs/preflight-architecture-and-v1.1-plan.md`                           |
 
 ## Commands
 

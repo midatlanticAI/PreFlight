@@ -102,11 +102,13 @@ Plus a `public/llms.txt`:
 > One-sentence description of what the site is.
 
 ## Main pages
+
 - [Home](https://example.com/)
 - [Docs](https://example.com/docs)
 - [Pricing](https://example.com/pricing)
 
 ## Reference
+
 - [API docs](https://example.com/api)
 ```
 

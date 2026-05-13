@@ -378,7 +378,7 @@ export function HomeView({
               },
               {
                 q: 'Can Pre-Flight catch supply-chain attacks from 2025-2026?',
-                a: 'Yes, by exact version. We hard-code known-compromised versions from Shai-Hulud (Sept 2025), Axios / Sapphire Sleet (March 2026), Mini Shai-Hulud SAP (April 2026), Bitwarden CLI 2026.4.0, the Mini Shai-Hulud TanStack worm (May 11, 2026), and more. Citations include CISA cybersecurity advisories, GTIG/Mandiant threat intelligence, Microsoft Threat Intelligence, the affected vendors\' own security advisories, and the corresponding GitHub Security Advisory records.',
+                a: "Yes, by exact version. We hard-code known-compromised versions from Shai-Hulud (Sept 2025), Axios / Sapphire Sleet (March 2026), Mini Shai-Hulud SAP (April 2026), Bitwarden CLI 2026.4.0, the Mini Shai-Hulud TanStack worm (May 11, 2026), and more. Citations include CISA cybersecurity advisories, GTIG/Mandiant threat intelligence, Microsoft Threat Intelligence, the affected vendors' own security advisories, and the corresponding GitHub Security Advisory records.",
               },
               {
                 q: 'Does Pre-Flight work with apps not built by AI?',

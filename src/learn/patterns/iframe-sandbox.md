@@ -28,10 +28,7 @@ summary: A `<iframe src="...">` without a `sandbox` attribute lets the embedded 
 
 ```html
 <!-- Sandboxed: nothing allowed except what's explicitly granted. -->
-<iframe
-  src="https://embed.example.com/widget"
-  sandbox="allow-scripts allow-same-origin"
-></iframe>
+<iframe src="https://embed.example.com/widget" sandbox="allow-scripts allow-same-origin"></iframe>
 ```
 
 `sandbox` is an HTML attribute that switches the iframe from "everything allowed" to "nothing allowed, then add capabilities back one at a time." The empty `sandbox=""` is the maximum restriction: no scripts, no forms, no popups, no top-level navigation, no plugins, fresh origin.
@@ -92,10 +89,7 @@ Add `sandbox=""` and add back only what's needed.
 **Pure content (article preview, static document):**
 
 ```html
-<iframe
-  src="https://docs.example.com/page"
-  sandbox=""
-></iframe>
+<iframe src="https://docs.example.com/page" sandbox=""></iframe>
 ```
 
 The discipline: start at `sandbox=""`, run the embed, see what breaks, add the minimum token to fix it. Most embeds need `allow-scripts` and not much else.

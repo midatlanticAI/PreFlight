@@ -82,7 +82,7 @@ The example file lets a new developer see what env vars the app needs without gr
 ## Related
 
 - [Hardcoded secrets in source](/learn/patterns/secret-scanner) covers the broader credential-leak class.
-- [NEXT_PUBLIC_ misuse](/learn/patterns/next-public-misuse) covers the specific Next.js variant where the `.env` is correctly untracked but the `NEXT_PUBLIC_` prefix exposes the values anyway.
+- [NEXT*PUBLIC* misuse](/learn/patterns/next-public-misuse) covers the specific Next.js variant where the `.env` is correctly untracked but the `NEXT_PUBLIC_` prefix exposes the values anyway.
 
 ## Sources
 

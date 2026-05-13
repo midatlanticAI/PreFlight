@@ -22,9 +22,12 @@ summary: `localStorage.setItem('jwt', token)` puts the session in a JavaScript-r
 The pattern:
 
 ```ts
-const res = await fetch('/api/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+const res = await fetch('/api/login', {
+  method: 'POST',
+  body: JSON.stringify({ email, password }),
+});
 const { token } = await res.json();
-localStorage.setItem('jwt', token);  // session is now readable by any JS on the page
+localStorage.setItem('jwt', token); // session is now readable by any JS on the page
 ```
 
 `localStorage` is a JavaScript-accessible key-value store scoped to the origin. Any script running on the page can read it. That includes XSS payloads.
@@ -67,8 +70,10 @@ export async function POST(req: Request) {
 
   const token = await signJwt({ sub: user.id });
   const res = new Response(JSON.stringify({ ok: true }));
-  res.headers.set('Set-Cookie',
-    `session=${token}; Max-Age=2592000; Path=/; HttpOnly; Secure; SameSite=Lax`);
+  res.headers.set(
+    'Set-Cookie',
+    `session=${token}; Max-Age=2592000; Path=/; HttpOnly; Secure; SameSite=Lax`
+  );
   return res;
 }
 ```

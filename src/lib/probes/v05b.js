@@ -26,9 +26,11 @@ import { isTestFile, isScannerSelfSource } from '../file-filter.js';
 //     production source-map directives enabled.
 //   - any file with a sourceMappingURL comment pointing at a public-looking path.
 
-const VITE_SOURCEMAP_RE = /build\s*:\s*\{[^}]*sourcemap\s*:\s*(?:true|['"]inline['"]|['"]hidden['"])/s;
+const VITE_SOURCEMAP_RE =
+  /build\s*:\s*\{[^}]*sourcemap\s*:\s*(?:true|['"]inline['"]|['"]hidden['"])/s;
 const NEXT_SOURCEMAP_RE = /productionBrowserSourceMaps\s*:\s*true/;
-const WEBPACK_SOURCEMAP_RE = /devtool\s*:\s*['"](?:source-map|cheap-source-map|inline-source-map)['"][^}]*?(?:mode\s*:\s*['"]production['"]|production)/s;
+const WEBPACK_SOURCEMAP_RE =
+  /devtool\s*:\s*['"](?:source-map|cheap-source-map|inline-source-map)['"][^}]*?(?:mode\s*:\s*['"]production['"]|production)/s;
 const SOURCEMAP_URL_RE = /\/\/[#@]\s*sourceMappingURL=([^\s]+)/;
 
 export function probeSourceMapExposure(files) {
@@ -39,7 +41,10 @@ export function probeSourceMapExposure(files) {
     // Config-file checks. Bundlers leak source maps to production when these
     // directives are set; the actual .map files only ship if the build runs
     // with that config. Probe flags the config, not the bytes.
-    if (/vite\.config\.(?:js|ts|mjs|cjs)$/.test(file.path) && VITE_SOURCEMAP_RE.test(file.content)) {
+    if (
+      /vite\.config\.(?:js|ts|mjs|cjs)$/.test(file.path) &&
+      VITE_SOURCEMAP_RE.test(file.content)
+    ) {
       findings.push({
         id: `sourcemap-vite-${file.path}`,
         probe: 'Source Map Exposure',
@@ -181,7 +186,8 @@ export function probeIframeSandbox(files) {
 
 const SECURITY_HANDLER_PATHS_RE =
   /\b(?:auth|login|logout|register|signup|password|admin|permission|role|access|impersonate|delete-account)\b/i;
-const HANDLER_RE = /\b(?:export\s+)?(?:async\s+)?(?:function\s+\w+|const\s+\w+\s*=\s*async)\s*\(|app\.(?:post|delete|put|patch)\s*\(|export\s+async\s+function\s+(?:POST|DELETE|PUT|PATCH)\b/;
+const HANDLER_RE =
+  /\b(?:export\s+)?(?:async\s+)?(?:function\s+\w+|const\s+\w+\s*=\s*async)\s*\(|app\.(?:post|delete|put|patch)\s*\(|export\s+async\s+function\s+(?:POST|DELETE|PUT|PATCH)\b/;
 const LOGGER_CALL_RE =
   /\b(?:log|logger|console|audit|track|telemetry|metrics|trail|record|emit|capture|monitor)\.(?:info|warn|error|debug|log|event|capture|audit|track|emit|count|increment)\b|\bSentry\.captureException\b|\bdatadog(?:Logs|Metrics)?\.\w+\b/;
 const DELETE_HANDLER_RE = /\b(?:export\s+async\s+function\s+DELETE\b|app\.delete\s*\()/;
@@ -224,7 +230,7 @@ export function probeSecurityLogging(files) {
         ? `path matches security pattern: ${file.path}`
         : 'destructive HTTP handler (DELETE/PUT/PATCH) found',
       remediation:
-        'Add structured logging to every security-sensitive action: login attempts (success + failure), password resets, permission changes, account deletions, admin actions, and any state-changing operation. Use a logger module (winston, pino, your platform\'s log abstraction) so the output is parseable. Log enough context to debug an incident (userId, IP if you have it, the action, the outcome) without logging credentials or full request bodies.',
+        "Add structured logging to every security-sensitive action: login attempts (success + failure), password resets, permission changes, account deletions, admin actions, and any state-changing operation. Use a logger module (winston, pino, your platform's log abstraction) so the output is parseable. Log enough context to debug an incident (userId, IP if you have it, the action, the outcome) without logging credentials or full request bodies.",
     });
   });
   return findings;
@@ -262,9 +268,7 @@ export function probeRAGIngestion(files) {
       if (!isEmbedding && !isVectorWrite) return;
 
       // Did user input flow into this call (or nearby)?
-      const ctx = lines
-        .slice(Math.max(0, i - 4), Math.min(lines.length, i + 4))
-        .join(' ');
+      const ctx = lines.slice(Math.max(0, i - 4), Math.min(lines.length, i + 4)).join(' ');
       if (!USER_INPUT_NEAR_RE.test(ctx)) return;
       if (RAG_VALIDATION_RE.test(ctx)) return; // visible validation; not a finding
 
@@ -316,9 +320,7 @@ export function probeVectorEmbeddingWeaknesses(files) {
       // Look at ±5 lines of context. The defense we expect: a namespace,
       // filter, or where-clause that pins the query to the current user /
       // tenant / org scope.
-      const ctx = lines
-        .slice(Math.max(0, i - 2), Math.min(lines.length, i + 6))
-        .join(' ');
+      const ctx = lines.slice(Math.max(0, i - 2), Math.min(lines.length, i + 6)).join(' ');
       const hasScopeFilter = NAMESPACE_OR_FILTER_RE.test(ctx);
       const referencesUser = USER_METADATA_RE.test(ctx);
 

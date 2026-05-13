@@ -33,7 +33,8 @@ import { isTestFile, isScannerSelfSource } from '../file-filter.js';
 //   - String literals without interpolation.
 
 const SQL_PARAMETERIZED_TAGS = new Set(['sql', 'pg', 'postgres', 'slonik', 'drizzle']);
-const SQL_RISK_CALLEES = /\b(?:db|client|connection|conn|pool|knex|sequelize)\.(?:query|raw|execute|unsafe)\s*\(\s*`/g;
+const SQL_RISK_CALLEES =
+  /\b(?:db|client|connection|conn|pool|knex|sequelize)\.(?:query|raw|execute|unsafe)\s*\(\s*`/g;
 const SQL_BARE_CALLEES = /\b(?:query|execute|raw|unsafe|prepare)\s*\(\s*`/g;
 const SQL_HAS_INTERPOLATION = /\$\{[^}]+\}/;
 
@@ -94,7 +95,7 @@ export function probeSQLInjectionTemplateLiterals(files) {
             line: i + 1,
             evidence: line.trim().slice(0, 200),
             remediation:
-              'This call interpolates user input into a SQL string. Switch to parameterized queries using the driver\'s built-in placeholder syntax. See the related Learn pattern for driver-specific examples.',
+              "This call interpolates user input into a SQL string. Switch to parameterized queries using the driver's built-in placeholder syntax. See the related Learn pattern for driver-specific examples.",
           });
         }
       }
@@ -113,10 +114,13 @@ export function probeSQLInjectionTemplateLiterals(files) {
 // derived variable (body / query / params / headers / cookies) or is built
 // from a `path.join` with such a variable.
 
-const FS_CALL_RE = /\b(?:fs|fsPromises|fsp|node:fs)\.(?:read|write|append|create(?:Read|Write)Stream|stat|lstat|access|unlink|rmdir|readdir|opendir|cp|copy)(?:File|Sync)?\s*\(/g;
+const FS_CALL_RE =
+  /\b(?:fs|fsPromises|fsp|node:fs)\.(?:read|write|append|create(?:Read|Write)Stream|stat|lstat|access|unlink|rmdir|readdir|opendir|cp|copy)(?:File|Sync)?\s*\(/g;
 const PATH_JOIN_RE = /\bpath\.(?:join|resolve)\s*\(/g;
-const USER_INPUT_TOKEN_RE = /\b(?:req|request|ctx|context|event)\.(?:body|query|params|headers|cookies|searchParams)(?:\.\w+)?/;
-const SAFE_NORMALIZE_RE = /\bpath\.(?:normalize|relative|isAbsolute)|escape|sanitize|allow(?:list)?|whitelist/i;
+const USER_INPUT_TOKEN_RE =
+  /\b(?:req|request|ctx|context|event)\.(?:body|query|params|headers|cookies|searchParams)(?:\.\w+)?/;
+const SAFE_NORMALIZE_RE =
+  /\bpath\.(?:normalize|relative|isAbsolute)|escape|sanitize|allow(?:list)?|whitelist/i;
 
 export function probePathTraversal(files) {
   const findings = [];
@@ -134,9 +138,7 @@ export function probePathTraversal(files) {
 
       // Look at ±3 lines of context for the user-input token and for any
       // normalization that would mitigate the risk.
-      const ctx = lines
-        .slice(Math.max(0, i - 1), Math.min(lines.length, i + 4))
-        .join(' ');
+      const ctx = lines.slice(Math.max(0, i - 1), Math.min(lines.length, i + 4)).join(' ');
       if (!USER_INPUT_TOKEN_RE.test(ctx)) return;
       if (SAFE_NORMALIZE_RE.test(ctx)) return;
 
@@ -193,9 +195,7 @@ export function probeWeakRandomness(files) {
       WEAK_RANDOM_CALL_RE.lastIndex = 0;
       if (!hit) return;
 
-      const ctx = lines
-        .slice(Math.max(0, i - 3), Math.min(lines.length, i + 4))
-        .join(' ');
+      const ctx = lines.slice(Math.max(0, i - 3), Math.min(lines.length, i + 4)).join(' ');
       if (UI_CONTEXT_RE.test(ctx)) return; // animation / preview use; fine
       if (!SECURITY_CONTEXT_RE.test(ctx)) return;
 
@@ -257,9 +257,7 @@ export function probeStackTraceLeaks(files) {
       // its stack property).
       if (!(hasResponse && (hasStack || hasStringifyErr))) return;
 
-      const ctx = lines
-        .slice(Math.max(0, i - 5), Math.min(lines.length, i + 2))
-        .join(' ');
+      const ctx = lines.slice(Math.max(0, i - 5), Math.min(lines.length, i + 2)).join(' ');
       if (DEV_GUARD_RE.test(ctx)) return;
 
       findings.push({
@@ -291,7 +289,8 @@ export function probeStackTraceLeaks(files) {
 // origin other than the current site, without `integrity="..."`.
 
 const SCRIPT_TAG_RE = /<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
-const LINK_STYLE_RE = /<link\b[^>]*\brel\s*=\s*["']stylesheet["'][^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>/gi;
+const LINK_STYLE_RE =
+  /<link\b[^>]*\brel\s*=\s*["']stylesheet["'][^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>/gi;
 const HAS_INTEGRITY_RE = /\bintegrity\s*=\s*["'][^"']+["']/;
 
 function isCrossOrigin(url) {

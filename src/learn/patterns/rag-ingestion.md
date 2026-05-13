@@ -37,7 +37,13 @@ export async function POST(req: Request) {
   });
   for (let i = 0; i < chunks.length; i++) {
     await pinecone.upsert({
-      vectors: [{ id: hash(chunks[i]), values: embeddings.data[i].embedding, metadata: { text: chunks[i] } }],
+      vectors: [
+        {
+          id: hash(chunks[i]),
+          values: embeddings.data[i].embedding,
+          metadata: { text: chunks[i] },
+        },
+      ],
     });
   }
   return Response.json({ ok: true });

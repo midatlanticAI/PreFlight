@@ -160,12 +160,7 @@ export const AI_PROVIDERS = {
     format: 'openai-compat',
     // Cohere ships an OpenAI-compatible shim at /compatibility/v1.
     endpoint: 'https://api.cohere.ai/compatibility/v1/chat/completions',
-    models: [
-      'command-a-2025',
-      'command-r-plus-2024',
-      'command-r-2024',
-      'command-r7b-2024',
-    ],
+    models: ['command-a-2025', 'command-r-plus-2024', 'command-r-2024', 'command-r7b-2024'],
     defaultModel: 'command-a-2025',
     docsUrl: 'https://dashboard.cohere.com/api-keys',
     keyPlaceholder: '40+ alphanumeric chars',
@@ -181,12 +176,7 @@ export const AI_PROVIDERS = {
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     // Per https://ai.google.dev/gemini-api/docs/models — Gemini 3.1 Pro Preview replaced
     // Gemini 3 Pro after the latter's March 9, 2026 shutdown. Gemini 2.0 Flash retires June 1.
-    models: [
-      'gemini-3.1-pro-preview',
-      'gemini-3.1-flash',
-      'gemini-3.1-flash-lite',
-      'gemini-3-pro',
-    ],
+    models: ['gemini-3.1-pro-preview', 'gemini-3.1-flash', 'gemini-3.1-flash-lite', 'gemini-3-pro'],
     defaultModel: 'gemini-3.1-flash-lite',
     docsUrl: 'https://aistudio.google.com/app/apikey',
     keyPlaceholder: 'AIza...',
@@ -310,7 +300,12 @@ export async function callAI({ provider, apiKey, model }, messages, onChunk, sig
 // all accept the same request body and emit the same SSE stream shape. Only the
 // endpoint URL, auth scheme (always Bearer for these providers), and model list
 // differ. Anthropic does not use this shape; it has its own callAnthropic.
-async function callOpenAICompat({ apiKey, model, endpoint, label }, { system, user }, onChunk, signal) {
+async function callOpenAICompat(
+  { apiKey, model, endpoint, label },
+  { system, user },
+  onChunk,
+  signal
+) {
   const resp = await fetch(endpoint, {
     method: 'POST',
     headers: {

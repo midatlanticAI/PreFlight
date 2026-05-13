@@ -26,7 +26,7 @@ summary: Two related patterns: SSRF (server fetches a URL the client supplies; a
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const next = searchParams.get('next');
-  return Response.redirect(next);  // attacker controls `next`
+  return Response.redirect(next); // attacker controls `next`
 }
 ```
 
@@ -37,7 +37,7 @@ A login flow with `?next=/dashboard` is normal. An attacker sends a victim a lin
 ```ts
 export async function POST(req: Request) {
   const { url } = await req.json();
-  const r = await fetch(url);  // server fetches whatever the client says
+  const r = await fetch(url); // server fetches whatever the client says
   return Response.json(await r.text());
 }
 ```
@@ -62,7 +62,7 @@ Pre-Flight scans server-side code for:
 **Open redirect:** allowlist the destination.
 
 ```ts
-const ALLOWED_PATHS = /^\/[a-zA-Z0-9_\-\/]*$/;  // internal paths only
+const ALLOWED_PATHS = /^\/[a-zA-Z0-9_\-\/]*$/; // internal paths only
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -91,7 +91,14 @@ import net from 'node:net';
 
 const BLOCKED_HOSTS = new Set(['169.254.169.254', 'metadata.google.internal']);
 const PRIVATE_RANGES = [
-  /^10\./, /^172\.(1[6-9]|2[0-9]|3[01])\./, /^192\.168\./, /^127\./, /^0\./, /^::1$/, /^fc/, /^fe80:/,
+  /^10\./,
+  /^172\.(1[6-9]|2[0-9]|3[01])\./,
+  /^192\.168\./,
+  /^127\./,
+  /^0\./,
+  /^::1$/,
+  /^fc/,
+  /^fe80:/,
 ];
 
 async function isSafeUrl(input: string): Promise<boolean> {
