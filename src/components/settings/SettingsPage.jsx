@@ -12,6 +12,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { Sliders, MessageSquare, Github, Activity, Info } from 'lucide-react';
 import { T, fontUI } from '../../lib/theme.js';
+import { useScrollFades, ScrollFadeStyles } from '../ScrollableTabs.jsx';
 
 const SETTINGS_TABS = [
   { to: '/settings', label: 'General', icon: Sliders, end: true },
@@ -22,6 +23,7 @@ const SETTINGS_TABS = [
 ];
 
 export function SettingsPage() {
+  const { ref, showLeft, showRight } = useScrollFades();
   return (
     <div className="ap-fade-in">
       <header style={{ marginBottom: 20 }}>
@@ -56,52 +58,79 @@ export function SettingsPage() {
         }}
         className="ap-settings-grid"
       >
-        <nav
-          aria-label="Settings sections"
-          style={{
-            background: T.panel,
-            border: `1px solid ${T.border}`,
-            padding: 6,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-          }}
-          className="ap-settings-sidebar"
-        >
-          {SETTINGS_TABS.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              style={({ isActive }) => ({
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '12px 14px',
-                color: isActive ? T.bg : T.text,
-                background: isActive ? T.accent : 'transparent',
-                border: 'none',
-                fontFamily: fontUI,
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: 'pointer',
-                textDecoration: 'none',
-                minHeight: 44, // WCAG 2.5.5 AAA touch target
-              })}
-              className="ap-settings-tab"
-            >
-              <Icon size={16} aria-hidden="true" />
-              {label}
-            </NavLink>
-          ))}
-        </nav>
+        <div className="ap-settings-sidebar-wrap" style={{ position: 'relative' }}>
+          <nav
+            aria-label="Settings sections"
+            ref={ref}
+            style={{
+              background: T.panel,
+              border: `1px solid ${T.border}`,
+              padding: 6,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+            }}
+            className="ap-settings-sidebar ap-scrolltabs"
+          >
+            {SETTINGS_TABS.map(({ to, label, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                style={({ isActive }) => ({
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '12px 14px',
+                  color: isActive ? T.bg : T.text,
+                  background: isActive ? T.accent : 'transparent',
+                  border: 'none',
+                  fontFamily: fontUI,
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  minHeight: 44, // WCAG 2.5.5 AAA touch target
+                  flex: '0 0 auto',
+                  whiteSpace: 'nowrap',
+                })}
+                className="ap-settings-tab"
+              >
+                <Icon size={16} aria-hidden="true" />
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+          <span
+            aria-hidden="true"
+            className="ap-scrolltabs-fade ap-scrolltabs-fade-left ap-settings-fade"
+            style={{
+              opacity: showLeft ? 1 : 0,
+              background: `linear-gradient(to right, ${T.panel}, transparent)`,
+            }}
+          />
+          <span
+            aria-hidden="true"
+            className="ap-scrolltabs-fade ap-scrolltabs-fade-right ap-settings-fade"
+            style={{
+              opacity: showRight ? 1 : 0,
+              background: `linear-gradient(to left, ${T.panel}, transparent)`,
+            }}
+          />
+        </div>
 
         <div style={{ minWidth: 0 }}>
           <Outlet />
         </div>
       </div>
 
+      <ScrollFadeStyles />
       <style>{`
+        /* Fades only matter when the sidebar is the mobile row; hide them on desktop
+           where the sidebar is a static column with everything visible. */
+        @media (min-width: 761px) {
+          .ap-settings-fade { display: none; }
+        }
         @media (max-width: 760px) {
           .ap-settings-grid {
             grid-template-columns: 1fr !important;
@@ -109,10 +138,8 @@ export function SettingsPage() {
           .ap-settings-sidebar {
             flex-direction: row !important;
             overflow-x: auto;
-            scrollbar-width: thin;
           }
           .ap-settings-tab {
-            white-space: nowrap;
             padding: 10px 12px !important;
             font-size: 14px !important;
           }

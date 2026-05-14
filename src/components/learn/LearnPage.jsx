@@ -14,6 +14,7 @@
 
 import { NavLink, Outlet } from 'react-router-dom';
 import { T, fontUI } from '../../lib/theme.js';
+import { ScrollableTabs } from '../ScrollableTabs.jsx';
 
 const SUB_TABS = [
   { to: '/learn', label: 'Vibe-Aware', end: true },
@@ -51,26 +52,14 @@ export function LearnPage() {
         </p>
       </header>
 
-      <nav
-        aria-label="Learn sub-sections"
-        style={{
-          display: 'flex',
-          gap: 4,
-          background: T.panel,
-          border: `1px solid ${T.border}`,
-          padding: 4,
-          marginBottom: 24,
-          overflowX: 'auto',
-          scrollbarWidth: 'thin',
-        }}
-        className="ap-learn-subnav"
-      >
+      <ScrollableTabs ariaLabel="Learn sub-sections" style={{ marginBottom: 24 }}>
         {SUB_TABS.map(({ to, label, end }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
             style={({ isActive }) => ({
+              flex: '0 0 auto',
               padding: '12px 16px',
               color: isActive ? T.bg : T.text,
               background: isActive ? T.accent : 'transparent',
@@ -89,15 +78,7 @@ export function LearnPage() {
             {label}
           </NavLink>
         ))}
-      </nav>
-      <style>{`
-        @media (max-width: 480px) {
-          .ap-learn-subnav a {
-            padding: 10px 12px !important;
-            font-size: 14px !important;
-          }
-        }
-      `}</style>
+      </ScrollableTabs>
 
       <Outlet />
     </div>

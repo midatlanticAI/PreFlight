@@ -217,6 +217,12 @@ export function GlobalStyle() {
           font-size: 12px;
           letter-spacing: 0.14em;
         }
+        .ap-tab {
+          padding: 12px 14px !important;
+          letter-spacing: 0.08em;
+          flex: 1 1 0;
+          text-align: center;
+        }
       }
       @media (max-width: 640px) {
         .ap-app-header {
