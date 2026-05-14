@@ -182,6 +182,44 @@ const GLOBALS = new Set([
   'TransformStream',
   'CompressionStream',
   'DecompressionStream',
+  // DOM type constructors / parsers — used in instanceof checks and `new` expressions
+  // in vendored libs (htmx, marked, etc). All are standardized DOM globals.
+  'Document',
+  'DocumentFragment',
+  'DOMParser',
+  'ShadowRoot',
+  'XPathEvaluator',
+  'HTMLAnchorElement',
+  'HTMLFormElement',
+  'HTMLInputElement',
+  'HTMLSelectElement',
+  'HTMLButtonElement',
+  'HTMLImageElement',
+  'HTMLScriptElement',
+  'HTMLStyleElement',
+  'HTMLLinkElement',
+  'HTMLMetaElement',
+  'HTMLIFrameElement',
+  'HTMLTextAreaElement',
+  'HTMLLabelElement',
+  'HTMLDivElement',
+  'HTMLSpanElement',
+  'HTMLOptionElement',
+  'HTMLOptGroupElement',
+  'HTMLCanvasElement',
+  'HTMLVideoElement',
+  'HTMLAudioElement',
+  'HTMLDialogElement',
+  'HTMLTemplateElement',
+  'HTMLTableElement',
+  'HTMLTableRowElement',
+  'HTMLTableCellElement',
+  'SVGElement',
+  // Implicit globals legal in browser contexts (older code, event handler attributes,
+  // worker globals, AMD module loader exposed by RequireJS-shaped bundles).
+  'event',
+  'self',
+  'define',
   // Node.js
   'process',
   'Buffer',
@@ -391,6 +429,12 @@ export function probeCodeCorrectness(files) {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     // v1 scope: .js and .jsx only. TypeScript needs its own parser.
     if (!/\.(?:jsx?|mjs|cjs)$/i.test(file.path)) return;
+    // Skip minified / bundled vendor files. Minifiers rename and de-duplicate symbols,
+    // so an undeclared-identifier check produces guaranteed false positives. The files
+    // also tend to reference browser globals across every category (htmx hits ~12 of
+    // them; marked hits AMD's `define`). If the user wrote it themselves, they'd ship
+    // the unminified version.
+    if (/\.min\.(?:js|jsx|mjs|cjs)$/i.test(file.path)) return;
 
     const content = file.content || '';
     if (!content.trim()) return;

@@ -47,6 +47,28 @@ export function isScannerSelfSource(path) {
   return false;
 }
 
+// --- Template-fragment detection: server-rendered templates aren't full HTML documents ---
+// Jinja2 / Django / ERB / Handlebars / Pug / Liquid / Vue templates often end up with the
+// `.html` extension but begin with `{% extends "base.html" %}` (or similar inheritance
+// directives) — meaning they're FRAGMENTS, not full documents. The `<html>`, `<head>`,
+// and CSP `<meta>` live in the base template they extend.
+//
+// Probes that check for `<html lang>`, CSP meta tags, or skip-link presence produce
+// false positives on these fragments because the directive they're checking for lives
+// one layer up in the base.
+//
+// Detection: the file has no `<html ` tag at all, OR begins (after whitespace) with a
+// template inheritance / include directive.
+const TEMPLATE_INHERITANCE_RE =
+  /^\s*(?:{%\s*extends|{%\s*block|{#|<%@|---\s*\n|@extends|@section)/i;
+export function isTemplateFragment(content) {
+  if (!content) return false;
+  if (TEMPLATE_INHERITANCE_RE.test(content)) return true;
+  // No <html ...> tag anywhere → fragment (or partial / include).
+  if (!/<html\b/i.test(content)) return true;
+  return false;
+}
+
 // --- Meta-doc exclusion: discoverability files inherently contain URL references ---
 // llms.txt, robots.txt, sitemap.xml, .preflight.yml/json are documentation/metadata files
 // that legitimately list URLs as content (sitemap entries, llms.txt outbound links, suppress-

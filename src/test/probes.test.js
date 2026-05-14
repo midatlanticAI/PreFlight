@@ -715,6 +715,27 @@ describe('probeExternalURLs', () => {
     });
     expect(probeExternalURLs([{ path: 'package-lock.json', content: lock }])).toEqual([]);
   });
+
+  it('skips Docker Compose / k8s service-name hostnames (no-dot host with port)', () => {
+    // These are bare service identifiers reachable only inside the container network.
+    // Flagging them as HTTP-only is a false positive — they can't have TLS by design.
+    // The check requires an EXPLICIT non-default port; `:80` gets stripped by URL parsing
+    // so it doesn't qualify (and `http://something:80` deliberately written is rare).
+    const code = `
+      const ollama = "http://agent-ollama:11434";
+      const redis = "http://redis:6379";
+      const db = "http://postgres-db:5432/preflight";
+    `;
+    expect(probeExternalURLs([{ path: 'src/config.py', content: code }])).toEqual([]);
+  });
+
+  it('still flags a no-port single-label host (different shape from a Docker service)', () => {
+    // `http://intranet/foo` (no port, single-label) is NOT a Docker service shape — could
+    // be a real LAN hostname. The Docker skip only kicks in when a port is present.
+    const f = probeExternalURLs([{ path: 'src/x.ts', content: 'fetch("http://intranet/login")' }]);
+    expect(f.length).toBe(1);
+    expect(f[0].severity).toBe('low');
+  });
 });
 
 describe('probeHTML', () => {
@@ -769,6 +790,15 @@ describe('probeHTML', () => {
 
   it('ignores non-HTML files', () => {
     expect(probeHTML([file('app.tsx', '<button onclick="x"/>')])).toEqual([]);
+  });
+
+  it('does NOT flag missing CSP on a Jinja template fragment (extends base)', () => {
+    const jinja = `{% extends "base.html" %}
+{% block content %}
+<script>console.log("inline")</script>
+{% endblock %}`;
+    const f = probeHTML([file('templates/page.html', jinja)]);
+    expect(f.find((x) => x.title.includes('Content-Security-Policy'))).toBeUndefined();
   });
 });
 
@@ -941,6 +971,27 @@ describe('probeA11yLandmarks', () => {
     const code = `<button onClick={x}><Trash size={12} /> Delete</button>`;
     const f = probeA11yLandmarks([file('Comp.jsx', code)]);
     expect(f.find((x) => x.title.includes('Icon-only'))).toBeUndefined();
+  });
+
+  it('does NOT flag missing <html lang> on a Jinja template fragment', () => {
+    const jinja = `{% extends "base.html" %}
+{% block content %}
+<div class="page"><h1>Hello</h1></div>
+{% endblock %}`;
+    const f = probeA11yLandmarks([file('templates/page.html', jinja)]);
+    expect(f.find((x) => x.title.includes('lang attribute'))).toBeUndefined();
+  });
+
+  it('does NOT flag missing skip-link on a Jinja template fragment', () => {
+    const jinja = `{% extends "base.html" %}\n{% block content %}<body><main>hi</main></body>{% endblock %}`;
+    const f = probeA11yLandmarks([file('templates/page.html', jinja)]);
+    expect(f.find((x) => x.title.includes('skip-to-content'))).toBeUndefined();
+  });
+
+  it('still flags input without label on a fragment (element-level check, not doc-level)', () => {
+    const fragment = `<input type="text" name="search" />`;
+    const f = probeA11yLandmarks([file('templates/partial.html', fragment)]);
+    expect(f.find((x) => x.title.includes('label'))).toBeDefined();
   });
 });
 

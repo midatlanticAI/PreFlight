@@ -5,7 +5,12 @@
 // (AI-search visibility — llms.txt, AI-crawler allows in robots.txt), and A11y landmarks
 // (skip-link, heading order, lang attribute, ARIA roles, alt text).
 
-import { isTestFile, isScannerSelfSource, isMetaDocFile } from '../file-filter.js';
+import {
+  isTestFile,
+  isScannerSelfSource,
+  isMetaDocFile,
+  isTemplateFragment,
+} from '../file-filter.js';
 import {
   URL_PLACEHOLDER_HOSTS,
   URL_PLACEHOLDER_IP_RE,
@@ -92,15 +97,22 @@ export function probeExternalURLs(files) {
     URL_RE.lastIndex = 0;
     while ((m = URL_RE.exec(content)) !== null) {
       const raw = m[0].replace(/[.,;:!?)\]\}]+$/, ''); // strip trailing punctuation
-      let host;
+      let host, port;
       try {
-        host = new URL(raw).hostname.toLowerCase();
+        const parsed = new URL(raw);
+        host = parsed.hostname.toLowerCase();
+        port = parsed.port;
       } catch {
         continue;
       }
       if (!host || isHostInSafeList(host)) continue;
       if (URL_PLACEHOLDER_HOSTS.has(host)) continue;
       if (URL_PLACEHOLDER_IP_RE.test(host)) continue;
+      // Docker Compose / Kubernetes service names: bare-identifier hostnames (no dots,
+      // valid DNS label shape) with an explicit port. e.g. `http://agent-ollama:11434`,
+      // `http://redis:6379`, `http://postgres-db:5432`. These resolve only inside the
+      // service mesh; they can't have HTTPS and they aren't real internet hosts. Skip.
+      if (port && !host.includes('.') && /^[a-z][a-z0-9-]*$/.test(host)) continue;
       if (selfDomains.has(host)) continue;
       if (isInHelpContext(content, m.index)) continue;
       if (isInCommentLine(content, m.index)) continue;
@@ -284,9 +296,10 @@ export function probeHTML(files) {
     });
 
     // Missing or weak CSP meta tag in <head> of an otherwise scriptful page.
+    // Skip template fragments — they inherit CSP from the base template they extend.
     const hasInlineScript = /<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/i.test(content);
     const hasCsp = /<meta[^>]*http-equiv\s*=\s*["']content-security-policy["']/i.test(content);
-    if (hasInlineScript && !hasCsp) {
+    if (hasInlineScript && !hasCsp && !isTemplateFragment(content)) {
       findings.push({
         id: `html-nocsp-${file.path}`,
         probe: 'HTML Hygiene',
@@ -636,8 +649,13 @@ export function probeA11yLandmarks(files) {
     });
 
     if (isHtml) {
+      // Template fragments (Jinja {% extends %}, Django, ERB, etc.) inherit <html lang>
+      // and the skip-link from their base template, so those two DOCUMENT-level checks
+      // are pure false positive on a fragment. Element-level checks below (input without
+      // label, img without alt, icon-only buttons) still need to run on fragments.
+      const isFragment = isTemplateFragment(content);
       // <html lang="...">
-      if (!/<html[^>]*\blang\s*=/i.test(content)) {
+      if (!isFragment && !/<html[^>]*\blang\s*=/i.test(content)) {
         findings.push({
           id: `a11y-html-no-lang-${file.path}`,
           probe: 'A11y Landmarks',
@@ -701,7 +719,7 @@ export function probeA11yLandmarks(files) {
       });
       // Skip-link presence (a11y best practice — visible-on-focus link at top of <body>)
       const hasSkipLink = /<a\s[^>]*href=["']#(main|content)[^>]*>(skip|jump)/i.test(content);
-      if (!hasSkipLink && /<body[^>]*>/i.test(content)) {
+      if (!isFragment && !hasSkipLink && /<body[^>]*>/i.test(content)) {
         findings.push({
           id: `a11y-no-skip-link-${file.path}`,
           probe: 'A11y Landmarks',
