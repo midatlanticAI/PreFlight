@@ -17,13 +17,15 @@ describe('fetchGitHubRepo Authorization header', () => {
     // Mock fetch to capture every call's URL + headers, and return canned responses.
     globalThis.fetch = vi.fn(async (url, opts) => {
       capturedRequests.push({ url, headers: opts?.headers || {} });
-      // /repos/:owner/:repo — repo metadata
-      if (url.includes('/repos/') && !url.includes('/git/trees/')) {
+      // /repos/:owner/:repo — repo metadata. Default fixture is PUBLIC so blob fetches
+      // route through raw.githubusercontent.com (the CDN-fast path). Match the exact
+      // shape so /contents/ and /git/trees/ URLs fall through to their own handlers.
+      if (/\/repos\/[^/]+\/[^/]+$/.test(url)) {
         return {
           ok: true,
           status: 200,
           headers: new Map(),
-          json: async () => ({ default_branch: 'main' }),
+          json: async () => ({ default_branch: 'main', private: false }),
         };
       }
       // /git/trees/main?recursive=1 — repo tree
@@ -111,6 +113,71 @@ describe('fetchGitHubRepo Authorization header', () => {
     await fetchGitHubRepo('https://github.com/octocat/two');
     const secondCall = capturedRequests[0];
     expect(secondCall.headers.Authorization).toBe(`token ${secondPat}`);
+  });
+});
+
+describe('fetchGitHubRepo private-repo blob path', () => {
+  // Regression test for the v0.6 fix: raw.githubusercontent.com ignores Authorization
+  // headers for private-repo blobs, so private repos must route through the api.github.com
+  // contents endpoint with `Accept: application/vnd.github.raw`.
+  let originalFetch;
+  let capturedRequests;
+
+  beforeEach(() => {
+    capturedRequests = [];
+    originalFetch = globalThis.fetch;
+    saveGitHubPAT('ghp_private_' + 'a'.repeat(30));
+    globalThis.fetch = vi.fn(async (url, opts) => {
+      capturedRequests.push({ url, headers: opts?.headers || {} });
+      if (/\/repos\/[^/]+\/[^/]+$/.test(url)) {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Map(),
+          json: async () => ({ default_branch: 'main', private: true }),
+        };
+      }
+      if (url.includes('/git/trees/')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            tree: [{ path: 'package.json', type: 'blob', size: 100 }],
+            truncated: false,
+          }),
+        };
+      }
+      if (url.includes('/contents/')) {
+        return { ok: true, status: 200, text: async () => '{"name":"secret"}' };
+      }
+      return { ok: false, status: 404, statusText: 'Not Found' };
+    });
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    clearGitHubPAT();
+  });
+
+  it('routes private-repo blob fetches through api.github.com/contents, not raw.githubusercontent.com', async () => {
+    const files = await fetchGitHubRepo('https://github.com/acme/secret-repo');
+
+    expect(files).toHaveLength(1);
+    expect(files[0].path).toBe('package.json');
+    expect(files[0].content).toBe('{"name":"secret"}');
+
+    const rawCalls = capturedRequests.filter((r) => r.url.includes('raw.githubusercontent.com'));
+    const contentsCalls = capturedRequests.filter((r) => r.url.includes('/contents/'));
+    expect(rawCalls).toHaveLength(0);
+    expect(contentsCalls).toHaveLength(1);
+  });
+
+  it('sends Accept: application/vnd.github.raw on the contents call', async () => {
+    await fetchGitHubRepo('https://github.com/acme/secret-repo');
+    const contentsCall = capturedRequests.find((r) => r.url.includes('/contents/'));
+    expect(contentsCall).toBeDefined();
+    expect(contentsCall.headers.Accept).toBe('application/vnd.github.raw');
+    expect(contentsCall.headers.Authorization).toMatch(/^token ghp_private_/);
   });
 });
 

@@ -159,6 +159,11 @@ export async function fetchGitHubRepo(url, onProgress) {
   if (!branch) {
     throw new Error('GitHub did not report a default branch. Repository may be empty.');
   }
+  // raw.githubusercontent.com is the CDN-fast path but it does not reliably honor
+  // Authorization headers for private-repo blobs (returns 404 even with a valid PAT).
+  // For private repos we route blob fetches through api.github.com/repos/.../contents
+  // with `Accept: application/vnd.github.raw` so the auth header is respected.
+  const isPrivate = repoInfo.private === true;
 
   onProgress?.({ stage: `Walking ${branch} tree`, current: 0, total: 1 });
   let treeResp;
@@ -195,14 +200,28 @@ export async function fetchGitHubRepo(url, onProgress) {
 
   const out = [];
   let blobFailures = 0;
+  // Path segments need to be individually URL-encoded so that spaces / unicode / hashes in
+  // file names don't break the contents-endpoint URL. raw.githubusercontent.com is more
+  // lenient but we encode either way for consistency.
+  const encodePath = (p) => p.split('/').map(encodeURIComponent).join('/');
+  // Build per-file blob fetcher. For private repos with a PAT we use the api.github.com
+  // contents endpoint with `Accept: application/vnd.github.raw` because raw.gh ignores the
+  // Authorization header for private blobs. For public repos we keep the CDN-fast path.
+  const fetchBlob = isPrivate
+    ? (path) =>
+        fetch(
+          `https://api.github.com/repos/${owner}/${repo}/contents/${encodePath(path)}?ref=${encodeURIComponent(branch)}`,
+          { headers: { ...authHeaders, Accept: 'application/vnd.github.raw' } }
+        )
+    : (path) =>
+        fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodePath(path)}`, {
+          headers: authHeaders,
+        });
   for (let i = 0; i < targets.length; i++) {
     const t = targets[i];
     onProgress?.({ stage: `Fetching ${t.path}`, current: i + 1, total: targets.length });
     try {
-      const r = await fetch(
-        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${t.path}`,
-        { headers: authHeaders }
-      );
+      const r = await fetchBlob(t.path);
       if (r.ok) {
         const content = await r.text();
         out.push({ path: t.path, content });
@@ -216,11 +235,17 @@ export async function fetchGitHubRepo(url, onProgress) {
     }
   }
   if (blobFailures > 0) {
-    ghLog.warn('Some blob fetches failed', { fetched: out.length, failed: blobFailures });
+    ghLog.warn('Some blob fetches failed', {
+      fetched: out.length,
+      failed: blobFailures,
+      private: isPrivate,
+    });
   }
   if (out.length === 0) {
     throw new Error(
-      'Tree was readable but no file contents could be fetched. Likely a sandbox restriction. Use Files / Folder upload.'
+      isPrivate
+        ? `All ${targets.length} private-repo blob fetches failed. The PAT was accepted for repo metadata but rejected for file content. Verify the token has "Contents: read" repo access (fine-grained PAT) or the classic "repo" scope, then re-scan. Fallback: use Files / Folder upload.`
+        : `All ${targets.length} blob fetches failed. Likely a sandboxed-iframe restriction or a transient GitHub outage. Use Files / Folder upload as a workaround.`
     );
   }
   return out;
