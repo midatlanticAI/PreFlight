@@ -587,24 +587,43 @@ describe('probeAICodeSmells', () => {
 });
 
 describe('probeExternalURLs', () => {
-  it('flags an unknown domain referenced in source', () => {
+  // Post-v0.6 contract: URL Reputation is a SIGNAL detector, not a URL census. Generic
+  // HTTPS URLs on unknown hosts are NOT findings — they were the dominant noise source
+  // in the old "info on every unrecognized host" behavior. Only emit when something
+  // objectively suspicious matches.
+  it('does NOT flag a generic HTTPS URL on an unknown host', () => {
     const f = probeExternalURLs([
-      { path: 'src/api.ts', content: 'fetch("https://dasgas.com/api/x")' },
+      { path: 'src/api.ts', content: 'fetch("https://api.somerandomvendor.io/v1/data")' },
     ]);
-    expect(f).toHaveLength(1);
-    expect(f[0].title).toMatch(/dasgas\.com/);
-    expect(f[0].remediation).toMatch(/virustotal\.com/);
+    expect(f).toEqual([]);
   });
 
-  it('escalates suspicious TLDs to medium', () => {
+  it('does NOT flag URLs sitting in single-line // comments', () => {
+    const f = probeExternalURLs([
+      { path: 'src/a.ts', content: '// See http://1.2.3.4/dashboard for the staging endpoint' },
+    ]);
+    expect(f).toEqual([]);
+  });
+
+  it('does NOT flag URLs sitting in JSDoc * lines', () => {
+    const f = probeExternalURLs([
+      {
+        path: 'src/a.ts',
+        content: '/**\n * Background: https://something.tk/writeup\n */\nexport const x = 1;',
+      },
+    ]);
+    expect(f).toEqual([]);
+  });
+
+  it('flags suspicious TLDs at medium', () => {
     const f = probeExternalURLs([{ path: 'a.ts', content: 'fetch("https://something.tk/x")' }]);
     expect(f[0].severity).toBe('medium');
     expect(f[0].title).toMatch(/Suspicious TLD/);
   });
 
-  it('escalates raw IPs to medium', () => {
+  it('flags raw IPs at medium', () => {
     // Use a non-reserved IP: 203.0.113.0/24 is RFC 5737 (documentation) so the probe
-    // now treats it as a placeholder and skips it. 1.2.3.4 is real-looking enough.
+    // treats it as a placeholder and skips it. 1.2.3.4 is real-looking enough.
     const f = probeExternalURLs([{ path: 'a.ts', content: 'fetch("http://1.2.3.4/x")' }]);
     expect(f[0].severity).toBe('medium');
     expect(f[0].title).toMatch(/Raw IP/);
@@ -642,11 +661,12 @@ describe('probeExternalURLs', () => {
 
   it('skips meta/doc files (llms.txt, robots.txt, sitemap.xml, .preflight.yml)', () => {
     // These files are *expected* to enumerate URLs as content — flagging them is pure noise.
+    // Use a .tk URL so the test would fire if the meta-doc skip ever regressed.
     const f = probeExternalURLs([
-      { path: 'public/llms.txt', content: 'See https://dasgas.com for one example.' },
-      { path: 'public/robots.txt', content: 'Sitemap: https://dasgas.com/sitemap.xml' },
-      { path: 'public/sitemap.xml', content: '<loc>https://dasgas.com/page</loc>' },
-      { path: '.preflight.yml', content: "reason: 'fix per https://dasgas.com/advisory'" },
+      { path: 'public/llms.txt', content: 'See https://something.tk for one example.' },
+      { path: 'public/robots.txt', content: 'Sitemap: https://something.tk/sitemap.xml' },
+      { path: 'public/sitemap.xml', content: '<loc>https://something.tk/page</loc>' },
+      { path: '.preflight.yml', content: "reason: 'fix per https://something.tk/advisory'" },
     ]);
     expect(f).toEqual([]);
   });
@@ -677,9 +697,13 @@ describe('probeExternalURLs', () => {
   });
 
   it('groups multiple references to the same host into one finding', () => {
+    // Use a sketchy-TLD host so a finding fires under the new signal-only contract.
     const f = probeExternalURLs([
-      { path: 'a.ts', content: 'fetch("https://dasgas.com/a")' },
-      { path: 'b.ts', content: 'fetch("https://dasgas.com/b")\nfetch("https://dasgas.com/c")' },
+      { path: 'a.ts', content: 'fetch("https://something.tk/a")' },
+      {
+        path: 'b.ts',
+        content: 'fetch("https://something.tk/b")\nfetch("https://something.tk/c")',
+      },
     ]);
     expect(f).toHaveLength(1);
     expect(f[0].title).toMatch(/×3/);

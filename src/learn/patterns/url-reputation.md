@@ -13,21 +13,21 @@ sources:
     url: https://urlhaus.abuse.ch/
   - title: 'CWE-829 — Inclusion of Functionality from Untrusted Control Sphere'
     url: https://cwe.mitre.org/data/definitions/829.html
-summary: External URLs referenced in source flagged when they match patterns associated with abuse: raw-IP URLs, suspicious TLDs (.tk, .xyz, .gq), URL shorteners, http-only links. A signal to verify, not a verdict.
+summary: External URLs flagged ONLY when they trip an objective signal — raw-IP endpoints, suspicious TLDs (.tk, .xyz, .gq, etc.), URL shorteners, or HTTP-only links. Generic HTTPS URLs on unfamiliar hosts are NOT findings. A signal to verify, not a verdict.
 ---
 
 ## What this is
 
-Pre-Flight extracts every external HTTP/HTTPS URL from the project's source and runs heuristics over each. The probe is informational by design; a finding asks you to verify, not to patch.
+Pre-Flight extracts every external HTTP/HTTPS URL from the project's source and emits a finding only when the URL trips one of four objective signals. A generic HTTPS URL on a host the probe doesn't recognize is **not** a finding. (The pre-v0.6 behavior emitted an `info` finding for every unrecognized host, which produced a wall of noise on real projects that legitimately reference dozens of third-party domains.)
 
-The heuristics:
+The signals:
 
-- **Raw IP URLs**: `http://203.0.113.42/...`. Real APIs use hostnames. A raw IP in source is either a developer leaving a debug endpoint, a placeholder that wasn't replaced, or a deliberately-obscured destination.
-- **Suspicious TLDs**: `.tk`, `.xyz`, `.gq`, `.ml`, `.cf`, `.top`. These TLDs are disproportionately used by abuse infrastructure because they offer free or near-free registration with minimal verification.
-- **URL shorteners**: `bit.ly`, `tinyurl.com`, `goo.gl`, and others. A shortener in source hides the destination. The destination at write-time may differ from the destination at run-time.
-- **`http://` (not `https://`)**: plain HTTP in source. Either downgrade-prone or pointing at infrastructure that doesn't support TLS, both of which warrant a check.
+- **Raw IP URLs** — `http://1.2.3.4/...`. Real APIs use hostnames. A raw IP in source is either a developer leaving a debug endpoint, a placeholder that wasn't replaced, or a deliberately-obscured destination. Severity: medium.
+- **Suspicious TLDs** — `.tk`, `.xyz`, `.gq`, `.ml`, `.cf`, `.top`, `.click`, `.zip`, `.mov`, and others disproportionately used by abuse infrastructure because they offer free or near-free registration with minimal verification. Severity: medium.
+- **URL shorteners** — `bit.ly`, `tinyurl.com`, `goo.gl`, `t.co`, `ow.ly`, and others. A shortener in source hides the destination. The target at write-time may differ from the target at run-time. Severity: medium.
+- **HTTP-only** — plain `http://` URL, no `https://` alternative seen for the same host. Either downgrade-prone or pointing at infrastructure that doesn't support TLS. Severity: low.
 
-The probe avoids known-safe hosts (`github.com`, `npmjs.com`, `cloudflare.com`, major cloud provider domains, etc.) to keep the noise level reasonable.
+The probe also excludes: URLs inside `// comments` and JSDoc bodies (documentation, not runtime endpoints), URLs inside `remediation:` / `description:` / `learn_more:` / `source:` string-literal contexts (probe meta, not endpoints), the project's own homepage (`package.json#homepage`), self-domains declared in `.preflight.yml`, IANA-reserved example hosts (`example.com`, `localhost`, etc.), and RFC 5737 documentation-IP ranges (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`).
 
 ## Why it matters
 
@@ -42,12 +42,14 @@ The URL Reputation probe doesn't catch these directly. It catches the patterns w
 
 ## What the failure looks like
 
-Each external URL produces a finding at info / low / medium severity based on which heuristics match:
+A finding fires only when at least one of the four signals matches. Severity:
 
-- One heuristic match: info.
-- Multiple heuristic matches: low or medium.
+- HTTP-only with no TLS: **low**.
+- Raw IP, suspicious TLD, or URL shortener: **medium**.
 
-Pre-Flight links each finding to one-click VirusTotal, urlhaus, and whois lookups so the verification is immediate.
+Every finding links to one-click VirusTotal, urlhaus, and whois lookups so the verification is immediate.
+
+Each unique host is grouped into a single finding (the evidence field lists the first three occurrence locations) so a host referenced ten times doesn't produce ten duplicate entries.
 
 ## What the fix looks like
 

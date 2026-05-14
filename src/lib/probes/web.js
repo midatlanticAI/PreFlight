@@ -66,9 +66,18 @@ export function probeExternalURLs(files) {
   // chars from the match index looking for one of those property names.
   const isInHelpContext = (content, idx) => {
     const back = content.slice(Math.max(0, idx - 120), idx);
-    return /\b(remediation|description|help|docs?Url|message|note|hint)\s*[:=]\s*[`'"][^`'"]*$/i.test(
+    return /\b(remediation|description|help|docs?Url|learn_?more|message|note|hint|source|title|label)\s*[:=]\s*[`'"][^`'"]*$/i.test(
       back
     );
+  };
+
+  // Returns true if the URL match sits on a line that opens with `//`, ` *`, or `/*` — i.e.
+  // it's a comment. Single-line comments (`// see https://foo`) and JSDoc bodies (` * @see
+  // https://bar`) carry doc links, not runtime endpoints. Flagging them is pure noise.
+  const isInCommentLine = (content, idx) => {
+    const lineStart = content.lastIndexOf('\n', idx - 1) + 1;
+    const prefix = content.slice(lineStart, idx).replace(/^\s+/, '');
+    return /^(?:\/\/|\*\s|\/\*)/.test(prefix);
   };
 
   files.forEach((file) => {
@@ -94,6 +103,7 @@ export function probeExternalURLs(files) {
       if (URL_PLACEHOLDER_IP_RE.test(host)) continue;
       if (selfDomains.has(host)) continue;
       if (isInHelpContext(content, m.index)) continue;
+      if (isInCommentLine(content, m.index)) continue;
 
       const lineNum = content.slice(0, m.index).split('\n').length;
       const isHttp = raw.startsWith('http:');
@@ -104,14 +114,20 @@ export function probeExternalURLs(files) {
     }
   });
 
+  // Only emit a finding when the host trips an objective heuristic. The pre-v0.6 behavior of
+  // flagging every unknown HTTPS host as `info` produced a wall of noise on any real app
+  // (Twitter / blog hosts / vendor docs / etc. are not on the curated safe list, but
+  // referencing them isn't a security issue). The new contract: this probe is a signal
+  // detector, not an "unknown URL census."
   for (const [host, info] of seen) {
     const isIP = URL_RAW_IP_RE.test(host);
     const sketchyTLD = URL_SUSPICIOUS_TLD_RE.test(host);
     const isShortener = URL_SHORTENERS.has(host);
     const httpOnly = info.allHttp;
 
-    let severity = 'info';
-    let reason = 'External URL referenced in source';
+    if (!isIP && !sketchyTLD && !isShortener && !httpOnly) continue;
+
+    let severity, reason;
     if (isIP) {
       severity = 'medium';
       reason = 'Raw IP address used as endpoint';
@@ -121,7 +137,7 @@ export function probeExternalURLs(files) {
     } else if (isShortener) {
       severity = 'medium';
       reason = 'URL shortener (hides destination)';
-    } else if (httpOnly) {
+    } else {
       severity = 'low';
       reason = 'HTTP only — no TLS';
     }
@@ -142,11 +158,12 @@ export function probeExternalURLs(files) {
       line: first.line,
       evidence,
       remediation:
-        `Verify this domain hasn't been compromised, repurposed, or sold. The audit tool can't query reputation feeds from the browser due to CORS, so confirm with these one-click checks:\n\n` +
+        `This URL trips a heuristic associated with abuse infrastructure (raw IP, suspicious TLD, shortener, or HTTP-only). The probe doesn't claim the domain is malicious; it asks you to verify.\n\n` +
+        `One-click reputation checks (Pre-Flight can't query these from the browser due to CORS):\n` +
         `• VirusTotal: https://www.virustotal.com/gui/domain/${encodeURIComponent(host)}\n` +
         `• urlhaus (abuse.ch): https://urlhaus.abuse.ch/browse.php?search=${encodeURIComponent(host)}\n` +
         `• whois: https://who.is/whois/${encodeURIComponent(host)}\n\n` +
-        `Why this matters: a domain you trusted at write-time can change hands or get compromised. dasgas.com is a real example — Seclookup flagged it Malicious in the past. If you don't actively monitor your dependency URLs, a once-clean domain can become a quiet exfiltration target without anyone noticing.`,
+        `Fixes by signal: raw IP → use a hostname so DNS can be repointed; suspicious TLD → move to a verified registrar; shortener → use the unshortened destination so the target is auditable; HTTP-only → switch to https://.`,
     });
   }
   return findings;
