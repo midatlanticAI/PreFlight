@@ -25,6 +25,12 @@ import { JV_DESERIALIZE_001 } from './java/jv-deserialize-001-objectinputstream.
 import { JV_SQL_RAW_001 } from './java/jv-sql-raw-001-concat.js';
 import { JV_TLS_VERIFY_001 } from './java/jv-tls-verify-001-trustall.js';
 import { JV_SECRETS_001 } from './java/jv-secrets-001-hardcoded.js';
+import { C_SQL_RAW_001 } from './c/c-sql-raw-001-mprintf.js';
+import { C_TLS_VERIFY_001 } from './c/c-tls-verify-001-sslnone.js';
+import { C_SECRETS_001 } from './c/c-secrets-001-hardcoded.js';
+import { CPP_SQL_RAW_001 } from './cpp/cpp-sql-raw-001-qstring.js';
+import { CPP_TLS_VERIFY_001 } from './cpp/cpp-tls-verify-001-sslnone.js';
+import { CPP_SECRETS_001 } from './cpp/cpp-secrets-001-hardcoded.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -47,4 +53,10 @@ export const ADAPTERS = [
   JV_SQL_RAW_001,
   JV_TLS_VERIFY_001,
   JV_SECRETS_001,
+  C_SQL_RAW_001,
+  C_TLS_VERIFY_001,
+  C_SECRETS_001,
+  CPP_SQL_RAW_001,
+  CPP_TLS_VERIFY_001,
+  CPP_SECRETS_001,
 ];
