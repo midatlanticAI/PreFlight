@@ -51,6 +51,10 @@ import { PHP_DESERIALIZE_001 } from './php/php-deserialize-001-unserialize.js';
 import { PHP_SQL_RAW_001 } from './php/php-sql-raw-001-concat.js';
 import { PHP_TLS_VERIFY_001 } from './php/php-tls-verify-001-curlopt.js';
 import { PHP_SECRETS_001 } from './php/php-secrets-001-hardcoded.js';
+import { SC_DESERIALIZE_001 } from './scala/sc-deserialize-001-objectinput.js';
+import { SC_SQL_RAW_001 } from './scala/sc-sql-raw-001-interpolation.js';
+import { SC_TLS_VERIFY_001 } from './scala/sc-tls-verify-001-trustall.js';
+import { SC_SECRETS_001 } from './scala/sc-secrets-001-hardcoded.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -99,4 +103,8 @@ export const ADAPTERS = [
   PHP_SQL_RAW_001,
   PHP_TLS_VERIFY_001,
   PHP_SECRETS_001,
+  SC_DESERIALIZE_001,
+  SC_SQL_RAW_001,
+  SC_TLS_VERIFY_001,
+  SC_SECRETS_001,
 ];
