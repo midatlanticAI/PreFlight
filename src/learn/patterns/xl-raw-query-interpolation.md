@@ -6,6 +6,7 @@ last_updated: 2026-05-15
 draft: false
 related_probe_ids:
   - Python Raw SQL Interpolation
+  - JS SQL Injection (XL-002)
 sources:
   - title: CWE-89 — SQL Injection
     url: https://cwe.mitre.org/data/definitions/89.html

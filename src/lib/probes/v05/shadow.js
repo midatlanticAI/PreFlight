@@ -7,9 +7,12 @@
 // deltas for migration sign-off.
 //
 // Phase 0: the harness exists; no shadow adapters are registered yet.
-// Phase 2: each migrated adapter is registered here with shadow:true; after
-// 7+ days of shadow-output matching production-output by stableId, the flip
-// happens (v0.4 probe goes to shadow, v0.5 adapter goes to production).
+// Phase 2: each migrated adapter is registered here with shadow:true. The
+// flip (v0.4 probe -> shadow, v0.5 adapter -> production) is a one-field
+// config change a maintainer makes once shadow output matches production
+// output by stableId. There is no wall-clock dependency — how long to soak
+// the comparison before flipping is a deployment-confidence judgment, not a
+// barrier to shipping the code. See v05-architecture.md, execution gap #2.
 
 import { validateAdapter } from './manifest.js';
 

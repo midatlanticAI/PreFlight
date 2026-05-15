@@ -20,17 +20,21 @@ import { getBySlug } from '../lib/learn-content.js';
 import { attachProbeMeta } from '../lib/stable-id.js';
 import { PROBES } from '../App.jsx';
 
-const ENTRIES = Object.values(PROBE_MANIFEST_V05);
+// Phase 1 = the four Python adapters. The manifest also carries Phase 2+
+// adapters now, so scope every Phase 1 assertion to these ids rather than
+// the whole manifest.
+const PHASE1_IDS = ['PY-DESERIALIZE-001', 'PY-SECRETS-001', 'PY-SQL-RAW-001', 'PY-TLS-VERIFY-001'];
+const ENTRIES = Object.values(PROBE_MANIFEST_V05).filter((e) => PHASE1_IDS.includes(e.probe_id));
 
 describe('Phase 1: manifest shape', () => {
-  it('registers exactly the four Phase 1 Python adapters', () => {
-    const ids = Object.keys(PROBE_MANIFEST_V05).sort();
-    expect(ids).toEqual([
-      'PY-DESERIALIZE-001',
-      'PY-SECRETS-001',
-      'PY-SQL-RAW-001',
-      'PY-TLS-VERIFY-001',
-    ]);
+  it('registers the four Phase 1 Python adapters and they are the only python ones', () => {
+    const ids = Object.keys(PROBE_MANIFEST_V05);
+    for (const id of PHASE1_IDS) expect(ids).toContain(id);
+    const pythonIds = Object.values(PROBE_MANIFEST_V05)
+      .filter((e) => e.language === 'python')
+      .map((e) => e.probe_id)
+      .sort();
+    expect(pythonIds).toEqual([...PHASE1_IDS].sort());
   });
 
   it('every Phase 1 adapter is shadow + experimental (no user-visible change yet)', () => {

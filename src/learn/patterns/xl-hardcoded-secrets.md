@@ -6,6 +6,7 @@ last_updated: 2026-05-15
 draft: false
 related_probe_ids:
   - Python Hardcoded Secret
+  - JS Secret Scanner (XL-006)
 sources:
   - title: CWE-798 — Use of Hard-coded Credentials
     url: https://cwe.mitre.org/data/definitions/798.html
