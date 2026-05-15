@@ -1,0 +1,10 @@
+# Fixture files for each registered adapter land here, organized by probe_id:
+#
+#   fixtures/PY-DESERIALIZE-001/positive.py
+#   fixtures/PY-DESERIALIZE-001/negative.py
+#   fixtures/PY-DESERIALIZE-001/adversarial.py   (optional)
+#
+# The manifest aggregator's validateFixturePaths() refuses to register an
+# adapter whose declared paths don't exist on disk. The dogfood scan
+# exercises every fixture: positive MUST produce >=1 finding, negative MUST
+# produce 0.

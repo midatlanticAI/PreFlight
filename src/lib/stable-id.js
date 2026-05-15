@@ -1,6 +1,19 @@
 // src/lib/stable-id.js
 // Deterministic per-finding identifiers that survive line shifts and reformats, plus the
 // per-probe confidence / autofix metadata that the UI surfaces alongside severity.
+
+import { PROBE_MANIFEST_V05, MANIFEST_OWASP_MAP, mergeOwaspMaps } from './probes/v05/manifest.js';
+
+// Reverse-lookup: probe name -> v0.5 manifest entry. Built lazily at module load so
+// attachProbeMeta can find the v0.5 record by the same `finding.probe` string the
+// v0.4 pipeline uses. Empty for Phase 0; populated incrementally as adapters land.
+const MANIFEST_BY_PROBE_NAME = (() => {
+  const out = {};
+  for (const entry of Object.values(PROBE_MANIFEST_V05)) {
+    if (entry?.name) out[entry.name] = entry;
+  }
+  return out;
+})();
 //
 // Why the stableId hash exists: a finding's default uid=197610(jviru) gid=197610 groups=197610 field uses byte offsets, so any
 // edit above a vulnerability invents a new id. That makes suppression and "have I seen
@@ -35,7 +48,14 @@ export function stableId(finding, fileContent) {
     .map((s) => s.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .join('|');
-  const key = `${finding.probe}|${file}|${finding.title}|${ctx}`;
+  // v0.5 migration continuity: when a v0.5 adapter replaces a v0.4 probe, it can
+  // declare legacy_finding_id_seed in its manifest entry. The stableId hash uses
+  // that seed in place of the probe name so the hash is byte-identical to what the
+  // v0.4 probe produced. Users' suppression entries (which reference the old hash)
+  // keep working without rewrites. New probes (no seed) hash by probe name as before.
+  const v05 = MANIFEST_BY_PROBE_NAME[finding.probe];
+  const seed = v05?.legacy_finding_id_seed || finding.probe;
+  const key = `${seed}|${file}|${finding.title}|${ctx}`;
   return fnv1a(key);
 }
 
@@ -320,7 +340,14 @@ export const PROBE_META = {
 //
 // Reference: OWASP Top 10 2025 (https://owasp.org/Top10/) and
 //            OWASP LLM Top 10 2025 (https://genai.owasp.org/llm-top-10/).
-export const PROBE_OWASP_MAP = {
+//
+// v0.5 migration shape: the hand-coded map below is one of two contributors.
+// MANIFEST_OWASP_MAP (built from the v0.5 PROBE_MANIFEST_V05) is the other.
+// PROBE_OWASP_MAP is the merge of both. As probes migrate to v0.5 their hand-
+// coded entries move out of HAND_CODED_OWASP_MAP and into the manifest; the
+// exported PROBE_OWASP_MAP shape stays identical so OwaspCoverageView and the
+// tests don't need to change. For Phase 0 the manifest map is empty.
+const HAND_CODED_OWASP_MAP = {
   // OWASP Top 10 2025
   A01: [
     'Admin Route Exposure',
@@ -363,6 +390,11 @@ export const PROBE_OWASP_MAP = {
   LLM08: ['Vector Embedding Weaknesses'],
 };
 
+// The exported map is the merge. For Phase 0 (manifest empty) this is byte-
+// identical to HAND_CODED_OWASP_MAP. Consumers (OwaspCoverageView,
+// FindingCard via OWASP_BY_PROBE) read PROBE_OWASP_MAP and need no changes.
+export const PROBE_OWASP_MAP = mergeOwaspMaps(HAND_CODED_OWASP_MAP, MANIFEST_OWASP_MAP);
+
 // Human-readable label for each OWASP code. Used by the OWASP coverage page
 // and by the FindingCard tooltip.
 export const OWASP_LABELS = {
@@ -398,6 +430,10 @@ export const OWASP_BY_PROBE = (() => {
 })();
 
 // Attach probe-level confidence and autofix metadata to each finding.
+// v0.5 extension: when a manifest entry exists for the probe (looked up by name),
+// also copy the v0.5 fields onto the finding. Personas and downstream consumers
+// (formatAgentPrompt, FindingCard) read these as plain finding fields per Q5
+// resolution in docs/v05-research/v05-architecture.md — emission-time copy.
 export function attachProbeMeta(findings) {
   findings.forEach((f) => {
     const meta = PROBE_META[f.probe];
@@ -419,6 +455,24 @@ export function attachProbeMeta(findings) {
       // Default: treat as medium / manual when we haven't classified a probe yet.
       f.confidence = 'medium';
       f.autofix = 'manual';
+    }
+    // v0.5: copy manifest fields onto the finding when an adapter is registered
+    // for this probe name. Phase 0 has no adapters; this block is a no-op until
+    // Phase 1+ adapters land. The fields override v0.4 PROBE_META values when
+    // both are present (manifest is authoritative for migrated probes).
+    const v05 = MANIFEST_BY_PROBE_NAME[f.probe];
+    if (v05) {
+      f.probe_id = v05.probe_id;
+      if (v05.xl_family != null) f.xl_family = v05.xl_family;
+      f.maturity = v05.maturity;
+      f.why_ai_v05 = v05.why_ai_v05;
+      f.vibe_v05 = v05.vibe_v05;
+      f.fp_gates_v05 = v05.fp_gates_v05;
+      f.autofix_v05 = v05.autofix_v05;
+      // Backward-compat fold: v0.5 autofix tier wins over v0.4 PROBE_META.autofix
+      // for migrated probes. Same enum values, same semantics.
+      f.autofix = v05.autofix_v05;
+      f.confidence = v05.confidence;
     }
   });
   return findings;
