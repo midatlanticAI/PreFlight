@@ -75,14 +75,26 @@ Shared helpers (test-fixture-path detection, `.example`-file detection,
 allowlist-comment detection) live in a third tier — `shared-detectors/` —
 that adapters import explicitly. The family record stays pure metadata.
 
-### Decision 3: Handwritten for v0.5, codegen later
+### Decision 3: AI-authored adapters, no deterministic generator
 
-Roughly 30 hand-authored adapters in v0.5 (4 priority XL families × ~4
-priority languages + the 7 language-specific probes from the cross-tool
-comparison + migration of overlapping v0.4 probes). Codegen waits until
-v0.6+ when the matrix (XL family × language → detection pattern) is
-observable rather than hypothetical. The directory structure is designed
-so codegen can write into it later without conflict.
+Adapters are authored per-file with judgment: read the research spec,
+choose the detection approach, write the language-specific false-positive
+gates, hand-craft the positive/negative fixtures, write the Learn page.
+
+There is no separate deterministic codegen tool (no `scripts/gen-adapter`,
+no template-substitution generator) and none is planned. The "168 files is
+too many to hand-write" problem that a template generator would solve does
+not exist when the authoring is judgment-driven: a dumb template generator
+produces worse adapters than judgment authoring (it cannot reason about a
+language's false-positive quirks), and the "smart" part a good generator
+would need is exactly what judgment authoring already provides. Writing a
+generator to do, worse, what is already being done well is pure redundancy.
+
+The only mechanical helper that may exist is a _scaffold_ (create the
+`fixtures/<PROBE_ID>/` directory + empty stub files so the build-time
+fixture/Learn contract is never tripped by a forgotten folder). That is a
+chore-saver, not codegen — it generates no detection logic. Optional,
+unbuilt unless explicitly requested.
 
 ---
 
@@ -108,12 +120,12 @@ every suppression comment in user code. That cost is unacceptable.
 
 Every adapter declares a `maturity` field:
 
-| Value | Meaning |
-|---|---|
-| `experimental` | New probe, may produce noise. Persona renders muted; not counted in risk score; opt-in only. |
-| `beta` | Production-ready but recently shipped. Persona renders normally; counted in risk score; carries a small "new" badge. |
-| `stable` | Default. Vetted on real repos. Counted in risk score, no badge. |
-| `deprecated` | On the way out. Persona renders muted with deprecation reason; not counted in risk score by default. |
+| Value          | Meaning                                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `experimental` | New probe, may produce noise. Persona renders muted; not counted in risk score; opt-in only.                         |
+| `beta`         | Production-ready but recently shipped. Persona renders normally; counted in risk score; carries a small "new" badge. |
+| `stable`       | Default. Vetted on real repos. Counted in risk score, no badge.                                                      |
+| `deprecated`   | On the way out. Persona renders muted with deprecation reason; not counted in risk score by default.                 |
 
 Migrated v0.4 probes default to `stable`. New v0.5 probes declare explicitly
 on first commit. The field is consumed by personas to weight finding
@@ -210,14 +222,20 @@ internal channel that is not user-visible. The scan layer compares
 shadow-channel output against production output and logs deltas to the
 diagnostics drawer.
 
-After 7+ days of shadow output matching production output on real scans
-(measured by stableId equivalence), the migration flips: the v0.4 probe
-becomes `shadow: true`, the v0.5 adapter becomes production. After 7 more
-days of zero regressions, the v0.4 probe gets removed.
+The flip is a one-field config change a human makes when satisfied the
+shadow output matches production output (measured by stableId equivalence):
+`shadow: true` → `shadow: false` on the v0.5 adapter, and the reverse on the
+v0.4 probe. There is no wall-clock dependency. All of the code — adapter,
+shadow channel, comparison harness, the migration itself — is written and
+shipped in one pass. Whether to soak the comparison for an hour or a week
+before flipping is a deployment-confidence judgment the maintainer controls;
+it is NOT a barrier to building or shipping the code. (Earlier drafts of
+this doc framed the soak as a hard time-gate. It is not. It is a dial.)
 
 Zero-downtime probe migration. No double-firing release. No noisy Phase 2.
 
 The shadow field is part of the v0.5 schema:
+
 - `shadow: false` (default) — adapter emits to user-visible channel.
 - `shadow: true` — adapter emits to internal comparison channel only.
 
@@ -264,29 +282,32 @@ Compare overlap on real repos (agentwasp is the obvious target).
 The 12 v0.4 probes that overlap with an XL family. Current Secret Scanner →
 adapters under XL-006. Current SQL Injection probe → JS adapter under
 XL-002. Current Auth Weakness → splits across XL-001 (jwt:none) + XL-002 +
-new. Originals stay in `legacy/`, drop to shadow mode, get removed after
-parity window.
+new. Originals stay in `legacy/`, drop to shadow mode, removed once the
+maintainer is satisfied with parity (a config flip, no time-gate).
 
 **Phase 3 — Build remaining priority adapters.**
-Driven by the 14-language report. Likely JS + Python + Go + Ruby for v0.5
-ship; Java / PHP / Rust for v0.6.
+The remaining languages across the same XL families plus the
+language-specific probes. Driven by the 14-language research corpus.
 
 **Phase 4 — Generate `PROBES` from manifest.**
-Retire the hand-listed v0.4 array.
+Retire the hand-listed v0.4 array; the live PROBES set is projected from
+the manifest's non-shadow adapters merged with un-migrated legacy probes.
 
-**Phase 5 — Codegen tooling.**
-Matrix-driven adapter scaffolding.
+(No Phase 5. The earlier "codegen tooling" phase was removed — see
+Decision 3. Adapters are AI-authored with judgment; a deterministic
+template generator would produce worse output than the authoring it
+would replace.)
 
 ---
 
 ## Settled questions
 
-| Question | Resolution |
-|---|---|
-| Q1: XL family execution logic? | Pure metadata. Shared logic lives in `shared-detectors/`, imported explicitly. |
-| Q2: Probe ID format? | Two fields: `probe_id` (human, `PY-DESERIALIZE-001`) + `xl_family` (machine, `XL-001`). |
+| Question                                   | Resolution                                                                                                                                                  |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q1: XL family execution logic?             | Pure metadata. Shared logic lives in `shared-detectors/`, imported explicitly.                                                                              |
+| Q2: Probe ID format?                       | Two fields: `probe_id` (human, `PY-DESERIALIZE-001`) + `xl_family` (machine, `XL-001`).                                                                     |
 | Q3: Cross-language probes → many adapters? | Yes. Verbose-and-explicit beats clever-and-implicit. Each adapter is ~10 lines if it just declares `{xl_family, scope, fp_gates, detector: detectSecrets}`. |
-| Q4: Fixture format? | Real files in `fixtures/<PROBE_ID>/`. Dogfood scan exercises them. |
+| Q4: Fixture format?                        | Real files in `fixtures/<PROBE_ID>/`. Dogfood scan exercises them.                                                                                          |
 
 ## Phase 0 gating questions — all resolved
 
@@ -348,6 +369,7 @@ consumption patterns:
 
 Keep `PROBE_OWASP_MAP` as the **producer interface forever**. Don't retire
 it — retire only the hand-coded contributor. Reasons:
+
 - The view iterates by category code; that shape is natural for the UI
   and is cheaper to maintain than rewriting the consumer.
 - The lazy `OWASP_BY_PROBE` inversion is a useful primitive that should
@@ -384,7 +406,7 @@ function + a `buildOwaspMapFromManifest()` shim). Zero changes to
 
 - Side-by-side schema (Decision 1)
 - Composition over inheritance (Decision 2)
-- Handwritten for v0.5, codegen later (Decision 3)
+- AI-authored adapters, no deterministic generator (Decision 3)
 - Directory structure
 - Migration phase ordering
 

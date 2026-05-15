@@ -1,0 +1,789 @@
+{
+  "schema_version": "v0.5.0",
+  "generated": "2026-05-14",
+  "description": "Structured IOC bundle for the 2026 supply-chain incident timeline. Probes reference entries via the 'ioc_bundle_ref' field using the top-level keys in 'incidents'. Verification pass completed May 14, 2026 against Snyk, Wiz, StepSecurity, Microsoft, Datadog Security Labs, Akamai, Aikido Security, Socket, Cloudsmith, Semgrep, Sonatype, CISA, USENIX, RustSec, Composer, and CocoaPods primary sources.",
+  "verification_notes": {
+    "primary_sources_consulted": [
+      "snyk.io",
+      "wiz.io",
+      "stepsecurity.io",
+      "microsoft.com/en-us/security/blog",
+      "securitylabs.datadoghq.com",
+      "akamai.com/blog/security-research",
+      "aikido.dev",
+      "socket.dev",
+      "sonatype.com",
+      "cisa.gov",
+      "rustsec.org",
+      "blog.packagist.com",
+      "blog.cocoapods.org",
+      "tanstack.com/blog",
+      "docs.litellm.ai"
+    ],
+    "verification_methodology": "Each campaign, CVE, package version, UTC timestamp, threat actor attribution, and victim count cross-referenced against at minimum two independent primary or near-primary sources before inclusion.",
+    "unverified_items_excluded": [
+      "CVE-2024-39614 Django",
+      "CVE-2024-41989 Django",
+      "CVE-2024-39329 Django",
+      "CVE-2022-29217 PyJWT",
+      "CVE-2020-26160 golang-jwt",
+      "CVE-2019-1010083 Werkzeug",
+      "CVE-2017-1000052 Plug.Static",
+      "CVE-2012-6636 Android WebView",
+      "CVE-2007-4559 Python pickle",
+      "StripeAPI.net 506 versions",
+      "60-gem Ruby credential stealing campaign August 2025",
+      "qiniu/qmgo Go typosquat"
+    ]
+  },
+  "incidents": {
+    "trivy_2026_03": {
+      "name": "Aqua Security Trivy supply chain compromise",
+      "discovery_date": "2026-03-19",
+      "initial_access_date": "2026-02-27",
+      "threat_actor": "TeamPCP",
+      "threat_actor_aliases": ["DeadCatx3", "PCPcat", "Persy_PCP", "ShellForce", "CipherForce"],
+      "cve": "CVE-2026-33634",
+      "cisa_kev_remediation_deadline": "2026-04-08",
+      "campaign_name": null,
+      "ecosystems_affected": ["GitHub Actions", "Docker Hub", "npm (via CanisterWorm)"],
+      "primary_artifacts": {
+        "trivy_binary": ["v0.69.4", "v0.69.5", "v0.69.6"],
+        "trivy_action_tags_force_pushed": "75 of 76",
+        "setup_trivy_tags_force_pushed": "all 7"
+      },
+      "c2_infrastructure": [
+        "scan.aquasecurtiy[.]org",
+        "45.148.10.212",
+        "plug-tab-protective-relay.trycloudflare.com",
+        "tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io (ICP canister dead drop)"
+      ],
+      "iocs": {
+        "github_repo_pattern": "tpcp-docs (created in victim GitHub organizations as exfil dead drop)",
+        "systemd_service_names": ["sysmon", "pgmon", "pgmonitor", "internal-monitor"],
+        "kubernetes_daemonset_names": ["host-provisioner-std", "host-provisioner-iran"]
+      },
+      "primary_sources": [
+        "https://www.wiz.io/blog/trivy-compromised-teampcp-supply-chain-attack",
+        "https://www.microsoft.com/en-us/security/blog/2026/03/24/detecting-investigating-defending-against-trivy-supply-chain-compromise/",
+        "https://safedep.io/trivy-teampcp-supply-chain-compromise/",
+        "https://phoenix.security/teampcp-supply-chain-attack-trivy-checkmarx-github-actions-npm-canisterworm/"
+      ]
+    },
+    "checkmarx_2026_03": {
+      "name": "Checkmarx KICS / AST GitHub Actions compromise",
+      "discovery_date": "2026-03-23",
+      "threat_actor": "TeamPCP",
+      "campaign_name": null,
+      "ecosystems_affected": ["GitHub Actions", "OpenVSX"],
+      "primary_artifacts": {
+        "kics_github_action_tags_compromised": "all 35",
+        "ast_github_action_version": "2.3.28",
+        "openvsx_extensions": ["ast-results 2.53.0", "cx-dev-assist 1.7.0"]
+      },
+      "c2_infrastructure": ["checkmarx[.]zone", "83.142.209.11"],
+      "github_repo_pattern": "docs-tpcp",
+      "primary_sources": [
+        "https://phoenix.security/teampcp-supply-chain-attack-trivy-checkmarx-github-actions-npm-canisterworm/",
+        "https://securitylabs.datadoghq.com/articles/litellm-compromised-pypi-teampcp-supply-chain-campaign/"
+      ]
+    },
+    "litellm_2026_03": {
+      "name": "LiteLLM PyPI compromise",
+      "discovery_date": "2026-03-24",
+      "threat_actor": "TeamPCP",
+      "campaign_name": null,
+      "ecosystems_affected": ["PyPI"],
+      "primary_artifacts": {
+        "litellm_1_82_7": {
+          "published_utc": "2026-03-24T10:39:00Z",
+          "injection_vector": "base64-encoded payload in litellm/proxy/proxy_server.py line 128",
+          "trigger": "import litellm.proxy"
+        },
+        "litellm_1_82_8": {
+          "published_utc": "2026-03-24T10:52:00Z",
+          "injection_vector": "litellm_init.pth file in site-packages",
+          "trigger": "any Python interpreter startup"
+        },
+        "quarantined_utc": "2026-03-24T13:38:00Z"
+      },
+      "exposure_window_hours": 3,
+      "exfil_domain": "models.litellm.cloud (NOT litellm.ai)",
+      "exfil_domain_registered": "2026-03-23 via Spaceship Inc.",
+      "encryption": "AES-256-CBC + RSA-4096 hardcoded public key",
+      "stolen_via": "PyPI publish token extracted from LiteLLM CI runner during Trivy attack",
+      "snyk_record": "SNYK-PYTHON-LITELLM-15762713",
+      "sonatype_record": "sonatype-2026-001357",
+      "snyk_advisory": "https://snyk.io/blog/poisoned-security-scanner-backdooring-litellm/",
+      "official_advisory": "https://docs.litellm.ai/blog/security-update-march-2026",
+      "primary_sources": [
+        "https://docs.litellm.ai/blog/security-update-march-2026",
+        "https://snyk.io/blog/poisoned-security-scanner-backdooring-litellm/",
+        "https://securitylabs.datadoghq.com/articles/litellm-compromised-pypi-teampcp-supply-chain-campaign/",
+        "https://www.armosec.io/blog/litellm-supply-chain-attack-backdoor-analysis/",
+        "https://github.com/BerriAI/litellm/issues/24518"
+      ],
+      "last_known_clean": "1.82.6"
+    },
+    "telnyx_2026_03": {
+      "name": "Telnyx PyPI compromise",
+      "discovery_date": "2026-03-27",
+      "threat_actor": "TeamPCP",
+      "campaign_name": null,
+      "ecosystems_affected": ["PyPI"],
+      "primary_artifacts": {
+        "telnyx_4_87_1": {
+          "published_utc": "2026-03-27T03:51:00Z",
+          "injection_vector": "telnyx/_client.py with WAV steganography payload (non-functional due to typo)"
+        },
+        "telnyx_4_87_2": {
+          "published_utc": "2026-03-27T04:07:00Z",
+          "injection_vector": "telnyx/_client.py with WAV steganography payload (functional)"
+        }
+      },
+      "c2_infrastructure": ["83.142.209.203"],
+      "notable_technique": "WAV audio file steganography (payload embedded in .wav files to blend with telecom product surface)",
+      "platform_specific_payloads": {
+        "windows": "msbuild.exe persistence in Startup folder"
+      },
+      "last_known_clean": "4.87.0",
+      "primary_sources": [
+        "https://www.akamai.com/blog/security-research/2026/mar/telnyx-pypi-2026-teampcp-supply-chain-attacks",
+        "https://isc.sans.edu/diary/32838",
+        "https://digital.nhs.uk/cyber-alerts/2026/cc-4762",
+        "https://thehackernews.com/2026/03/teampcp-pushes-malicious-telnyx.html"
+      ]
+    },
+    "axios_2026_03": {
+      "name": "Axios npm compromise (Sapphire Sleet)",
+      "discovery_date": "2026-03-31",
+      "threat_actor": "Sapphire Sleet",
+      "threat_actor_aliases": [
+        "UNC1069",
+        "STARDUST CHOLLIMA",
+        "Alluring Pisces",
+        "BlueNoroff",
+        "CageyChameleon",
+        "CryptoCore"
+      ],
+      "attribution": "North Korean state actor",
+      "campaign_name": null,
+      "important_note": "Separate threat actor from TeamPCP. Same timeframe, unrelated campaign.",
+      "ecosystems_affected": ["npm"],
+      "primary_artifacts": {
+        "axios_1_14_1": {
+          "published_utc": "2026-03-31T00:21:00Z",
+          "injection_vector": "manifest-only tampering, adds plain-crypto-js@4.2.1 as fake dependency"
+        },
+        "axios_0_30_4": {
+          "published_utc": "2026-03-31T01:00:00Z",
+          "injection_vector": "same as 1.14.1"
+        },
+        "plain_crypto_js_4_2_1": {
+          "role": "fake dependency that executes postinstall RAT dropper",
+          "removed_utc": "2026-03-31T03:29:00Z"
+        },
+        "malicious_packages_removed_utc": "2026-03-31T03:15:00Z"
+      },
+      "exposure_window_hours": 2.9,
+      "estimated_installs_during_window": 600000,
+      "confirmed_endpoints_compromised": "135+ (Huntress)",
+      "malware_family": "WAVESHAPER.V2",
+      "c2_infrastructure": ["sfrclak[.]com", "142.11.206.73:8000"],
+      "platform_payloads": ["Windows: wt.exe in C:\\ProgramData", "macOS", "Linux"],
+      "social_engineering": "Maintainer Jason Saayman targeted via fake company-founder identity, Microsoft Teams call with multiple fake participants",
+      "last_known_clean": ["1.14.0", "0.30.3"],
+      "primary_sources": [
+        "https://www.microsoft.com/en-us/security/blog/2026/04/01/mitigating-the-axios-npm-supply-chain-compromise/",
+        "https://www.cisa.gov/news-events/alerts/2026/04/20/supply-chain-compromise-impacts-axios-node-package-manager",
+        "https://www.stepsecurity.io/blog/axios-compromised-on-npm-malicious-versions-drop-remote-access-trojan",
+        "https://github.com/axios/axios/issues/10636",
+        "https://www.sans.org/blog/what-we-learned-axios-npm-supply-chain-compromise-emergency-briefing"
+      ]
+    },
+    "bitwarden_cli_2026_04": {
+      "name": "Bitwarden CLI npm compromise",
+      "discovery_date": "2026-04",
+      "threat_actor": "TeamPCP",
+      "campaign_name": null,
+      "ecosystems_affected": ["npm"],
+      "primary_artifacts": {
+        "bitwarden_cli_2026_4_0": {
+          "package": "@bitwarden/cli@2026.4.0",
+          "injection_vector": "preinstall hook downloads Bun runtime then executes 10MB obfuscated JavaScript payload",
+          "obfuscation": "import.meta.require with seeded Fisher-Yates shuffle cipher (__decodeScrambled seed 0x3039) across 36 call sites"
+        }
+      },
+      "primary_sources": [
+        "https://www.microsoft.com/en-us/security/blog/2026/03/24/detecting-investigating-defending-against-trivy-supply-chain-compromise/"
+      ]
+    },
+    "sap_2026_04_29": {
+      "name": "SAP npm packages Mini Shai-Hulud campaign initial wave",
+      "discovery_date": "2026-04-29",
+      "threat_actor": "TeamPCP",
+      "campaign_name": "Mini Shai-Hulud",
+      "ecosystems_affected": ["npm"],
+      "primary_artifacts": {
+        "sap_packages_count": 4,
+        "campaign_marker": "GitHub repository description 'A Mini Shai-Hulud has Appeared'"
+      },
+      "primary_sources": [
+        "https://securityboulevard.com/2026/05/1800-developers-hit-in-mini-shai-hulud-supply-chain-attack-across-pypi-npm-and-php/",
+        "https://www.securityweek.com/1800-hit-in-mini-shai-hulud-attack-on-sap-lightning-intercom/"
+      ]
+    },
+    "lightning_intercom_php_2026_04_30": {
+      "name": "Lightning PyPI plus intercom-client npm plus intercom-php Packagist (Mini Shai-Hulud cross-ecosystem)",
+      "discovery_date": "2026-04-30",
+      "threat_actor": "TeamPCP",
+      "campaign_name": "Mini Shai-Hulud",
+      "ecosystems_affected": ["PyPI", "npm", "Packagist"],
+      "first_cross_ecosystem_propagation": true,
+      "primary_artifacts": {
+        "lightning_2_6_2": {
+          "ecosystem": "PyPI",
+          "package": "lightning",
+          "version": "2.6.2",
+          "published_utc": "2026-04-30",
+          "stars_at_time": "31,100+"
+        },
+        "lightning_2_6_3": {
+          "ecosystem": "PyPI",
+          "package": "lightning",
+          "version": "2.6.3",
+          "published_utc": "2026-04-30",
+          "last_known_clean": "2.6.1"
+        },
+        "intercom_client_7_0_4": {
+          "ecosystem": "npm",
+          "package": "intercom-client",
+          "version": "7.0.4",
+          "published_utc": "2026-04-30",
+          "published_via": "compromised GitHub user 'nhur' through now-deleted branch triggering automated CI publish workflow"
+        },
+        "intercom_client_7_0_5": {
+          "ecosystem": "npm",
+          "package": "intercom-client",
+          "version": "7.0.5",
+          "published_utc": "2026-04-30"
+        },
+        "intercom_php_5_0_2": {
+          "ecosystem": "Packagist",
+          "package": "intercom/intercom-php",
+          "version": "5.0.2",
+          "published_utc": "2026-04-30T20:53:00Z",
+          "removed_utc": "2026-04-30T22:37:00Z",
+          "exposure_window_minutes": 104,
+          "lifetime_installs": "20.7 million",
+          "monthly_installs": "285,000",
+          "daily_installs_estimated": "12,700",
+          "injection_vector": "Force-pushed tag to commit e69bf4b3e84e7951a7b4ded8fee8822c57630cf8; converted PHP SDK into Composer plugin with install-time execution",
+          "ghsa": "GHSA-gr3r-crp5-qrrm"
+        }
+      },
+      "root_cause": "Local installation of pyannote-audio introduced compromised lightning PyPI package as transitive dependency, triggering PyPI-to-npm chain that corrupted intercom-client@7.0.4, which then led to Packagist artifact for intercom/intercom-php@5.0.2",
+      "exfil_domain": "zero.masscan.cloud",
+      "github_repo_marker": "Sha1-Hulud: The Second Coming (description)",
+      "developers_affected": "1,800+ (Ox Security count)",
+      "primary_sources": [
+        "https://socket.dev/blog/mini-shai-hulud-packagist-malicious-intercom-php-package-compromise",
+        "https://semgrep.dev/blog/2026/malicious-intercom-php-package-spreads-mini-shai-hulud-attack-to-packagist-via-composer-plugin/",
+        "https://cloudsmith.com/blog/mini-shai-hulud-reaches-packagist-the-intercom-intercom-php-compromise-explained",
+        "https://thehackernews.com/2026/04/pytorch-lightning-compromised-in-pypi.html",
+        "https://advisories.gitlab.com/composer/intercom/intercom-php/GHSA-gr3r-crp5-qrrm/"
+      ]
+    },
+    "tanstack_2026_05_11": {
+      "name": "TanStack npm plus Mistral PyPI plus Guardrails AI Mini Shai-Hulud apex wave",
+      "discovery_date": "2026-05-11",
+      "threat_actor": "TeamPCP",
+      "campaign_name": "Mini Shai-Hulud",
+      "ecosystems_affected": ["npm", "PyPI"],
+      "cve": "CVE-2026-45321",
+      "cvss": 9.6,
+      "ghsa": "GHSA-g7cv-rxg3-hmpx",
+      "mal_record": "MAL-2026-3432 (mistralai)",
+      "mal_ghsa": "GHSA-3q49-cfcf-g5fm (mistralai)",
+      "first_npm_with_valid_slsa_attestations": true,
+      "primary_artifacts": {
+        "tanstack_packages_affected": 42,
+        "tanstack_versions_affected": 84,
+        "tanstack_publish_window_utc": "2026-05-11T19:20:00Z to 2026-05-11T19:26:00Z",
+        "detection_minutes": 20,
+        "detector": "ashishkurmi at stepsecurity",
+        "mistralai_2_4_6": {
+          "ecosystem": "PyPI",
+          "package": "mistralai",
+          "version": "2.4.6",
+          "last_known_clean": "2.4.5 (published 2026-05-07)",
+          "delivery_mechanism": "transformers.pyz dropper from git-tanstack.com",
+          "note": "No v2.4.6 tag exists in mistralai/client-python GitHub"
+        },
+        "guardrails_ai_0_10_1": {
+          "ecosystem": "PyPI",
+          "package": "guardrails-ai",
+          "version": "0.10.1"
+        },
+        "uipath_packages_compromised": "65 (@uipath/*)",
+        "opensearch_packages_compromised": "weekly downloads 1.3M+",
+        "total_packages_affected": "170+ (npm and PyPI combined)",
+        "total_cumulative_downloads_affected": "518 million"
+      },
+      "attack_chain": [
+        "fork TanStack/router renamed to zblgg/configuration to evade fork-list searches",
+        "PR triggering pull_request_target workflow with poisoned actions cache",
+        "cache poisoning across fork-to-base trust boundary",
+        "OIDC token extraction from runner memory via /proc/<pid>/mem",
+        "publish to npm using extracted OIDC token (no maintainer credentials stolen)"
+      ],
+      "c2_infrastructure": [
+        "git-tanstack[.]com (Cloudflare flagged as phishing)",
+        "83.142.209.194 (Mistral dropper)"
+      ],
+      "destructive_payload": "1-in-6 chance of rm -rf / if system locale appears Israeli or Iranian (Microsoft Defender Security analysis)",
+      "primary_sources": [
+        "https://tanstack.com/blog/npm-supply-chain-compromise-postmortem",
+        "https://tanstack.com/blog/incident-followup",
+        "https://snyk.io/blog/tanstack-npm-packages-compromised/",
+        "https://www.wiz.io/blog/mini-shai-hulud-strikes-again-tanstack-more-npm-packages-compromised",
+        "https://safedep.io/mass-npm-supply-chain-attack-tanstack-mistral/",
+        "https://www.aikido.dev/blog/mini-shai-hulud-is-back-tanstack-compromised",
+        "https://github.com/TanStack/router/issues/7383",
+        "https://thehackernews.com/2026/05/mini-shai-hulud-worm-compromises.html"
+      ],
+      "clean_families": [
+        "@tanstack/query*",
+        "@tanstack/table*",
+        "@tanstack/form*",
+        "@tanstack/virtual*",
+        "@tanstack/store"
+      ]
+    },
+    "rubygems_2026_05_12": {
+      "name": "RubyGems mass-malicious-uploads incident",
+      "discovery_date": "2026-05-12",
+      "threat_actor": "Unknown",
+      "campaign_name": null,
+      "ecosystems_affected": ["RubyGems"],
+      "primary_artifacts": {
+        "malicious_packages_count": "500+",
+        "containment_date": "2026-05-13",
+        "containment_action": "Account sign-ups disabled, all 500+ malicious packages yanked, Fastly WAF protection added, rate-limiting tightened"
+      },
+      "reporter": "Maciej Mensfeld of Mend.io",
+      "target": "RubyGems engineers and staff (not downstream developers)",
+      "campaign_type": "Coordinated spam-publishing limited to newly-registered accounts",
+      "related_campaign": {
+        "name": "GemStuffer",
+        "package_count": "155+",
+        "target": "UK local government democratic services portals (Lambeth, Wandsworth, Southwark)",
+        "abuse_pattern": "Using RubyGems registry as data exfiltration channel rather than malware distribution"
+      },
+      "primary_sources": [
+        "https://thehackernews.com/2026/05/rubygems-suspends-new-signups-after.html",
+        "https://news.risky.biz/risky-bulletin-rubygems-disables-sign-ups-after-attack-on-staff/",
+        "https://socket.dev/blog/gemstuffer",
+        "https://thehackernews.com/2026/05/gemstuffer-abuses-150-rubygems-to.html"
+      ]
+    },
+    "bufferzonecorp_2026_05_01": {
+      "name": "BufferZoneCorp Ruby gems plus Go modules campaign",
+      "discovery_date": "2026-05-01",
+      "threat_actor": "BufferZoneCorp (GitHub account)",
+      "campaign_name": null,
+      "ecosystems_affected": ["RubyGems", "Go modules"],
+      "primary_artifacts": {
+        "package_types": "Sleeper packages with plausible utility branding then weaponized via update",
+        "ruby_typosquats": [
+          "knot-activesupport-logger (activesupport-logger typosquat)",
+          "devise-jwt typosquat"
+        ],
+        "go_typosquats": [
+          "go-retryablehttp typosquat",
+          "grpc-client typosquat",
+          "config-loader typosquat"
+        ]
+      },
+      "behaviors": [
+        "Install-time credential theft via native extension build process",
+        "Environment variable scraping",
+        "SSH key and AWS credential file harvest",
+        "GitHub Actions workflow tampering",
+        "SSH persistence via authorized_keys (deploy@buildserver pattern)",
+        "GOPROXY/GOSUMDB poisoning"
+      ],
+      "primary_sources": [
+        "https://socket.dev/blog/malicious-ruby-gems-and-go-modules-steal-secrets-poison-ci",
+        "https://thehackernews.com/2026/05/poisoned-ruby-gems-and-go-modules.html"
+      ]
+    },
+    "termncolor_2025_07": {
+      "name": "Termncolor / colorinal PyPI multi-stage malware",
+      "discovery_date": "2025-07-22",
+      "threat_actor": "Unknown (Kaspersky links ZiChatBot dropper to OceanLotus/APT32 with 64% code similarity)",
+      "malware_family": "ZiChatBot",
+      "campaign_name": null,
+      "ecosystems_affected": ["PyPI"],
+      "primary_artifacts": {
+        "termncolor": {
+          "downloads": 387,
+          "behavior": "Benign-looking package that imports colorinal as dependency",
+          "upload_window": "2025-07-16 to 2025-07-22"
+        },
+        "colorinal": {
+          "downloads": 614,
+          "behavior": "Multi-stage dropper via DLL sideloading: unicode.py loads terminate.dll which decrypts AES-CBC payload",
+          "platforms_targeted": ["Windows", "Linux"]
+        },
+        "uuid32_utils": {
+          "behavior": "Related dropper in same campaign"
+        }
+      },
+      "c2_protocol": "Zulip REST API (helper@zulpichat.com)",
+      "persistence_windows": "Registry Run key entry",
+      "persistence_linux": "Crontab entry under /tmp/obsHub/obs-check-update",
+      "discoverer": "Zscaler ThreatLabz (Manisha Ramcharan Prajapati, Satyam Singh)",
+      "primary_sources": [
+        "https://www.zscaler.com/blogs/security-research/supply-chain-risk-python-termncolor-and-colorinal-explained",
+        "https://thehackernews.com/2025/08/malicious-pypi-and-npm-packages.html",
+        "https://thehackernews.com/2026/05/pypi-packages-deliver-zichatbot-malware.html",
+        "https://cybersecuritynews.com/new-zichatbot-malware-uses-zulip-rest-apis/"
+      ]
+    },
+    "shanhai666_2025_11": {
+      "name": "shanhai666 NuGet logic-bomb campaign targeting ICS/PLCs",
+      "discovery_date": "2025-11-05",
+      "package_publish_window": "2023 to 2024",
+      "threat_actor": "shanhai666 (suspected Chinese origin per Socket)",
+      "campaign_name": null,
+      "ecosystems_affected": ["NuGet"],
+      "primary_artifacts": {
+        "package_count_malicious": 9,
+        "package_count_published": 12,
+        "total_downloads": 9488,
+        "packages": [
+          { "name": "MyDbRepository", "last_updated": "2023-05-13" },
+          { "name": "MCDbRepository", "last_updated": "2024-06-05", "trigger_date": "2027-08-08" },
+          {
+            "name": "Sharp7Extend",
+            "last_updated": "2024-08-14",
+            "trigger": "immediate",
+            "duration": "until 2028-06-06"
+          },
+          { "name": "SqlUnicornCoreTest", "trigger_date": "2028-11-29" },
+          { "name": "SqlUnicornCore", "trigger_date": "2028-11-29" }
+        ],
+        "mechanism": "C# extension methods inject malicious logic into every database query or PLC operation. Checks current date against hardcoded trigger dates. If match: 20% probability process termination via Process.GetCurrentProcess().Kill().",
+        "sharp7extend_specific": "Targets Siemens S7 PLCs via Sharp7 library typosquat. Immediate 20% probability process termination on PLC communication, plus 80% silent write-failure rate after 30-90 minute grace period."
+      },
+      "disclosure_window": "2025-11-05 to 2025-11-07",
+      "discoverer": "Socket via Kush Pandya",
+      "primary_sources": [
+        "https://thehackernews.com/2025/11/hidden-logic-bombs-in-malware-laced.html",
+        "https://www.bleepingcomputer.com/news/security/malicious-nuget-packages-drop-disruptive-time-bombs/",
+        "https://industrialcyber.co/control-device-security/socket-researchers-uncover-nuget-packages-that-silently-sabotage-industrial-plcs-safety-critical-systems/"
+      ]
+    },
+    "nethereum_2025_10": {
+      "name": "Nethereum NuGet homoglyph typosquats",
+      "discovery_date": "2025-10-16",
+      "removal_date": "2025-10-20",
+      "exposure_window_days": 4,
+      "threat_actor": "Same actor using aliases 'nethereumgroup' and 'NethereumCsharp'",
+      "campaign_name": null,
+      "ecosystems_affected": ["NuGet"],
+      "primary_artifacts": {
+        "netherreum_all": {
+          "name": "Netherеum.All (Cyrillic е U+0435 in 'Nether-e-um')",
+          "first_published": "2025-10-16",
+          "removed": "2025-10-20",
+          "fake_downloads_shown": "11.6 million (artificially inflated)",
+          "publisher": "nethereumgroup",
+          "c2_endpoint": "solananetworkinstance[.]info/api/gads",
+          "payload": "XOR-decoded HTTPS POST exfiltrating mnemonics, private keys, keystore JSON, signed transactions"
+        },
+        "nethereumnet": {
+          "name": "NethereumNet",
+          "first_published": "early October 2025",
+          "removed": "before October 18, 2025",
+          "publisher": "NethereumCsharp"
+        }
+      },
+      "victim_target": "Crypto / Ethereum .NET developers",
+      "primary_sources": [
+        "https://socket.dev/blog/malicious-nuget-packages-typosquat-nethereum-to-exfiltrate-wallet-keys",
+        "https://thehackernews.com/2025/10/fake-nethereum-nuget-package-used.html"
+      ]
+    },
+    "boltdb_go_2021_2025": {
+      "name": "boltdb-go/bolt Go Module Mirror cache exploitation",
+      "publish_date": "2021-11",
+      "discovery_date": "2025-02-05",
+      "exposure_duration_years": 3,
+      "threat_actor": "Unknown",
+      "campaign_name": null,
+      "ecosystems_affected": ["Go modules"],
+      "primary_artifacts": {
+        "package": "github.com/boltdb-go/bolt",
+        "version": "1.3.1",
+        "typosquat_of": "github.com/boltdb/bolt (legitimate, declared complete in 2016)",
+        "attack_vector": "First documented exploitation of Go Module Proxy indefinite caching. Pushed malicious version 1.3.1 to GitHub, then modified Git tags to point to benign version. Go Module Mirror cached the malicious 1.3.1 indefinitely.",
+        "capability": "Remote command execution via backdoor C2"
+      },
+      "discoverer": "Socket via Kirill Boychenko",
+      "primary_sources": [
+        "https://thehackernews.com/2025/02/malicious-go-package-exploits-module.html",
+        "https://snyk.io/blog/go-malicious-package-alert/"
+      ]
+    },
+    "finch_rustsec_2025_12": {
+      "name": "RustSec finch family typosquat campaign",
+      "publish_date": "2025-12-08",
+      "report_date": "2025-12-09",
+      "advisory_issued": "2026-02-12",
+      "advisory_modified": "2026-02-13",
+      "threat_actor": "Unknown (Socket reports 'faceless' username)",
+      "campaign_name": null,
+      "ecosystems_affected": ["crates.io"],
+      "primary_artifacts": {
+        "finch_rust": {
+          "advisory": "RUSTSEC-2025-0148",
+          "downloads": null,
+          "typosquat_of": "finch (legitimate bioinformatics tool, 67,223 downloads)"
+        },
+        "finch_rst": {
+          "advisory": "RUSTSEC-2025-0150",
+          "downloads": 21,
+          "typosquat_of": "finch"
+        },
+        "sha_rst": {
+          "advisory": "RUSTSEC-2025-0151",
+          "downloads": 22,
+          "role": "Credential-stealing dependency of finch_cli_rust and finch-rst"
+        },
+        "finch_cli_rust": {
+          "advisory": "RUSTSEC-2025-0152",
+          "downloads": 18,
+          "typosquat_of": "finch_cli"
+        },
+        "sha_rust": {
+          "role": "Credential-stealing dependency, evolved through 8 iterations over 2 weeks"
+        },
+        "polymarket_clients_sdk": {
+          "advisory": "RUSTSEC-2026-0010",
+          "report_date": "2026-02-06",
+          "typosquat_of": "polymarket-client-sdk"
+        }
+      },
+      "discoverer": "Matthias Zepper of National Genomics Infrastructure Sweden (reported to Rust security WG)",
+      "primary_sources": [
+        "https://blog.rust-lang.org/2026/02/13/crates.io-malicious-crate-update/",
+        "https://rustsec.org/advisories/RUSTSEC-2025-0148.html",
+        "https://rustsec.org/advisories/RUSTSEC-2025-0150.html",
+        "https://rustsec.org/advisories/RUSTSEC-2025-0151.html",
+        "https://rustsec.org/advisories/RUSTSEC-2025-0152.html",
+        "https://socket.dev/blog/malicious-crate-mimicking-finch-exfiltrates-credentials"
+      ]
+    },
+    "uv_cve_2025_54368": {
+      "name": "uv (Astral) ZIP confusion vulnerability",
+      "cve": "CVE-2025-54368",
+      "ghsa": "GHSA-8qf3-x8v5-2pj8",
+      "publish_date": "2025-08-08",
+      "affected_versions": "uv <= 0.8.5",
+      "fixed_version": "uv 0.8.6",
+      "cvss_v3": 5.5,
+      "cwe": ["CWE-436 Interpretation Conflict", "CWE-20 Improper Input Validation"],
+      "description": "uv handled remote ZIP archives in streamwise fashion without reconciling file entries against the archive's central directory. An attacker could craft ZIP archives that extract with legitimate contents on some installers and malicious contents on others. Also handled 'stacked' ZIPs with multiple internal ZIPs.",
+      "workaround": "UV_INSECURE_NO_ZIP_VALIDATION=1 (reverts to vulnerable behavior, not recommended)",
+      "exploitation_in_wild": "None found in PyPI review",
+      "coordinated_pypi_fix": "Warehouse rejects ZIPs exhibiting these differentials",
+      "discoverers": ["Caleb Brown (Google)", "Tim Hatch (Netflix)"],
+      "primary_sources": [
+        "https://github.com/astral-sh/uv/security/advisories/GHSA-8qf3-x8v5-2pj8",
+        "https://astral.sh/blog/uv-security-advisory-cve-2025-54368",
+        "https://blog.pypi.org/posts/2025-08-07-wheel-archive-confusion-attacks/"
+      ]
+    },
+    "composer_cve_2026_04": {
+      "name": "Composer Perforce VCS driver command injection",
+      "cves": ["CVE-2026-40176", "CVE-2026-40261"],
+      "ghsa": "GHSA-wg36-wvj6-r67p",
+      "publish_date": "2026-04-14",
+      "affected_versions": "Composer >= 2.0, < 2.2.27 (LTS) and >= 2.3, < 2.9.6 (mainline)",
+      "fixed_versions": ["Composer 2.2.27 (LTS)", "Composer 2.9.6 (mainline)"],
+      "cvss_scores": {
+        "CVE-2026-40176": 7.8,
+        "CVE-2026-40261": 8.8
+      },
+      "vulnerability": "Improper input validation in Perforce VCS driver. CVE-2026-40176 affects Perforce::generateP4Command() interpolating port/user/client without escaping. CVE-2026-40261 affects Perforce::syncCodeBase() via crafted source reference with shell metacharacters.",
+      "attack_vector": "CVE-2026-40261 exploitable through any Composer repository serving package metadata declaring Perforce as source type. Does not require Perforce installed on victim machine.",
+      "packagist_mitigation": "Perforce source metadata publishing disabled on Packagist.org and Private Packagist as of 2026-04-10 (four days before public CVE disclosure)",
+      "discoverers": ["Koda Reef (CVE-2026-40261)", "saku0512 (CVE-2026-40176)"],
+      "exploitation_in_wild": "None found per Packagist scan",
+      "primary_sources": [
+        "https://blog.packagist.com/composer-2-9-6-perforce-driver-command-injection-vulnerabilities/",
+        "https://github.com/advisories/GHSA-wg36-wvj6-r67p",
+        "https://laravel-news.com/composer-296-fixes-two-perforce-command-injection-vulnerabilities"
+      ]
+    },
+    "mvnpm_shai_hulud_2025_11": {
+      "name": "Shai-Hulud v2 cross-ecosystem spillover to Maven Central via mvnpm",
+      "discovery_date": "2025-11-24",
+      "containment_date": "2025-11-25T22:44:00Z",
+      "threat_actor": "TeamPCP",
+      "campaign_name": "Shai-Hulud v2 / Sha1-Hulud: The Second Coming",
+      "ecosystems_affected": ["npm", "Maven Central", "GitHub Actions"],
+      "first_cross_registry_worm": true,
+      "primary_artifacts": {
+        "maven_central_spillover": {
+          "package": "org.mvnpm:posthog-node:4.18.1",
+          "purge_date": "2025-11-25T22:44:00Z",
+          "mechanism": "Automated mvnpm process that rebuilds npm packages as Maven artifacts. mvnpm does not perform security checks; it repackages whatever npm publishes.",
+          "important_clarification": "org.mvnpm:posthog-node:4.18.1 is the ONLY confirmed Maven Central spillover artifact. Broader Shai-Hulud v2 affected 830+ npm packages but other Maven Central rebundles are not confirmed in primary sources.",
+          "shared_payload_signatures": {
+            "setup_bun_js": "loader",
+            "bun_environment_js_sha1": "d60ec97eea19fffb4809bc35b91033b52490ca11"
+          }
+        },
+        "npm_packages_affected": "830+ in this wave, exfiltrated secrets from 5,000+ files uploaded to GitHub",
+        "github_repos_with_exfil": "25,000+ (Wiz tracking)",
+        "unique_secrets_in_4645_repos_audited": "11,858 unique, 2,298 still valid as of 2025-11-24 (GitGuardian)"
+      },
+      "github_repo_marker": "Sha1-Hulud: The Second Coming (description)",
+      "patient_zero": "@asyncapi/avro-schema-parser@3.0.25 via pull_request_target vulnerable workflow trigger",
+      "downstream_compromises": [
+        "@asyncapi/*",
+        "@postman/*",
+        "@posthog/*",
+        "@ensdomains/*",
+        "@zapier/*"
+      ],
+      "primary_sources": [
+        "https://thehackernews.com/2025/11/shai-hulud-v2-campaign-spreads-from-npm.html",
+        "https://socket.dev/blog/shai-hulud-strikes-again-v2",
+        "https://advisories.gitlab.com/pkg/maven/org.mvnpm/posthog-node/GMS-2025-800/",
+        "https://xygeni.io/blog/shai-hulud-20-npm-supply-chain-attack/"
+      ]
+    },
+    "cocoapods_2024_07": {
+      "name": "CocoaPods Trunk vulnerabilities",
+      "discovery_date": "2024-07-01",
+      "cves": ["CVE-2024-38366", "CVE-2024-38367", "CVE-2024-38368"],
+      "cvss_scores": {
+        "CVE-2024-38366": {
+          "score_eva": 10.0,
+          "score_securityweek": 9.0,
+          "type": "Remote code execution via insecure email verification on Trunk server"
+        },
+        "CVE-2024-38367": {
+          "score": 8.2,
+          "type": "Zero-click account takeover via X-Forwarded-Host spoofing"
+        },
+        "CVE-2024-38368": {
+          "score_socket": 9.3,
+          "score_securityweek": 9.9,
+          "type": "Unauthorized ownership of orphaned pods via public 'Claim the Pods' API"
+        }
+      },
+      "discoverer": "E.V.A. Information Security",
+      "orphaned_pods_at_discovery": 1866,
+      "downstream_apps_potentially_affected": "Meta (Facebook, WhatsApp), Apple (Safari, AppleTV, Xcode), Microsoft (Teams), TikTok, Snapchat, Amazon, LinkedIn, Netflix, Okta, Yahoo, Zynga",
+      "primary_sources": [
+        "https://thehackernews.com/2024/07/critical-flaws-in-cocoapods-expose-ios.html",
+        "https://www.darkreading.com/cloud-security/apple-cocoapods-bugs-expose-apps-code-injection",
+        "https://www.securityweek.com/critical-cocoapods-flaws-exposed-many-ios-macos-apps-to-supply-chain-attacks/"
+      ]
+    },
+    "cocoapods_sunset_2026_12": {
+      "name": "CocoaPods Trunk permanent read-only transition",
+      "key_dates": {
+        "prepare_command_blocked": "2025-05",
+        "notification_window_1": "January 2025",
+        "notification_window_2": "September-October 2026",
+        "test_run_readonly": "2026-11-01 to 2026-11-07",
+        "permanent_readonly": "2026-12-02"
+      },
+      "rationale": "Volunteer burnout, server costs, security incidents (E.V.A. CVEs above), Swift Package Manager maturity",
+      "impact": "No new pods or pod versions after 2026-12-02. Existing pods continue to install. Critical native modules (react-native-maps, @react-native-firebase/app) will eventually stop receiving updates via CocoaPods.",
+      "migration_target": "Swift Package Manager (SPM)",
+      "primary_sources": [
+        "https://blog.cocoapods.org/CocoaPods-Specs-Repo/",
+        "https://blog.cocoapods.org/",
+        "https://jfrog.com/blog/swiftpm-cocoapods-enterprise-development-apple-platforms/"
+      ]
+    },
+    "mavengate_2024_01": {
+      "name": "MavenGate dependency hijacking research",
+      "discovery_date": "2024-01-22",
+      "discoverer": "Oversecured",
+      "ecosystems_affected": ["Maven Central", "JCenter", "Gradle dependencies"],
+      "primary_artifacts": {
+        "total_domains_analyzed": 33938,
+        "vulnerable_domains": 6170,
+        "vulnerable_percentage": 18.18,
+        "attack_mechanism": "Hijack abandoned dependencies by purchasing expired reverse domains and asserting groupId ownership via DNS TXT record",
+        "affected_groupids_named": ["co.fs2", "net.jpountz.lz4", "com.opencsv"]
+      },
+      "companies_notified": "200+ including Google, Facebook, Signal, Amazon",
+      "primary_sources": [
+        "https://oversecured.com/blog/introducing-mavengate-a-supply-chain-attack-method-for-java-and-android-applications",
+        "https://www.redpacketsecurity.com/mavengate-attack-could-let-hackers-hijack-java-and-android-via-abandoned-libraries/"
+      ]
+    }
+  },
+  "sonatype_2026_sscr": {
+    "name": "Sonatype 2026 State of the Software Supply Chain Report",
+    "publication_date": "2026-01-28",
+    "key_statistics": {
+      "total_malicious_packages_cumulative": "1.233 million",
+      "new_malicious_packages_2025": 454648,
+      "yoy_growth_percent": 75,
+      "downloads_2025_across_top_4_registries": "9.8 trillion",
+      "downloads_yoy_growth_percent": 67,
+      "registries_covered": ["Maven Central", "PyPI", "npm", "NuGet", "Hugging Face"],
+      "npm_share_of_malware_2025_percent": 99,
+      "repository_abuse_share_percent": 55.9,
+      "ai_hallucinated_dependencies_per_27_75_recommendations": "27.75% of 36,870 LLM-suggested upgrades hallucinated"
+    },
+    "primary_sources": [
+      "https://www.sonatype.com/press-releases/sonatype-research-reveals-open-malware-grows-75-percent",
+      "https://www.sonatype.com/state-of-the-software-supply-chain/2026/open-source-malware",
+      "https://www.infosecurity-magazine.com/news/454000-malicious-open-source/"
+    ]
+  },
+  "usenix_2025_package_hallucinations": {
+    "name": "We Have a Package for You! A Comprehensive Analysis of Package Hallucinations by Code Generating LLMs",
+    "venue": "USENIX Security 2025",
+    "arxiv": "arXiv:2406.10279",
+    "doi": "10.5281/zenodo.14676377",
+    "authors": [
+      "Joseph Spracklen",
+      "Raveen Wijewickrama",
+      "A H M Nazmus Sakib",
+      "Anindya Maiti",
+      "Bimal Viswanath",
+      "Murtuza Jadliwala"
+    ],
+    "affiliations": [
+      "University of Texas at San Antonio",
+      "University of Oklahoma",
+      "Virginia Tech"
+    ],
+    "key_findings": {
+      "commercial_model_hallucination_rate_percent": 5.2,
+      "open_source_model_hallucination_rate_percent": 21.7,
+      "unique_hallucinated_package_names": 205474,
+      "models_evaluated": 16,
+      "code_samples": 576000,
+      "languages_evaluated": ["Python", "JavaScript"]
+    },
+    "primary_sources": [
+      "https://www.usenix.org/conference/usenixsecurity25/presentation/spracklen",
+      "https://www.usenix.org/system/files/usenixsecurity25-spracklen.pdf",
+      "https://arxiv.org/abs/2406.10279",
+      "https://github.com/Spracks/PackageHallucination"
+    ]
+  }
+}
