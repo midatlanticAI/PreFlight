@@ -96,6 +96,10 @@ export function validateFamily(family) {
       'fixtures_v05_pattern'
     );
   }
+  // Family-level compliance mapping (the regulatory unit is the family,
+  // not the per-language adapter). Optional; inherited by adapters in
+  // buildManifest unless the adapter overrides it.
+  validateComplianceRefs(family.compliance_refs, `family ${family.xl_id}`);
 }
 
 /**
@@ -207,64 +211,77 @@ export function validateAdapter(adapter) {
       adapter.learn_more_slug
     );
   }
-  // compliance_refs is OPTIONAL (forward-compat per the locked /goal —
-  // populated after the language buildout). Absent is valid. Present must be
-  // a well-formed array: scan-scope framework, non-empty clause + url, a
-  // direct|indicative relationship, and an ISO last_reviewed date.
-  if (adapter.compliance_refs !== undefined && adapter.compliance_refs !== null) {
-    if (!Array.isArray(adapter.compliance_refs)) {
+  // compliance_refs is OPTIONAL. An adapter MAY carry its own, but the
+  // common case (per the family-level mapping decision) is that it inherits
+  // the XL family's compliance_refs in buildManifest. Either way, if present
+  // on the adapter it must be well-formed.
+  validateComplianceRefs(adapter.compliance_refs, `adapter ${adapter.probe_id}`);
+}
+
+/**
+ * Validate a compliance_refs array (shared by validateAdapter +
+ * validateFamily). Absent / null is valid (compliance is optional and
+ * inherited). When present it must be an array of well-formed refs:
+ * a SCAN-scope framework, non-empty clause + http(s) url, a
+ * direct|indicative relationship, and an ISO last_reviewed date.
+ *
+ * SCAN scope only. FERPA / SOX / FDA / FTC / EU-AI-Act are education-scope
+ * (taught via Learn pages) and are deliberately rejected here so the
+ * scanner never claims to detect them.
+ *
+ * @param {unknown} refs
+ * @param {string} owner  label for error messages (e.g. "family XL-006")
+ */
+export function validateComplianceRefs(refs, owner) {
+  if (refs === undefined || refs === null) return;
+  if (!Array.isArray(refs)) {
+    throw new ManifestError(
+      `${owner}: compliance_refs must be an array when present`,
+      'compliance_refs',
+      refs
+    );
+  }
+  refs.forEach((ref, idx) => {
+    const where = `compliance_refs[${idx}]`;
+    if (!ref || typeof ref !== 'object') {
+      throw new ManifestError(`${owner}: ${where} must be an object`, where, ref);
+    }
+    if (!COMPLIANCE_FRAMEWORKS.includes(ref.framework)) {
       throw new ManifestError(
-        `adapter ${adapter.probe_id}: compliance_refs must be an array when present`,
-        'compliance_refs',
-        adapter.compliance_refs
+        `${owner}: ${where}.framework not in scan-scope set ${JSON.stringify(COMPLIANCE_FRAMEWORKS)} (FERPA/SOX/FDA/FTC/AI-Act are education-scope, not scan-scope)`,
+        `${where}.framework`,
+        ref.framework
       );
     }
-    adapter.compliance_refs.forEach((ref, idx) => {
-      const where = `compliance_refs[${idx}]`;
-      if (!ref || typeof ref !== 'object') {
-        throw new ManifestError(
-          `adapter ${adapter.probe_id}: ${where} must be an object`,
-          where,
-          ref
-        );
-      }
-      if (!COMPLIANCE_FRAMEWORKS.includes(ref.framework)) {
-        throw new ManifestError(
-          `adapter ${adapter.probe_id}: ${where}.framework not in scan-scope set ${JSON.stringify(COMPLIANCE_FRAMEWORKS)} (FERPA/SOX/FDA/FTC/AI-Act are education-scope, not scan-scope)`,
-          `${where}.framework`,
-          ref.framework
-        );
-      }
-      if (typeof ref.clause !== 'string' || ref.clause.length === 0) {
-        throw new ManifestError(
-          `adapter ${adapter.probe_id}: ${where}.clause must be a non-empty string`,
-          `${where}.clause`,
-          ref.clause
-        );
-      }
-      if (typeof ref.url !== 'string' || !/^https?:\/\//.test(ref.url)) {
-        throw new ManifestError(
-          `adapter ${adapter.probe_id}: ${where}.url must be an http(s) URL`,
-          `${where}.url`,
-          ref.url
-        );
-      }
-      if (!COMPLIANCE_RELATIONSHIPS.includes(ref.relationship)) {
-        throw new ManifestError(
-          `adapter ${adapter.probe_id}: ${where}.relationship must be one of ${JSON.stringify(COMPLIANCE_RELATIONSHIPS)}`,
-          `${where}.relationship`,
-          ref.relationship
-        );
-      }
-      if (typeof ref.last_reviewed !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(ref.last_reviewed)) {
-        throw new ManifestError(
-          `adapter ${adapter.probe_id}: ${where}.last_reviewed must be an ISO YYYY-MM-DD date (auditable provenance)`,
-          `${where}.last_reviewed`,
-          ref.last_reviewed
-        );
-      }
-    });
-  }
+    if (typeof ref.clause !== 'string' || ref.clause.length === 0) {
+      throw new ManifestError(
+        `${owner}: ${where}.clause must be a non-empty string`,
+        `${where}.clause`,
+        ref.clause
+      );
+    }
+    if (typeof ref.url !== 'string' || !/^https?:\/\//.test(ref.url)) {
+      throw new ManifestError(
+        `${owner}: ${where}.url must be an http(s) URL`,
+        `${where}.url`,
+        ref.url
+      );
+    }
+    if (!COMPLIANCE_RELATIONSHIPS.includes(ref.relationship)) {
+      throw new ManifestError(
+        `${owner}: ${where}.relationship must be one of ${JSON.stringify(COMPLIANCE_RELATIONSHIPS)}`,
+        `${where}.relationship`,
+        ref.relationship
+      );
+    }
+    if (typeof ref.last_reviewed !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(ref.last_reviewed)) {
+      throw new ManifestError(
+        `${owner}: ${where}.last_reviewed must be an ISO YYYY-MM-DD date (auditable provenance)`,
+        `${where}.last_reviewed`,
+        ref.last_reviewed
+      );
+    }
+  });
 }
 
 /**
@@ -384,9 +401,15 @@ export function buildManifest(families, adapters) {
         'learn_more_slug'
       );
     }
+    // Compliance mapping is family-level (the regulatory unit is the
+    // family). An adapter MAY override with its own; otherwise it inherits
+    // the family's. Absent on both = null (compliance is optional; most
+    // probes have no scan-scope regulatory mapping).
+    const resolvedCompliance = adapter.compliance_refs || family?.compliance_refs || null;
     manifest[adapter.probe_id] = Object.freeze({
       ...adapter,
       learn_more_slug: resolvedSlug,
+      compliance_refs: resolvedCompliance,
     });
   }
 

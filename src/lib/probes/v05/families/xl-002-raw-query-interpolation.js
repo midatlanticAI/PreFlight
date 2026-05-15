@@ -28,4 +28,30 @@ export const XL_002 = {
     positive: 'an f-string / concat feeding a query / execute / raw method',
     negative: 'a parameterized query with bound placeholders',
   },
+  // Scan-scope regulatory mapping. Interpretation layer, not certification.
+  // SQL injection is the canonical injection class; PCI 6.2.4 names it
+  // directly. The HIPAA/GDPR ties are 'indicative' (data-dependent).
+  compliance_refs: [
+    {
+      framework: 'PCI-DSS',
+      clause: 'Req 6.2.4 (injection-flaw defenses, incl. SQL injection)',
+      url: 'https://www.pcisecuritystandards.org/document_library/',
+      relationship: 'direct',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'HIPAA',
+      clause: '45 CFR 164.312(c)(1) Integrity',
+      url: 'https://www.ecfr.gov/current/title-45/section-164.312',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'GDPR',
+      clause: 'Art.32 security of processing',
+      url: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+  ],
 };

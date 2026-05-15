@@ -27,4 +27,38 @@ export const XL_004 = {
     positive: 'verify disabled on a client used against an https endpoint in app code',
     negative: 'default verification, or a ca-bundle path configured explicitly',
   },
+  // Scan-scope regulatory mapping. Disabling certificate verification is
+  // itself the clause failure for transmission-security controls, so the
+  // HIPAA and PCI ties are 'direct'; the GDPR/SOC2 ties are 'indicative'
+  // ("appropriate" encryption is risk-dependent).
+  compliance_refs: [
+    {
+      framework: 'PCI-DSS',
+      clause: 'Req 4.2.1 (strong cryptography for PAN in transit over open networks)',
+      url: 'https://www.pcisecuritystandards.org/document_library/',
+      relationship: 'direct',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'HIPAA',
+      clause: '45 CFR 164.312(e)(1) Transmission security',
+      url: 'https://www.ecfr.gov/current/title-45/section-164.312',
+      relationship: 'direct',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'GDPR',
+      clause: 'Art.32(1)(a) encryption of personal data',
+      url: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'SOC2',
+      clause: 'Trust Services Criteria CC6.7 (transmission of data)',
+      url: 'https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+  ],
 };

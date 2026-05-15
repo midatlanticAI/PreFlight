@@ -25,6 +25,9 @@
  * @property {Object} fixtures_v05_pattern        conceptual pattern (not paths)
  * @property {string} fixtures_v05_pattern.positive  text describing the positive case
  * @property {string} fixtures_v05_pattern.negative  text describing the negative case
+ * @property {ComplianceRef[]} [compliance_refs]  OPTIONAL scan-scope regulatory
+ *   mapping at the family level (the family is the regulatory unit). Adapters
+ *   inherit this in buildManifest unless they declare their own.
  */
 
 /**

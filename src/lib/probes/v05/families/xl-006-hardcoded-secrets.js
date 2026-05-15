@@ -30,4 +30,38 @@ export const XL_006 = {
     positive: 'a provider-key-shaped literal assigned in source or passed to a client ctor',
     negative: 'the key read from an environment variable / secret manager',
   },
+  // Scan-scope regulatory mapping. A hardcoded credential is associated
+  // with credential-protection and access-control clauses, but whether it
+  // is a finding depends on what the key unlocks, so the ties are
+  // 'indicative' (a human judges blast radius).
+  compliance_refs: [
+    {
+      framework: 'PCI-DSS',
+      clause: 'Req 8.3.1 / 8.6.2 (do not hard-code authentication credentials)',
+      url: 'https://www.pcisecuritystandards.org/document_library/',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'HIPAA',
+      clause: '45 CFR 164.312(d) Person or entity authentication',
+      url: 'https://www.ecfr.gov/current/title-45/section-164.312',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'GDPR',
+      clause: 'Art.32(1)(b) confidentiality of processing systems',
+      url: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'SOC2',
+      clause: 'Trust Services Criteria CC6.1 (logical access controls)',
+      url: 'https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+  ],
 };

@@ -34,4 +34,38 @@ export const XL_013 = {
     positive: 'a JWT signed with alg:none, or jwt.verify(token) with no key argument',
     negative: 'jwt.verify(token, secret) / a signed algorithm (HS256, RS256)',
   },
+  // Scan-scope regulatory mapping. Not verifying a token signature
+  // directly defeats entity authentication, so the HIPAA tie is 'direct';
+  // the PCI/GDPR/SOC2 ties are 'indicative' (authentication-strength
+  // requirements judged in context).
+  compliance_refs: [
+    {
+      framework: 'HIPAA',
+      clause: '45 CFR 164.312(d) Person or entity authentication',
+      url: 'https://www.ecfr.gov/current/title-45/section-164.312',
+      relationship: 'direct',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'PCI-DSS',
+      clause: 'Req 8.3 (strong authentication for users and administrators)',
+      url: 'https://www.pcisecuritystandards.org/document_library/',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'GDPR',
+      clause: 'Art.32 security of processing',
+      url: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'SOC2',
+      clause: 'Trust Services Criteria CC6.1 (logical access controls)',
+      url: 'https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+  ],
 };

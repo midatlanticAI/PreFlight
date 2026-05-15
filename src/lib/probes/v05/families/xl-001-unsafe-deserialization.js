@@ -33,4 +33,32 @@ export const XL_001 = {
     positive: 'a deserialize call whose input is a request body / socket / uploaded file',
     negative: 'a deserialize call against a constant local trusted path, or a safe loader',
   },
+  // Scan-scope regulatory mapping. This is an INTERPRETATION layer over a
+  // finding the scanner already emits, never a certification. relationship
+  // is honest: 'indicative' = the pattern is associated with the clause but
+  // a human must judge it in context (deserialization is an integrity /
+  // injection risk whose regulatory weight depends on the data handled).
+  compliance_refs: [
+    {
+      framework: 'PCI-DSS',
+      clause: 'Req 6.2.4 (injection and insecure deserialization defenses)',
+      url: 'https://www.pcisecuritystandards.org/document_library/',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'HIPAA',
+      clause: '45 CFR 164.312(c)(1) Integrity',
+      url: 'https://www.ecfr.gov/current/title-45/section-164.312',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'GDPR',
+      clause: 'Art.32(1)(b) integrity of processing systems',
+      url: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679',
+      relationship: 'indicative',
+      last_reviewed: '2026-05-15',
+    },
+  ],
 };
