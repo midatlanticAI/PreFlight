@@ -40,6 +40,9 @@ import { KT_SQL_RAW_001 } from './kotlin/kt-sql-raw-001-room.js';
 import { KT_TLS_VERIFY_001 } from './kotlin/kt-tls-verify-001-trustall.js';
 import { KT_SECRETS_001 } from './kotlin/kt-secrets-001-hardcoded.js';
 import { KT_AUTH_001 } from './kotlin/kt-auth-001-jjwt-unsigned.js';
+import { SW_SQL_RAW_001 } from './swift/sw-sql-raw-001-interpolation.js';
+import { SW_TLS_VERIFY_001 } from './swift/sw-tls-verify-001-trustall.js';
+import { SW_SECRETS_001 } from './swift/sw-secrets-001-hardcoded.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -77,4 +80,7 @@ export const ADAPTERS = [
   KT_TLS_VERIFY_001,
   KT_SECRETS_001,
   KT_AUTH_001,
+  SW_SQL_RAW_001,
+  SW_TLS_VERIFY_001,
+  SW_SECRETS_001,
 ];
