@@ -17,6 +17,10 @@ import { RS_DESERIALIZE_001 } from './rust/rs-deserialize-001-untrusted.js';
 import { RS_SQL_RAW_001 } from './rust/rs-sql-raw-001-format.js';
 import { RS_TLS_VERIFY_001 } from './rust/rs-tls-verify-001-danger.js';
 import { RS_SECRETS_001 } from './rust/rs-secrets-001-hardcoded.js';
+import { GO_DESERIALIZE_001 } from './go/go-deserialize-001-untrusted.js';
+import { GO_SQL_RAW_001 } from './go/go-sql-raw-001-sprintf.js';
+import { GO_TLS_VERIFY_001 } from './go/go-tls-verify-001-insecure.js';
+import { GO_SECRETS_001 } from './go/go-secrets-001-hardcoded.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -31,4 +35,8 @@ export const ADAPTERS = [
   RS_SQL_RAW_001,
   RS_TLS_VERIFY_001,
   RS_SECRETS_001,
+  GO_DESERIALIZE_001,
+  GO_SQL_RAW_001,
+  GO_TLS_VERIFY_001,
+  GO_SECRETS_001,
 ];
