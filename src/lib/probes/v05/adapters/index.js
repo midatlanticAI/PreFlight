@@ -59,6 +59,9 @@ import { EX_DESERIALIZE_001 } from './elixir/ex-deserialize-001-binarytoterm.js'
 import { EX_SQL_RAW_001 } from './elixir/ex-sql-raw-001-fragment.js';
 import { EX_TLS_VERIFY_001 } from './elixir/ex-tls-verify-001-verifynone.js';
 import { EX_SECRETS_001 } from './elixir/ex-secrets-001-hardcoded.js';
+import { DA_SQL_RAW_001 } from './dart/da-sql-raw-001-rawquery.js';
+import { DA_TLS_VERIFY_001 } from './dart/da-tls-verify-001-badcert.js';
+import { DA_SECRETS_001 } from './dart/da-secrets-001-hardcoded.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -115,4 +118,7 @@ export const ADAPTERS = [
   EX_SQL_RAW_001,
   EX_TLS_VERIFY_001,
   EX_SECRETS_001,
+  DA_SQL_RAW_001,
+  DA_TLS_VERIFY_001,
+  DA_SECRETS_001,
 ];
