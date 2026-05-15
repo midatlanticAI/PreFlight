@@ -34,7 +34,7 @@ describe('Phase 3 (Elixir): manifest shape', () => {
 
   it('every Elixir adapter is shadow + experimental + elixir + no legacy seed', () => {
     for (const e of ENTRIES) {
-      expect(e.shadow).toBe(true);
+      expect(e.shadow).toBe(false);
       expect(e.maturity).toBe('experimental');
       expect(e.language).toBe('elixir');
       expect(e.legacy_finding_id_seed).toBe(null);
@@ -52,12 +52,12 @@ describe('Phase 3 (Elixir): manifest shape', () => {
     expect(byId('EX-SECRETS-001').learn_more_slug).toBe('xl-hardcoded-secrets');
   });
 
-  it('Elixir adapters are invisible to users (not in v0.4 PROBES, not in OWASP map)', () => {
+  it('Elixir adapters are LIVE and user-visible (in v0.4 PROBES + OWASP map)', () => {
     const probeNames = new Set(PROBES.map((p) => p.name));
     const owaspNames = new Set(Object.values(MANIFEST_OWASP_MAP).flat());
     for (const e of ENTRIES) {
-      expect(probeNames.has(e.name)).toBe(false);
-      expect(owaspNames.has(e.name)).toBe(false);
+      expect(probeNames.has(e.name)).toBe(true);
+      expect(owaspNames.has(e.name)).toBe(true);
     }
   });
 });

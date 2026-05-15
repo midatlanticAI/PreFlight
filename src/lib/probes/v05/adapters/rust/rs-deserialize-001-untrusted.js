@@ -54,7 +54,7 @@ export const RS_DESERIALIZE_001 = {
   known_incidents: 'CWE-502; OWASP A08; serde/axum body-limit guidance',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: null,
   detect(files) {
     const findings = [];

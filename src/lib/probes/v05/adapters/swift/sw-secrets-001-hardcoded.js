@@ -60,7 +60,7 @@ export const SW_SECRETS_001 = {
   known_incidents: 'CWE-798; OWASP A07 / MASVS-CRYPTO; routine .ipa secret extraction',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: null,
   detect(files) {
     const findings = [];

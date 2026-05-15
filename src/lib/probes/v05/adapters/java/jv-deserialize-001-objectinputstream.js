@@ -53,7 +53,7 @@ export const JV_DESERIALIZE_001 = {
     'CWE-502; OWASP A08; CVE-2017-7525 (Jackson); Commons-Collections gadget chains; Log4Shell-era Java deser CVEs',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: null,
   detect(files) {
     const findings = [];

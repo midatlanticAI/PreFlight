@@ -53,7 +53,7 @@ export const CPP_SQL_RAW_001 = {
   known_incidents: 'CWE-89; OWASP A03; Qt SQL bindValue guidance',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: null,
   detect(files) {
     const findings = [];

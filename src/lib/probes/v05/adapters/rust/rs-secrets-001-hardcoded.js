@@ -64,7 +64,7 @@ export const RS_SECRETS_001 = {
   known_incidents: 'CWE-798; OWASP A07; routine GitHub secret-scanning detections',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: null,
   detect(files) {
     const findings = [];

@@ -52,7 +52,7 @@ export const JS_AUTH_001 = {
   known_incidents: 'CWE-327 (alg:none); CWE-347 (missing signature verification); OWASP A07',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: 'Auth Weakness',
   detect(files) {
     const findings = [];

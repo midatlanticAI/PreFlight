@@ -54,7 +54,7 @@ export const KT_AUTH_001 = {
   known_incidents: 'CWE-347; OWASP A07 / Mobile M3; jjwt signed-vs-unsigned parse advisories',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: null,
   detect(files) {
     const findings = [];

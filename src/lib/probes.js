@@ -35,6 +35,10 @@ import {
   shouldScanFile,
 } from './file-filter.js';
 import { stableId, attachStableIds, PROBE_META, attachProbeMeta } from './stable-id.js';
+// v0.5 live adapters projected as {name, fn}. manifest.js is already in the
+// module graph via stable-id.js and does NOT import probes.js, so this
+// direct import introduces no cycle.
+import { MANIFEST_LIVE_PROBES } from './probes/v05/manifest.js';
 import {
   SUPPRESSION_KEY,
   SUPPRESSION_DISPOSITIONS,
@@ -1517,4 +1521,8 @@ export const PROBES = [
   { name: 'Security Logging', fn: probeSecurityLogging },
   { name: 'RAG Ingestion', fn: probeRAGIngestion },
   { name: 'Vector Embedding Weaknesses', fn: probeVectorEmbeddingWeaknesses },
+  // v0.5: the live (shadow:false, net-new) language-agnostic adapters,
+  // projected from PROBE_MANIFEST_V05. Migration adapters are held out
+  // until the v0.4 cutover (see isLiveAdapter).
+  ...MANIFEST_LIVE_PROBES,
 ];

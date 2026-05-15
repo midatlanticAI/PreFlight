@@ -41,7 +41,7 @@ describe('Phase 2: manifest shape', () => {
 
   it('every Phase 2 adapter is shadow + experimental + javascript', () => {
     for (const e of ENTRIES) {
-      expect(e.shadow).toBe(true);
+      expect(e.shadow).toBe(false);
       expect(e.maturity).toBe('experimental');
       expect(e.language).toBe('javascript');
     }

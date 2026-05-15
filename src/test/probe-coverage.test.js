@@ -16,6 +16,18 @@ import {
   attachProbeMeta,
 } from '../lib/stable-id.js';
 import { LEARN_ENTRIES, resolvePatternForProbe } from '../lib/learn-content.js';
+import { PROBE_MANIFEST_V05 } from '../lib/probes/v05/manifest.js';
+
+// v0.5 live probes are registered in PROBES via the manifest projection.
+// Their Learn slug lives on the manifest entry (by probe name), not in the
+// hand-coded v0.4 PROBE_META. The coverage contract is the same — every
+// registered probe must resolve to a published pattern — only the source
+// of the slug differs. slugFor() resolves from either.
+const MANIFEST_BY_NAME = {};
+for (const e of Object.values(PROBE_MANIFEST_V05)) MANIFEST_BY_NAME[e.name] = e;
+const slugFor = (name) =>
+  PROBE_META[name]?.learn_more_slug || MANIFEST_BY_NAME[name]?.learn_more_slug || null;
+const hasMeta = (name) => !!PROBE_META[name] || !!MANIFEST_BY_NAME[name];
 
 // Probes that intentionally have no dedicated pattern page. Each must carry a
 // brief reason here so a future contributor reading the test understands why
@@ -28,23 +40,22 @@ const EXEMPT = new Map([
 ]);
 
 describe('probe coverage', () => {
-  it('every registered probe has a PROBE_META entry', () => {
-    const missing = PROBES.filter((p) => !PROBE_META[p.name]).map((p) => p.name);
+  it('every registered probe has a PROBE_META or v0.5 manifest entry', () => {
+    const missing = PROBES.filter((p) => !hasMeta(p.name)).map((p) => p.name);
     expect(missing).toEqual([]);
   });
 
   it('every probe is either wired to a learn_more_slug or explicitly exempt', () => {
-    const unwired = PROBES.filter((p) => {
-      const meta = PROBE_META[p.name];
-      return !meta?.learn_more_slug && !EXEMPT.has(p.name);
-    }).map((p) => p.name);
+    const unwired = PROBES.filter((p) => !slugFor(p.name) && !EXEMPT.has(p.name)).map(
+      (p) => p.name
+    );
     expect(unwired).toEqual([]);
   });
 
   it('every learn_more_slug resolves to an existing Learn entry', () => {
     const unresolved = [];
     for (const probe of PROBES) {
-      const slug = PROBE_META[probe.name]?.learn_more_slug;
+      const slug = slugFor(probe.name);
       if (!slug) continue;
       const entry = LEARN_ENTRIES.find((e) => e.slug === slug);
       if (!entry) unresolved.push(`${probe.name} → ${slug}`);
@@ -55,7 +66,7 @@ describe('probe coverage', () => {
   it('every learn_more_slug resolves to a non-draft pattern (so the in-app link works)', () => {
     const failures = [];
     for (const probe of PROBES) {
-      const slug = PROBE_META[probe.name]?.learn_more_slug;
+      const slug = slugFor(probe.name);
       if (!slug) continue;
       const resolved = resolvePatternForProbe(slug);
       if (!resolved) {
@@ -71,7 +82,7 @@ describe('probe coverage', () => {
     const missing = [];
     for (const probe of PROBES) {
       if (EXEMPT.has(probe.name)) continue;
-      const slug = PROBE_META[probe.name]?.learn_more_slug;
+      const slug = slugFor(probe.name);
       const entry = LEARN_ENTRIES.find((e) => e.slug === slug && e.type === 'pattern');
       if (!entry) missing.push(`${probe.name} → ${slug ?? '<no slug>'}`);
     }

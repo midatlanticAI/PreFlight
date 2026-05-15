@@ -425,15 +425,33 @@ export function buildManifest(families, adapters) {
  * @param {Object<string, object>} manifest
  * @returns {Object<string, string[]>}
  */
+/**
+ * Is this adapter LIVE (user-visible, executed in the real scan)?
+ *
+ * Two gates:
+ *  - shadow:false — the maintainer has promoted it.
+ *  - legacy_finding_id_seed == null — it is net-new detection. An adapter
+ *    that carries a legacy seed is a v0.4 *migration*; it stays out of the
+ *    live set until the v0.4 probe it replaces is retired (the branch-merge
+ *    cutover), otherwise the v0.4 probe and the adapter double-fire on the
+ *    same code. Until then it is still exercised by the parity test.
+ *
+ * The OWASP-map projection and the live-PROBES projection MUST use this
+ * same predicate, or probe-coverage breaks (a name in the OWASP map that
+ * is not a registered probe).
+ *
+ * @param {object} adapter
+ * @returns {boolean}
+ */
+export function isLiveAdapter(adapter) {
+  return !adapter.shadow && adapter.legacy_finding_id_seed == null;
+}
+
 export function buildOwaspMapFromManifest(manifest) {
   const out = {};
   for (const adapter of Object.values(manifest)) {
-    // Shadow adapters are comparison-only and not user-visible. They must
-    // not appear in the OWASP coverage page or the v0.4 PROBE_OWASP_MAP
-    // until promoted (shadow:false). A shadow adapter in the coverage map
-    // would also trip the v0.4 probe-coverage test, since its name is not
-    // in the v0.4 PROBES array.
-    if (adapter.shadow) continue;
+    // Only LIVE adapters appear in the user-visible OWASP coverage map.
+    if (!isLiveAdapter(adapter)) continue;
     for (const codeField of ['owasp_web', 'owasp_llm']) {
       const code = adapter[codeField];
       if (!code) continue;
@@ -472,13 +490,25 @@ export function mergeOwaspMaps(handCoded, fromManifest) {
 
 // ---------- The live manifest ----------
 
-// Phase 1: XL-001/002/004/006 families + their Python adapters. All Phase 1
-// adapters carry shadow:true / maturity:experimental — they run in the
-// comparison channel and do NOT change user-visible scan output. Promotion
-// to live is a per-adapter shadow:false flip the maintainer makes.
+// v1 promotion: every adapter is shadow:false. The net-new language
+// adapters are LIVE (executed in the real scan, user-visible). The three
+// v0.4 migration adapters (legacy_finding_id_seed set) are held out of the
+// live set by isLiveAdapter until the v0.4 probes they replace are retired
+// at the branch-merge cutover — otherwise they double-fire. They remain
+// exercised by the v05-phase2 parity test.
 
 /** @type {Readonly<Object<string, object>>} */
 export const PROBE_MANIFEST_V05 = buildManifest(FAMILIES, ADAPTERS);
 
 // Re-export for stable-id.js consumption.
 export const MANIFEST_OWASP_MAP = buildOwaspMapFromManifest(PROBE_MANIFEST_V05);
+
+// The live adapters projected into the v0.4 probe shape ({name, fn}) so
+// the existing scan loop (App.jsx handleScan) executes them with no
+// pipeline change. probes.js appends these to PROBES.
+/** @type {ReadonlyArray<{name: string, fn: (files: Array<{path:string,content:string}>) => object[]}>} */
+export const MANIFEST_LIVE_PROBES = Object.freeze(
+  Object.values(PROBE_MANIFEST_V05)
+    .filter(isLiveAdapter)
+    .map((a) => Object.freeze({ name: a.name, fn: a.detect }))
+);

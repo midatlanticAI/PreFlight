@@ -51,7 +51,7 @@ export const C_SQL_RAW_001 = {
   known_incidents: 'CWE-89; OWASP A03; SQLite mprintf %q vs %s guidance',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: null,
   detect(files) {
     const findings = [];

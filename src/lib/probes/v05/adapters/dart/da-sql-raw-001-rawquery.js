@@ -48,7 +48,7 @@ export const DA_SQL_RAW_001 = {
   known_incidents: 'CWE-89; OWASP A03; sqflite rawQuery args guidance',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: null,
   detect(files) {
     const findings = [];

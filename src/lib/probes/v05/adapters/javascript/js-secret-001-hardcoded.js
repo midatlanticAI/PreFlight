@@ -53,7 +53,7 @@ export const JS_SECRET_001 = {
   known_incidents: 'CWE-798; OWASP A07; routine GitHub secret-scanning detections',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: 'Secret Scanner',
   detect(files) {
     const findings = [];

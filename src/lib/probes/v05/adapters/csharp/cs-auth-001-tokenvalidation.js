@@ -54,7 +54,7 @@ export const CS_AUTH_001 = {
   known_incidents: 'CWE-347; OWASP A07; JWT signature-bypass advisories',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: null,
   detect(files) {
     const findings = [];

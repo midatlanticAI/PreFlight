@@ -37,9 +37,9 @@ describe('Phase 1: manifest shape', () => {
     expect(pythonIds).toEqual([...PHASE1_IDS].sort());
   });
 
-  it('every Phase 1 adapter is shadow + experimental (no user-visible change yet)', () => {
+  it('every Phase 1 adapter is promoted (shadow:false) + experimental + python', () => {
     for (const e of ENTRIES) {
-      expect(e.shadow).toBe(true);
+      expect(e.shadow).toBe(false);
       expect(e.maturity).toBe('experimental');
       expect(e.language).toBe('python');
     }
@@ -53,10 +53,10 @@ describe('Phase 1: manifest shape', () => {
     }
   });
 
-  it('Phase 1 adapter names are NOT in the v0.4 PROBES array (shadow-only)', () => {
+  it('Phase 1 adapter names ARE in the live v0.4 PROBES array (promoted)', () => {
     const probeNames = new Set(PROBES.map((p) => p.name));
     for (const e of ENTRIES) {
-      expect(probeNames.has(e.name)).toBe(false);
+      expect(probeNames.has(e.name)).toBe(true);
     }
   });
 });

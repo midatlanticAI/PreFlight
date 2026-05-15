@@ -62,7 +62,7 @@ export const PY_DESERIALIZE_001 = {
   known_incidents: 'CVE-2007-4559; CWE-502; PyTorch 2.6 weights_only default; HF safetensors push',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: null,
   detect(files) {
     const findings = [];

@@ -39,7 +39,7 @@ describe('Phase 3 (Go): manifest shape', () => {
 
   it('every Go adapter is shadow + experimental + go + no legacy seed', () => {
     for (const e of ENTRIES) {
-      expect(e.shadow).toBe(true);
+      expect(e.shadow).toBe(false);
       expect(e.maturity).toBe('experimental');
       expect(e.language).toBe('go');
       expect(e.legacy_finding_id_seed).toBe(null);
@@ -57,12 +57,12 @@ describe('Phase 3 (Go): manifest shape', () => {
     expect(byId('GO-SECRETS-001').learn_more_slug).toBe('xl-hardcoded-secrets');
   });
 
-  it('Go adapters are invisible to users (not in v0.4 PROBES, not in OWASP map)', () => {
+  it('Go adapters are LIVE and user-visible (in v0.4 PROBES + OWASP map)', () => {
     const probeNames = new Set(PROBES.map((p) => p.name));
     const owaspNames = new Set(Object.values(MANIFEST_OWASP_MAP).flat());
     for (const e of ENTRIES) {
-      expect(probeNames.has(e.name)).toBe(false);
-      expect(owaspNames.has(e.name)).toBe(false);
+      expect(probeNames.has(e.name)).toBe(true);
+      expect(owaspNames.has(e.name)).toBe(true);
     }
   });
 });

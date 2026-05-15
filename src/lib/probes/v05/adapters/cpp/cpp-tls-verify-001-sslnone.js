@@ -49,7 +49,7 @@ export const CPP_TLS_VERIFY_001 = {
   known_incidents: 'CWE-295; OWASP A02; OpenSSL / libcurl / Asio verification docs',
   ioc_bundle_ref: null,
   maturity: 'experimental',
-  shadow: true,
+  shadow: false,
   legacy_finding_id_seed: null,
   detect(files) {
     const findings = [];
