@@ -55,6 +55,7 @@
  * @property {string|null} known_incidents        CVE numbers, campaign names
  * @property {string|null} ioc_bundle_ref         key into preflight_v05_iocs.json
  * @property {Maturity} maturity                  experimental | beta | stable | deprecated
+ * @property {ComplianceRef[]} [compliance_refs]  OPTIONAL regulatory mapping; populated post-language per locked /goal
  * @property {boolean} [shadow]                   true = emits to internal channel only (default false)
  * @property {string|null} [legacy_finding_id_seed]  for migration stableId continuity; preserves v0.4 hashes
  * @property {(files: Array<{path: string, content: string}>) => Array<Finding>} detect
@@ -119,6 +120,18 @@
  * @property {string} [adversarial]               optional adversarial fixture
  */
 
+/**
+ * One regulatory citation attached to a probe. The probe does not change;
+ * this is an interpretation layer over a finding the scanner already emits.
+ *
+ * @typedef {Object} ComplianceRef
+ * @property {"HIPAA"|"PCI-DSS"|"GDPR"|"SOC2"} framework
+ * @property {string} clause                      e.g. "164.312(a)(2)(iv)", "Art.32(1)(a)", "3.5.1"
+ * @property {string} url                         link to the primary regulatory text
+ * @property {"direct"|"indicative"} relationship direct = the pattern is the violation; indicative = needs human judgment
+ * @property {string} last_reviewed               ISO date the mapping was verified against current regulatory text
+ */
+
 // Constant exports for runtime use (validators reference these).
 export const LANGUAGES = Object.freeze([
   'python',
@@ -162,6 +175,26 @@ export const AUTOFIX_TIERS = Object.freeze(['mechanical', 'review-needed', 'manu
 
 export const MATURITIES = Object.freeze(['experimental', 'beta', 'stable', 'deprecated']);
 
+// Compliance axis. Forward-compat per the locked /goal: the field is added to
+// the schema NOW so the manifest is regulation-ready, but compliance mapping
+// is populated AFTER the language buildout. compliance_refs is OPTIONAL — it
+// is deliberately NOT in REQUIRED_ADAPTER_FIELDS, so the language work never
+// has to touch it and absent compliance data is valid.
+//
+// SCAN-scope frameworks only (code-detectable technical safeguards). FERPA /
+// SOX / FDA / FTC / EU-AI-Act are NOT scan-scope — they are education-scope
+// (Learn pages teach them; the scanner does not claim to detect them). Do
+// not add them here.
+export const COMPLIANCE_FRAMEWORKS = Object.freeze(['HIPAA', 'PCI-DSS', 'GDPR', 'SOC2']);
+
+// 'direct'     — the pattern is itself the clause violation (e.g. plaintext
+//                PHI in a log directly trips HIPAA 164.312(b)).
+// 'indicative' — the pattern is associated with the clause but needs human
+//                judgment in context. Never render an indicative ref as a
+//                confirmed violation. This distinction is a load-bearing
+//                legal constraint, not a tone choice.
+export const COMPLIANCE_RELATIONSHIPS = Object.freeze(['direct', 'indicative']);
+
 // Required fields on every adapter record. Used by validateAdapter().
 export const REQUIRED_ADAPTER_FIELDS = Object.freeze([
   'probe_id',
@@ -184,7 +217,9 @@ export const REQUIRED_ADAPTER_FIELDS = Object.freeze([
   'detect',
 ]);
 
-// Required fields on every XL family record.
+// Required fields on every XL family record. learn_more_slug is mandatory:
+// a probe family with no Learn page is half a product. The build fails
+// (validateLearnContent) if the markdown is missing or still draft.
 export const REQUIRED_FAMILY_FIELDS = Object.freeze([
   'xl_id',
   'name',
@@ -195,6 +230,7 @@ export const REQUIRED_FAMILY_FIELDS = Object.freeze([
   'fp_gates_v05_shared',
   'autofix_v05',
   'fixtures_v05_pattern',
+  'learn_more_slug',
 ]);
 
 // probe_id format: LANG-CATEGORY-NNN. e.g. PY-DESERIALIZE-001.

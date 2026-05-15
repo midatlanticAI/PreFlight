@@ -24,7 +24,11 @@ import {
   MATURITIES,
   PROBE_ID_RE,
   XL_FAMILY_RE,
+  COMPLIANCE_FRAMEWORKS,
+  COMPLIANCE_RELATIONSHIPS,
 } from './types.js';
+import { FAMILIES } from './families/index.js';
+import { ADAPTERS } from './adapters/index.js';
 
 /** @type {Error & {field?: string, value?: unknown}} */
 class ManifestError extends Error {
@@ -189,6 +193,112 @@ export function validateAdapter(adapter) {
   if (typeof adapter.detect !== 'function') {
     throw new ManifestError('adapter.detect must be a function', 'detect');
   }
+  // A standalone adapter (no XL family to inherit a Learn page from) must
+  // declare its own learn_more_slug. Adapters with an xl_family resolve the
+  // slug from the family in buildManifest(). Either way every adapter ends
+  // up with a Learn page; an adapter that resolves to none fails the build.
+  if (
+    (adapter.xl_family == null || adapter.xl_family === undefined) &&
+    (typeof adapter.learn_more_slug !== 'string' || adapter.learn_more_slug.length === 0)
+  ) {
+    throw new ManifestError(
+      `adapter ${adapter.probe_id} has no xl_family and no learn_more_slug — every probe must resolve to a Learn page`,
+      'learn_more_slug',
+      adapter.learn_more_slug
+    );
+  }
+  // compliance_refs is OPTIONAL (forward-compat per the locked /goal —
+  // populated after the language buildout). Absent is valid. Present must be
+  // a well-formed array: scan-scope framework, non-empty clause + url, a
+  // direct|indicative relationship, and an ISO last_reviewed date.
+  if (adapter.compliance_refs !== undefined && adapter.compliance_refs !== null) {
+    if (!Array.isArray(adapter.compliance_refs)) {
+      throw new ManifestError(
+        `adapter ${adapter.probe_id}: compliance_refs must be an array when present`,
+        'compliance_refs',
+        adapter.compliance_refs
+      );
+    }
+    adapter.compliance_refs.forEach((ref, idx) => {
+      const where = `compliance_refs[${idx}]`;
+      if (!ref || typeof ref !== 'object') {
+        throw new ManifestError(
+          `adapter ${adapter.probe_id}: ${where} must be an object`,
+          where,
+          ref
+        );
+      }
+      if (!COMPLIANCE_FRAMEWORKS.includes(ref.framework)) {
+        throw new ManifestError(
+          `adapter ${adapter.probe_id}: ${where}.framework not in scan-scope set ${JSON.stringify(COMPLIANCE_FRAMEWORKS)} (FERPA/SOX/FDA/FTC/AI-Act are education-scope, not scan-scope)`,
+          `${where}.framework`,
+          ref.framework
+        );
+      }
+      if (typeof ref.clause !== 'string' || ref.clause.length === 0) {
+        throw new ManifestError(
+          `adapter ${adapter.probe_id}: ${where}.clause must be a non-empty string`,
+          `${where}.clause`,
+          ref.clause
+        );
+      }
+      if (typeof ref.url !== 'string' || !/^https?:\/\//.test(ref.url)) {
+        throw new ManifestError(
+          `adapter ${adapter.probe_id}: ${where}.url must be an http(s) URL`,
+          `${where}.url`,
+          ref.url
+        );
+      }
+      if (!COMPLIANCE_RELATIONSHIPS.includes(ref.relationship)) {
+        throw new ManifestError(
+          `adapter ${adapter.probe_id}: ${where}.relationship must be one of ${JSON.stringify(COMPLIANCE_RELATIONSHIPS)}`,
+          `${where}.relationship`,
+          ref.relationship
+        );
+      }
+      if (typeof ref.last_reviewed !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(ref.last_reviewed)) {
+        throw new ManifestError(
+          `adapter ${adapter.probe_id}: ${where}.last_reviewed must be an ISO YYYY-MM-DD date (auditable provenance)`,
+          `${where}.last_reviewed`,
+          ref.last_reviewed
+        );
+      }
+    });
+  }
+}
+
+/**
+ * Verify the Learn pattern markdown for a probe exists and is not draft.
+ * Browser-portable: caller supplies the existence + draft checks (build/test
+ * tooling has fs + frontmatter access). Mirrors validateFixturePaths().
+ *
+ * @param {object} resolvedEntry  a manifest entry (post-resolution; has learn_more_slug)
+ * @param {(slug: string) => boolean} patternExists
+ * @param {(slug: string) => boolean} patternIsDraft
+ * @throws when the Learn page is missing or still draft
+ */
+export function validateLearnContent(resolvedEntry, patternExists, patternIsDraft) {
+  const slug = resolvedEntry.learn_more_slug;
+  if (!slug) {
+    throw new ManifestError(
+      `adapter ${resolvedEntry.probe_id}: no learn_more_slug resolved`,
+      'learn_more_slug'
+    );
+  }
+  if (!patternExists(slug)) {
+    throw new ManifestError(
+      `adapter ${resolvedEntry.probe_id}: Learn pattern "${slug}" does not exist`,
+      'learn_more_slug',
+      slug
+    );
+  }
+  if (patternIsDraft(slug)) {
+    throw new ManifestError(
+      `adapter ${resolvedEntry.probe_id}: Learn pattern "${slug}" is still draft — undraft it before shipping the probe`,
+      'learn_more_slug',
+      slug
+    );
+  }
 }
 
 /**
@@ -256,14 +366,28 @@ export function buildManifest(families, adapters) {
         adapter.probe_id
       );
     }
-    if (adapter.xl_family && !familyById[adapter.xl_family]) {
+    const family = adapter.xl_family ? familyById[adapter.xl_family] : null;
+    if (adapter.xl_family && !family) {
       throw new ManifestError(
         `adapter ${adapter.probe_id} references unknown XL family: ${adapter.xl_family}`,
         'xl_family',
         adapter.xl_family
       );
     }
-    manifest[adapter.probe_id] = Object.freeze({ ...adapter });
+    // Resolve the Learn slug: adapter's own override wins, else inherit from
+    // the family. validateAdapter already guaranteed a standalone adapter
+    // (no family) carries its own slug, so resolution always yields a string.
+    const resolvedSlug = adapter.learn_more_slug || family?.learn_more_slug || null;
+    if (!resolvedSlug) {
+      throw new ManifestError(
+        `adapter ${adapter.probe_id}: could not resolve a learn_more_slug from adapter or family`,
+        'learn_more_slug'
+      );
+    }
+    manifest[adapter.probe_id] = Object.freeze({
+      ...adapter,
+      learn_more_slug: resolvedSlug,
+    });
   }
 
   return Object.freeze(manifest);
@@ -281,6 +405,12 @@ export function buildManifest(families, adapters) {
 export function buildOwaspMapFromManifest(manifest) {
   const out = {};
   for (const adapter of Object.values(manifest)) {
+    // Shadow adapters are comparison-only and not user-visible. They must
+    // not appear in the OWASP coverage page or the v0.4 PROBE_OWASP_MAP
+    // until promoted (shadow:false). A shadow adapter in the coverage map
+    // would also trip the v0.4 probe-coverage test, since its name is not
+    // in the v0.4 PROBES array.
+    if (adapter.shadow) continue;
     for (const codeField of ['owasp_web', 'owasp_llm']) {
       const code = adapter[codeField];
       if (!code) continue;
@@ -319,16 +449,10 @@ export function mergeOwaspMaps(handCoded, fromManifest) {
 
 // ---------- The live manifest ----------
 
-// Phase 0: empty. Phase 1+ populates by importing families and adapters
-// from the adjacent directories and passing them to buildManifest().
-//
-// When adapters land, replace these arrays with the imports.
-
-/** @type {object[]} */
-const FAMILIES = [];
-
-/** @type {object[]} */
-const ADAPTERS = [];
+// Phase 1: XL-001/002/004/006 families + their Python adapters. All Phase 1
+// adapters carry shadow:true / maturity:experimental — they run in the
+// comparison channel and do NOT change user-visible scan output. Promotion
+// to live is a per-adapter shadow:false flip the maintainer makes.
 
 /** @type {Readonly<Object<string, object>>} */
 export const PROBE_MANIFEST_V05 = buildManifest(FAMILIES, ADAPTERS);

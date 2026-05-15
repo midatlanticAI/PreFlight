@@ -31,14 +31,21 @@ import { PROBE_OWASP_MAP, OWASP_BY_PROBE, attachProbeMeta, stableId } from '../l
 
 // ---- Empty-input contract: Phase 0 ships with zero adapters ----
 
-describe('Phase 0: empty manifest', () => {
-  it('PROBE_MANIFEST_V05 is an empty frozen object', () => {
-    expect(PROBE_MANIFEST_V05).toEqual({});
+describe('manifest aggregator: structural invariants', () => {
+  it('PROBE_MANIFEST_V05 is a frozen object keyed by probe_id', () => {
     expect(Object.isFrozen(PROBE_MANIFEST_V05)).toBe(true);
+    for (const [key, entry] of Object.entries(PROBE_MANIFEST_V05)) {
+      expect(key).toBe(entry.probe_id);
+      expect(Object.isFrozen(entry)).toBe(true);
+    }
   });
 
-  it('MANIFEST_OWASP_MAP is empty for Phase 0', () => {
-    expect(MANIFEST_OWASP_MAP).toEqual({});
+  it('MANIFEST_OWASP_MAP is a {code: [name]} projection of the manifest', () => {
+    // Every name listed in the projection must correspond to a manifest entry.
+    const names = new Set(Object.values(PROBE_MANIFEST_V05).map((e) => e.name));
+    for (const list of Object.values(MANIFEST_OWASP_MAP)) {
+      for (const n of list) expect(names.has(n)).toBe(true);
+    }
   });
 
   it('buildManifest with empty inputs returns a frozen empty object', () => {
@@ -107,6 +114,7 @@ const validAdapter = () => ({
   xl_family: 'XL-001',
   language: 'python',
   name: 'Python Unsafe Deserialization',
+  learn_more_slug: 'xl-unsafe-deserialization',
   category: 'security',
   severity: 'critical',
   confidence: 'high',
@@ -192,6 +200,70 @@ describe('Phase 0: validateAdapter', () => {
   });
 });
 
+describe('schema: compliance_refs (forward-compat, optional)', () => {
+  const validRef = () => ({
+    framework: 'HIPAA',
+    clause: '164.312(a)(2)(iv)',
+    url: 'https://www.ecfr.gov/current/title-45/section-164.312',
+    relationship: 'indicative',
+    last_reviewed: '2026-05-15',
+  });
+
+  it('absent compliance_refs is valid (the Phase 1 / language case)', () => {
+    const a = validAdapter();
+    expect(a.compliance_refs).toBeUndefined();
+    expect(() => validateAdapter(a)).not.toThrow();
+  });
+
+  it('null compliance_refs is valid', () => {
+    const a = { ...validAdapter(), compliance_refs: null };
+    expect(() => validateAdapter(a)).not.toThrow();
+  });
+
+  it('a well-formed compliance_refs array is accepted', () => {
+    const a = { ...validAdapter(), compliance_refs: [validRef()] };
+    expect(() => validateAdapter(a)).not.toThrow();
+  });
+
+  it('rejects compliance_refs that is not an array', () => {
+    const a = { ...validAdapter(), compliance_refs: validRef() };
+    expect(() => validateAdapter(a)).toThrow(/must be an array/);
+  });
+
+  it('rejects an education-scope framework (FERPA is not scan-scope)', () => {
+    const a = { ...validAdapter(), compliance_refs: [{ ...validRef(), framework: 'FERPA' }] };
+    expect(() => validateAdapter(a)).toThrow(/scan-scope/);
+  });
+
+  it('rejects a non-direct/indicative relationship', () => {
+    const a = { ...validAdapter(), compliance_refs: [{ ...validRef(), relationship: 'maybe' }] };
+    expect(() => validateAdapter(a)).toThrow(/relationship/);
+  });
+
+  it('rejects a non-ISO last_reviewed (auditable provenance is required)', () => {
+    const a = {
+      ...validAdapter(),
+      compliance_refs: [{ ...validRef(), last_reviewed: 'May 2026' }],
+    };
+    expect(() => validateAdapter(a)).toThrow(/last_reviewed/);
+  });
+
+  it('rejects a non-http url', () => {
+    const a = { ...validAdapter(), compliance_refs: [{ ...validRef(), url: 'ecfr.gov/x' }] };
+    expect(() => validateAdapter(a)).toThrow(/url/);
+  });
+
+  it('rejects an empty clause', () => {
+    const a = { ...validAdapter(), compliance_refs: [{ ...validRef(), clause: '' }] };
+    expect(() => validateAdapter(a)).toThrow(/clause/);
+  });
+
+  it('compliance_refs is NOT in REQUIRED_ADAPTER_FIELDS (language work never touches it)', async () => {
+    const { REQUIRED_ADAPTER_FIELDS } = await import('../lib/probes/v05/types.js');
+    expect(REQUIRED_ADAPTER_FIELDS).not.toContain('compliance_refs');
+  });
+});
+
 // ---- Family validator ----
 
 const validFamily = () => ({
@@ -206,6 +278,7 @@ const validFamily = () => ({
   vibe_v05: 'save object, load object',
   fp_gates_v05_shared: ['test fixtures', 'signed internal artifacts'],
   autofix_v05: 'review-needed',
+  learn_more_slug: 'xl-unsafe-deserialization',
   fixtures_v05_pattern: {
     positive: 'network body to load',
     negative: 'local trusted file',
@@ -354,7 +427,10 @@ describe('Phase 0: attachProbeMeta backward compat', () => {
     expect(f[0].owasp).toContain('A03');
   });
 
-  it('does NOT attach v0.5 fields to v0.4-only probes (empty manifest)', () => {
+  it('does NOT attach v0.5 fields to a v0.4-only probe (no manifest entry for that name)', () => {
+    // The v0.4 "SQL Injection" probe is JS/template-literal; the v0.5 Python
+    // adapter is a different probe name ("Python Raw SQL Interpolation"), so
+    // a finding from the v0.4 probe gets no v0.5 fields.
     const f = [{ probe: 'SQL Injection', file: 'a.js', line: 1, title: 't' }];
     attachProbeMeta(f);
     expect(f[0].probe_id).toBeUndefined();
