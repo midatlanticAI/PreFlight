@@ -55,6 +55,10 @@ import { SC_DESERIALIZE_001 } from './scala/sc-deserialize-001-objectinput.js';
 import { SC_SQL_RAW_001 } from './scala/sc-sql-raw-001-interpolation.js';
 import { SC_TLS_VERIFY_001 } from './scala/sc-tls-verify-001-trustall.js';
 import { SC_SECRETS_001 } from './scala/sc-secrets-001-hardcoded.js';
+import { EX_DESERIALIZE_001 } from './elixir/ex-deserialize-001-binarytoterm.js';
+import { EX_SQL_RAW_001 } from './elixir/ex-sql-raw-001-fragment.js';
+import { EX_TLS_VERIFY_001 } from './elixir/ex-tls-verify-001-verifynone.js';
+import { EX_SECRETS_001 } from './elixir/ex-secrets-001-hardcoded.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -107,4 +111,8 @@ export const ADAPTERS = [
   SC_SQL_RAW_001,
   SC_TLS_VERIFY_001,
   SC_SECRETS_001,
+  EX_DESERIALIZE_001,
+  EX_SQL_RAW_001,
+  EX_TLS_VERIFY_001,
+  EX_SECRETS_001,
 ];
