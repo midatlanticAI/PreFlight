@@ -47,6 +47,10 @@ import { RB_DESERIALIZE_001 } from './ruby/rb-deserialize-001-marshal.js';
 import { RB_SQL_RAW_001 } from './ruby/rb-sql-raw-001-where.js';
 import { RB_TLS_VERIFY_001 } from './ruby/rb-tls-verify-001-verifynone.js';
 import { RB_SECRETS_001 } from './ruby/rb-secrets-001-hardcoded.js';
+import { PHP_DESERIALIZE_001 } from './php/php-deserialize-001-unserialize.js';
+import { PHP_SQL_RAW_001 } from './php/php-sql-raw-001-concat.js';
+import { PHP_TLS_VERIFY_001 } from './php/php-tls-verify-001-curlopt.js';
+import { PHP_SECRETS_001 } from './php/php-secrets-001-hardcoded.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -91,4 +95,8 @@ export const ADAPTERS = [
   RB_SQL_RAW_001,
   RB_TLS_VERIFY_001,
   RB_SECRETS_001,
+  PHP_DESERIALIZE_001,
+  PHP_SQL_RAW_001,
+  PHP_TLS_VERIFY_001,
+  PHP_SECRETS_001,
 ];
