@@ -36,6 +36,10 @@ import { CS_SQL_RAW_001 } from './csharp/cs-sql-raw-001-sqlcommand.js';
 import { CS_TLS_VERIFY_001 } from './csharp/cs-tls-verify-001-certcallback.js';
 import { CS_SECRETS_001 } from './csharp/cs-secrets-001-hardcoded.js';
 import { CS_AUTH_001 } from './csharp/cs-auth-001-tokenvalidation.js';
+import { KT_SQL_RAW_001 } from './kotlin/kt-sql-raw-001-room.js';
+import { KT_TLS_VERIFY_001 } from './kotlin/kt-tls-verify-001-trustall.js';
+import { KT_SECRETS_001 } from './kotlin/kt-secrets-001-hardcoded.js';
+import { KT_AUTH_001 } from './kotlin/kt-auth-001-jjwt-unsigned.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -69,4 +73,8 @@ export const ADAPTERS = [
   CS_TLS_VERIFY_001,
   CS_SECRETS_001,
   CS_AUTH_001,
+  KT_SQL_RAW_001,
+  KT_TLS_VERIFY_001,
+  KT_SECRETS_001,
+  KT_AUTH_001,
 ];
