@@ -473,6 +473,16 @@ export function attachProbeMeta(findings) {
       // for migrated probes. Same enum values, same semantics.
       f.autofix = v05.autofix_v05;
       f.confidence = v05.confidence;
+      // v0.5 probes have no v0.4 PROBE_META entry, so their Learn link must
+      // come from the manifest, or the in-app "Learn more" silently breaks.
+      if (v05.learn_more_slug) f.learn_more_slug = v05.learn_more_slug;
+      // Compliance is an interpretation layer over a finding the scanner
+      // already emits. Surface the family's scan-scope refs so FindingCard
+      // can render them (with the indicative/direct + not-a-certification
+      // framing). Absent on most probes; only the mapped families carry it.
+      if (Array.isArray(v05.compliance_refs) && v05.compliance_refs.length > 0) {
+        f.compliance_refs = v05.compliance_refs;
+      }
     }
   });
   return findings;

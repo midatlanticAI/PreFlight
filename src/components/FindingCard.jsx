@@ -145,6 +145,29 @@ export function FindingCard({
                     : 'manual'}
               </span>
             )}
+            {Array.isArray(finding.compliance_refs) && finding.compliance_refs.length > 0 && (
+              <span
+                className="ap-mono"
+                title={
+                  finding.compliance_refs
+                    .map((r) => `${r.framework} ${r.clause} (${r.relationship}) — ${r.url}`)
+                    .join('\n') +
+                  '\n\nInterpretation layer, not a compliance determination. ' +
+                  '"indicative" needs human judgement in context. Not legal advice.'
+                }
+                style={{
+                  fontSize: 11,
+                  color: T.textDim,
+                  background: T.panelAlt,
+                  border: `1px solid ${T.border}`,
+                  padding: '1px 6px',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                MAPS TO {[...new Set(finding.compliance_refs.map((r) => r.framework))].join(', ')}
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 14, color: T.text, marginBottom: 4, fontWeight: 500 }}>
             {finding.title}

@@ -22,6 +22,7 @@ import { join } from 'node:path';
 import { PROBE_MANIFEST_V05, validateComplianceRefs } from '../lib/probes/v05/manifest.js';
 import { COMPLIANCE_FRAMEWORKS, COMPLIANCE_RELATIONSHIPS } from '../lib/probes/v05/types.js';
 import { getBySlug } from '../lib/learn-content.js';
+import { attachProbeMeta } from '../lib/stable-id.js';
 
 const ENTRIES = Object.values(PROBE_MANIFEST_V05);
 const SCAN_FAMILIES = ['XL-001', 'XL-002', 'XL-004', 'XL-006', 'XL-013'];
@@ -136,5 +137,37 @@ describe('compliance: the nine Learn pages exist and are framed correctly', () =
     for (const slug of [...SCAN_PAGES, ...EDU_PAGES]) {
       expect(existsSync(pagePath(slug)), slug).toBe(true);
     }
+  });
+});
+
+describe('compliance: attachProbeMeta surfaces refs onto a live finding (UI wiring)', () => {
+  it('a live XL-006 finding gets compliance_refs + learn slug from the manifest', () => {
+    const findings = [
+      {
+        probe: 'Rust Hardcoded Secret', // RS-SECRETS-001, XL-006, live
+        file: 'a.rs',
+        line: 1,
+        title: 'Hardcoded provider key / secret in Rust source',
+        severity: 'critical',
+      },
+    ];
+    attachProbeMeta(findings);
+    const f = findings[0];
+    expect(Array.isArray(f.compliance_refs)).toBe(true);
+    expect(f.compliance_refs.length).toBeGreaterThan(0);
+    expect(f.compliance_refs.some((r) => r.framework === 'PCI-DSS')).toBe(true);
+    for (const r of f.compliance_refs) {
+      expect(COMPLIANCE_FRAMEWORKS).toContain(r.framework);
+      expect(COMPLIANCE_RELATIONSHIPS).toContain(r.relationship);
+    }
+    // v0.5 probes have no v0.4 PROBE_META; the Learn link must come from
+    // the manifest or the in-app "Learn more" silently breaks.
+    expect(f.learn_more_slug).toBe('xl-hardcoded-secrets');
+  });
+
+  it('a v0.4-only finding gets NO compliance_refs (compliance is opt-in)', () => {
+    const findings = [{ probe: 'Env File Hygiene', file: '.env', line: 1, title: 't' }];
+    attachProbeMeta(findings);
+    expect(findings[0].compliance_refs).toBeUndefined();
   });
 });
