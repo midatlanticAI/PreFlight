@@ -21,6 +21,10 @@ import { GO_DESERIALIZE_001 } from './go/go-deserialize-001-untrusted.js';
 import { GO_SQL_RAW_001 } from './go/go-sql-raw-001-sprintf.js';
 import { GO_TLS_VERIFY_001 } from './go/go-tls-verify-001-insecure.js';
 import { GO_SECRETS_001 } from './go/go-secrets-001-hardcoded.js';
+import { JV_DESERIALIZE_001 } from './java/jv-deserialize-001-objectinputstream.js';
+import { JV_SQL_RAW_001 } from './java/jv-sql-raw-001-concat.js';
+import { JV_TLS_VERIFY_001 } from './java/jv-tls-verify-001-trustall.js';
+import { JV_SECRETS_001 } from './java/jv-secrets-001-hardcoded.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -39,4 +43,8 @@ export const ADAPTERS = [
   GO_SQL_RAW_001,
   GO_TLS_VERIFY_001,
   GO_SECRETS_001,
+  JV_DESERIALIZE_001,
+  JV_SQL_RAW_001,
+  JV_TLS_VERIFY_001,
+  JV_SECRETS_001,
 ];
