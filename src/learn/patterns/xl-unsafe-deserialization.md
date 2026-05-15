@@ -66,7 +66,7 @@ Use a format that parses data without constructing arbitrary objects.
 - YAML: `yaml.safe_load(data)`, or an explicit `Loader=SafeLoader`.
 
 If you genuinely must accept a serialized object graph from outside, the
-honest answer is "do not" — there is no safe configuration of `pickle`
+honest answer is "do not". There is no safe configuration of `pickle`
 against untrusted input. Restructure so the boundary carries data, and
 the object is built on your side from validated fields.
 
