@@ -43,6 +43,10 @@ import { KT_AUTH_001 } from './kotlin/kt-auth-001-jjwt-unsigned.js';
 import { SW_SQL_RAW_001 } from './swift/sw-sql-raw-001-interpolation.js';
 import { SW_TLS_VERIFY_001 } from './swift/sw-tls-verify-001-trustall.js';
 import { SW_SECRETS_001 } from './swift/sw-secrets-001-hardcoded.js';
+import { RB_DESERIALIZE_001 } from './ruby/rb-deserialize-001-marshal.js';
+import { RB_SQL_RAW_001 } from './ruby/rb-sql-raw-001-where.js';
+import { RB_TLS_VERIFY_001 } from './ruby/rb-tls-verify-001-verifynone.js';
+import { RB_SECRETS_001 } from './ruby/rb-secrets-001-hardcoded.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -83,4 +87,8 @@ export const ADAPTERS = [
   SW_SQL_RAW_001,
   SW_TLS_VERIFY_001,
   SW_SECRETS_001,
+  RB_DESERIALIZE_001,
+  RB_SQL_RAW_001,
+  RB_TLS_VERIFY_001,
+  RB_SECRETS_001,
 ];
