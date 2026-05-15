@@ -34,8 +34,18 @@ const EDU_PAGES = [
   'compliance-eu-ai-act',
 ];
 const ALL = [...XL_PAGES, ...SCAN_PAGES, ...EDU_PAGES];
+
+// Curated AI-slop lexicon (CLAUDE.md voice rules + the corpus-study tells).
+// High-signal, low-false-positive only: words that almost never appear in
+// the manifesto's plain register and reliably mark inflated AI diction.
+// Deliberately NOT banned: "ecosystem" (the manifesto uses it), "navigate"
+// / "intricate" (legitimate technical senses), and common fillers like
+// "just"/"very" (too FP-prone for a hard lint).
 const BANNED =
-  /\b(comprehensive|best-in-class|powerful|robust|enterprise-grade|unlock|leverage|seamless)\b/i;
+  /\b(comprehensive|best-in-class|powerful|robust|enterprise-grade|unlock|leverage|seamless|delve|utilize|harness|foster|elevate|unveil|embark|garner|bolster|underscore|tapestry|realm|testament|beacon|treasure trove|synergy|multifaceted|meticulous|commendable|transformative|unparalleled|unwavering|groundbreaking|cutting-edge|pivotal|paramount)\b/i;
+// Performative-gravitas phrases (Pattern 1.1.2 / 1.2.1 / 1.3.1).
+const SLOP_PHRASES =
+  /it'?s (important|worth) (to )?note|in the realm of|fast-paced|ever-evolving|in a world where|stands? as a testament|shed light on|when it comes to|in essence,|in conclusion|ultimately,|navigate the complexit/i;
 
 const raw = (slug) => readFileSync(join(process.cwd(), 'src/learn/patterns', `${slug}.md`), 'utf8');
 const bodyOf = (text) => {
@@ -68,11 +78,13 @@ describe('learn uniformity: frontmatter is complete and consistent', () => {
 
 describe('learn uniformity: body voice (CLAUDE.md rules)', () => {
   for (const slug of ALL) {
-    it(`${slug} body has no em-dash and no marketing words`, () => {
+    it(`${slug} body has no em-dash, slop word, or gravitas phrase`, () => {
       const body = bodyOf(raw(slug));
       expect(body.includes('—'), `${slug}: em-dash in body`).toBe(false);
-      const hit = body.match(BANNED);
-      expect(hit, `${slug}: banned marketing word "${hit && hit[0]}"`).toBe(null);
+      const w = body.match(BANNED);
+      expect(w, `${slug}: AI-slop word "${w && w[0]}"`).toBe(null);
+      const p = body.match(SLOP_PHRASES);
+      expect(p, `${slug}: performative-gravitas phrase "${p && p[0]}"`).toBe(null);
     });
 
     it(`${slug} has real section headings`, () => {

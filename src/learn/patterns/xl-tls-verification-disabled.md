@@ -25,7 +25,7 @@ encrypted the channel to. A network attacker between you and the server
 presents their own certificate, your client accepts it, and they read and
 rewrite everything.
 
-The disable flag differs by ecosystem, the consequence does not:
+The disable flag differs by language, the consequence does not:
 
 - Python: `requests.get(url, verify=False)`,
   `httpx.Client(verify=False)`, `urllib3.disable_warnings()`.

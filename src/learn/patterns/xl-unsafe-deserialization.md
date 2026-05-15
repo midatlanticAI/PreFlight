@@ -20,7 +20,7 @@ summary: A deserializer that reconstructs arbitrary objects from bytes is remote
 
 ## What this is
 
-Some deserializers do not just parse data. They reconstruct arbitrary
+A deserializer does more than parse data. It reconstructs arbitrary
 objects, and reconstructing an object can run code. When the bytes are
 something you wrote and stored yourself, that is fine. When the bytes
 arrive from a request body, a queue, a cache, or a file a user uploaded,
