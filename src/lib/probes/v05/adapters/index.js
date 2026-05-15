@@ -31,6 +31,11 @@ import { C_SECRETS_001 } from './c/c-secrets-001-hardcoded.js';
 import { CPP_SQL_RAW_001 } from './cpp/cpp-sql-raw-001-qstring.js';
 import { CPP_TLS_VERIFY_001 } from './cpp/cpp-tls-verify-001-sslnone.js';
 import { CPP_SECRETS_001 } from './cpp/cpp-secrets-001-hardcoded.js';
+import { CS_DESERIALIZE_001 } from './csharp/cs-deserialize-001-binaryformatter.js';
+import { CS_SQL_RAW_001 } from './csharp/cs-sql-raw-001-sqlcommand.js';
+import { CS_TLS_VERIFY_001 } from './csharp/cs-tls-verify-001-certcallback.js';
+import { CS_SECRETS_001 } from './csharp/cs-secrets-001-hardcoded.js';
+import { CS_AUTH_001 } from './csharp/cs-auth-001-tokenvalidation.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -59,4 +64,9 @@ export const ADAPTERS = [
   CPP_SQL_RAW_001,
   CPP_TLS_VERIFY_001,
   CPP_SECRETS_001,
+  CS_DESERIALIZE_001,
+  CS_SQL_RAW_001,
+  CS_TLS_VERIFY_001,
+  CS_SECRETS_001,
+  CS_AUTH_001,
 ];
