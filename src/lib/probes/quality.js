@@ -5,6 +5,7 @@
 // the classification finding + type-specific teaching findings.
 
 import { FILE_SIZE_WARN_LINES, FILE_SIZE_FAIL_LINES } from '../threat-intel.js';
+import { isScannerSelfSource } from '../file-filter.js';
 
 export function probeCodeQuality(files) {
   const findings = [];
@@ -22,6 +23,13 @@ export function probeCodeQuality(files) {
 
     const content = file.content || '';
     const lines = content.split('\n');
+    // Scanner self-source (breakers.js, threat-intel.js, probes/*, ...)
+    // embeds attack/example code as DATA strings by design. The code-shape
+    // checks below (.then-no-.catch, await-no-try/catch) match that string
+    // content as if it were real control flow, which is a false positive.
+    // console.* and file-size checks still run on these files (those remain
+    // meaningful).
+    const selfSource = isScannerSelfSource(file.path);
 
     // --- console.* in production source. Each occurrence becomes ONE finding (deduped per file).
     let consoleCount = 0;
@@ -82,67 +90,68 @@ export function probeCodeQuality(files) {
     // Walk the statement to its END (terminating semicolon, end of file, or back-to-column-1 at
     // the start of a new statement) before deciding it's unhandled. Previous fixed 200-char
     // window false-positived on .then() handlers with long bodies (adversarial-agent finding).
-    [...content.matchAll(/\.then\s*\(/g)].forEach((m) => {
-      // Walk forward through balanced parens / braces until we hit a semicolon at depth 0
-      // or two consecutive newlines (paragraph break).
-      let i = m.index;
-      let pDepth = 0,
-        bDepth = 0;
-      let inSingle = false,
-        inDouble = false,
-        inBack = false;
-      let lastChar = '';
-      let chainEnd = content.length;
-      for (; i < content.length; i++) {
-        const ch = content[i];
-        if (inSingle) {
-          if (ch === "'" && lastChar !== '\\') inSingle = false;
+    if (!selfSource)
+      [...content.matchAll(/\.then\s*\(/g)].forEach((m) => {
+        // Walk forward through balanced parens / braces until we hit a semicolon at depth 0
+        // or two consecutive newlines (paragraph break).
+        let i = m.index;
+        let pDepth = 0,
+          bDepth = 0;
+        let inSingle = false,
+          inDouble = false,
+          inBack = false;
+        let lastChar = '';
+        let chainEnd = content.length;
+        for (; i < content.length; i++) {
+          const ch = content[i];
+          if (inSingle) {
+            if (ch === "'" && lastChar !== '\\') inSingle = false;
+            lastChar = ch;
+            continue;
+          }
+          if (inDouble) {
+            if (ch === '"' && lastChar !== '\\') inDouble = false;
+            lastChar = ch;
+            continue;
+          }
+          if (inBack) {
+            if (ch === '`' && lastChar !== '\\') inBack = false;
+            lastChar = ch;
+            continue;
+          }
+          if (ch === "'") inSingle = true;
+          else if (ch === '"') inDouble = true;
+          else if (ch === '`') inBack = true;
+          else if (ch === '(') pDepth++;
+          else if (ch === ')') pDepth--;
+          else if (ch === '{') bDepth++;
+          else if (ch === '}') bDepth--;
+          else if (ch === ';' && pDepth === 0 && bDepth === 0) {
+            chainEnd = i;
+            break;
+          } else if (ch === '\n' && content[i + 1] === '\n' && pDepth === 0 && bDepth === 0) {
+            chainEnd = i;
+            break;
+          }
           lastChar = ch;
-          continue;
         }
-        if (inDouble) {
-          if (ch === '"' && lastChar !== '\\') inDouble = false;
-          lastChar = ch;
-          continue;
-        }
-        if (inBack) {
-          if (ch === '`' && lastChar !== '\\') inBack = false;
-          lastChar = ch;
-          continue;
-        }
-        if (ch === "'") inSingle = true;
-        else if (ch === '"') inDouble = true;
-        else if (ch === '`') inBack = true;
-        else if (ch === '(') pDepth++;
-        else if (ch === ')') pDepth--;
-        else if (ch === '{') bDepth++;
-        else if (ch === '}') bDepth--;
-        else if (ch === ';' && pDepth === 0 && bDepth === 0) {
-          chainEnd = i;
-          break;
-        } else if (ch === '\n' && content[i + 1] === '\n' && pDepth === 0 && bDepth === 0) {
-          chainEnd = i;
-          break;
-        }
-        lastChar = ch;
-      }
-      const window = content.slice(m.index, chainEnd);
-      if (/\.catch\s*\(|\.finally\s*\(/.test(window)) return;
-      const ln = content.slice(0, m.index).split('\n').length;
-      findings.push({
-        id: `cq-then-no-catch-${file.path}-${m.index}`,
-        probe: 'Code Quality',
-        title: 'Promise .then() with no .catch() — unhandled rejection on error',
-        severity: 'low',
-        category: 'Misconfiguration',
-        cwe: 'CWE-755',
-        file: file.path,
-        line: ln,
-        evidence: window.slice(0, 80),
-        remediation:
-          'Add a .catch() handler, or prefer async/await with a try/catch wrapper. Unhandled promise rejections terminate Node processes in newer versions and leave a confusing console error in browsers.',
+        const window = content.slice(m.index, chainEnd);
+        if (/\.catch\s*\(|\.finally\s*\(/.test(window)) return;
+        const ln = content.slice(0, m.index).split('\n').length;
+        findings.push({
+          id: `cq-then-no-catch-${file.path}-${m.index}`,
+          probe: 'Code Quality',
+          title: 'Promise .then() with no .catch() — unhandled rejection on error',
+          severity: 'low',
+          category: 'Misconfiguration',
+          cwe: 'CWE-755',
+          file: file.path,
+          line: ln,
+          evidence: window.slice(0, 80),
+          remediation:
+            'Add a .catch() handler, or prefer async/await with a try/catch wrapper. Unhandled promise rejections terminate Node processes in newer versions and leave a confusing console error in browsers.',
+        });
       });
-    });
 
     // --- async function with await but no try/catch wrapping (heuristic — top-level await only)
     // Find each `async (...) =>` or `async function ...` body; check whether it contains `await`
@@ -151,89 +160,90 @@ export function probeCodeQuality(files) {
     const asyncBodies = [
       ...content.matchAll(/async\s+(?:function\s+\w+\s*\([^)]*\)|\([^)]*\)\s*=>)\s*\{/g),
     ];
-    asyncBodies.forEach((m) => {
-      let depth = 1;
-      let i = m.index + m[0].length;
-      let inSingle = false,
-        inDouble = false,
-        inBack = false,
-        inLineComment = false,
-        inBlockComment = false;
-      let prev = '';
-      while (i < content.length && depth > 0) {
-        const ch = content[i];
-        const next = content[i + 1];
-        if (inLineComment) {
-          if (ch === '\n') inLineComment = false;
-          i++;
-          prev = ch;
-          continue;
-        }
-        if (inBlockComment) {
-          if (ch === '*' && next === '/') {
-            inBlockComment = false;
+    if (!selfSource)
+      asyncBodies.forEach((m) => {
+        let depth = 1;
+        let i = m.index + m[0].length;
+        let inSingle = false,
+          inDouble = false,
+          inBack = false,
+          inLineComment = false,
+          inBlockComment = false;
+        let prev = '';
+        while (i < content.length && depth > 0) {
+          const ch = content[i];
+          const next = content[i + 1];
+          if (inLineComment) {
+            if (ch === '\n') inLineComment = false;
             i++;
+            prev = ch;
+            continue;
           }
+          if (inBlockComment) {
+            if (ch === '*' && next === '/') {
+              inBlockComment = false;
+              i++;
+            }
+            i++;
+            prev = ch;
+            continue;
+          }
+          if (inSingle) {
+            if (ch === "'" && prev !== '\\') inSingle = false;
+            i++;
+            prev = ch;
+            continue;
+          }
+          if (inDouble) {
+            if (ch === '"' && prev !== '\\') inDouble = false;
+            i++;
+            prev = ch;
+            continue;
+          }
+          if (inBack) {
+            if (ch === '`' && prev !== '\\') inBack = false;
+            i++;
+            prev = ch;
+            continue;
+          }
+          if (ch === '/' && next === '/') {
+            inLineComment = true;
+            i += 2;
+            prev = next;
+            continue;
+          }
+          if (ch === '/' && next === '*') {
+            inBlockComment = true;
+            i += 2;
+            prev = next;
+            continue;
+          }
+          if (ch === "'") inSingle = true;
+          else if (ch === '"') inDouble = true;
+          else if (ch === '`') inBack = true;
+          else if (ch === '{') depth++;
+          else if (ch === '}') depth--;
           i++;
           prev = ch;
-          continue;
         }
-        if (inSingle) {
-          if (ch === "'" && prev !== '\\') inSingle = false;
-          i++;
-          prev = ch;
-          continue;
+        const body = content.slice(m.index + m[0].length, i - 1);
+        if (/\bawait\b/.test(body) && !/\btry\s*\{/.test(body)) {
+          const ln = content.slice(0, m.index).split('\n').length;
+          findings.push({
+            id: `cq-async-no-try-${file.path}-${m.index}`,
+            probe: 'Code Quality',
+            title: 'async function uses await with no try/catch in body',
+            severity: 'low',
+            category: 'Misconfiguration',
+            cwe: 'CWE-755',
+            file: file.path,
+            line: ln,
+            evidence: m[0].slice(0, 120),
+            remediation:
+              'Wrap your awaits in try/catch and decide whether to surface errors to the UI, log them, or rethrow with context. A naked await that rejects becomes an unhandled rejection in the browser console and the calling code gets a Promise<rejected> instead of a value.',
+          });
         }
-        if (inDouble) {
-          if (ch === '"' && prev !== '\\') inDouble = false;
-          i++;
-          prev = ch;
-          continue;
-        }
-        if (inBack) {
-          if (ch === '`' && prev !== '\\') inBack = false;
-          i++;
-          prev = ch;
-          continue;
-        }
-        if (ch === '/' && next === '/') {
-          inLineComment = true;
-          i += 2;
-          prev = next;
-          continue;
-        }
-        if (ch === '/' && next === '*') {
-          inBlockComment = true;
-          i += 2;
-          prev = next;
-          continue;
-        }
-        if (ch === "'") inSingle = true;
-        else if (ch === '"') inDouble = true;
-        else if (ch === '`') inBack = true;
-        else if (ch === '{') depth++;
-        else if (ch === '}') depth--;
-        i++;
-        prev = ch;
-      }
-      const body = content.slice(m.index + m[0].length, i - 1);
-      if (/\bawait\b/.test(body) && !/\btry\s*\{/.test(body)) {
-        const ln = content.slice(0, m.index).split('\n').length;
-        findings.push({
-          id: `cq-async-no-try-${file.path}-${m.index}`,
-          probe: 'Code Quality',
-          title: 'async function uses await with no try/catch in body',
-          severity: 'low',
-          category: 'Misconfiguration',
-          cwe: 'CWE-755',
-          file: file.path,
-          line: ln,
-          evidence: m[0].slice(0, 120),
-          remediation:
-            'Wrap your awaits in try/catch and decide whether to surface errors to the UI, log them, or rethrow with context. A naked await that rejects becomes an unhandled rejection in the browser console and the calling code gets a Promise<rejected> instead of a value.',
-        });
-      }
-    });
+      });
   });
   return findings;
 }

@@ -26,12 +26,16 @@ function CopyButton({ value, label }) {
   return (
     <button
       onClick={async () => {
-        const ok = await copyToClipboard(value);
-        if (ok) {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        } else {
-          log.warn('breakers: copy failed', { label });
+        try {
+          const ok = await copyToClipboard(value);
+          if (ok) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          } else {
+            log.warn('breakers: copy failed', { label });
+          }
+        } catch (e) {
+          log.warn('breakers: copy threw', { error: e?.message, label });
         }
       }}
       className="ap-mono"

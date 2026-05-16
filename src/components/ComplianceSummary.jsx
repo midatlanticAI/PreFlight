@@ -154,12 +154,16 @@ export function ComplianceSummary({ findings, scope, scannedAt }) {
 
           <button
             onClick={async () => {
-              const ok = await copyToClipboard(formatComplianceExport(summary, scannedAt));
-              if (ok) {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
-              } else {
-                log.warn('compliance: export copy failed');
+              try {
+                const ok = await copyToClipboard(formatComplianceExport(summary, scannedAt));
+                if (ok) {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                } else {
+                  log.warn('compliance: export copy failed');
+                }
+              } catch (e) {
+                log.warn('compliance: export copy threw', { error: e?.message });
               }
             }}
             className="ap-mono"

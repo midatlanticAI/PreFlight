@@ -371,6 +371,12 @@ function isReferenceUse(node, parent) {
     case 'ImportDefaultSpecifier':
     case 'ImportNamespaceSpecifier':
       return false; // imported/local name = declaration
+    case 'ExportSpecifier':
+      // export { local as exported } — `exported` is an export NAME, never an
+      // identifier reference. `local` IS a reference (must resolve to a
+      // binding) and is validated as one. Without this case the alias falls
+      // through to default:true and gets flagged as an undeclared identifier.
+      return parent.exported !== node;
     case 'ImportDeclaration':
     case 'ExportNamedDeclaration':
     case 'ExportDefaultDeclaration':
