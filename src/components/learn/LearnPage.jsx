@@ -18,6 +18,7 @@ import { ScrollableTabs } from '../ScrollableTabs.jsx';
 
 const SUB_TABS = [
   { to: '/learn', label: 'Vibe-Aware', end: true },
+  { to: '/learn/how-it-works', label: 'How it works', end: false },
   { to: '/learn/patterns', label: 'Patterns', end: false },
   { to: '/learn/incidents', label: 'Field Reports', end: false },
   { to: '/learn/shapes', label: 'Shapes', end: false },
