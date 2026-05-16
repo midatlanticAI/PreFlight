@@ -16,7 +16,7 @@ The full philosophy is at [`src/learn/manifesto.md`](./src/learn/manifesto.md) a
 
 ## What it does
 
-43 probes covering OWASP Top 10 2025, OWASP LLM Top 10 2025, and current threat intel:
+96 probes covering OWASP Top 10 2025, OWASP LLM Top 10 2025, and current threat intel:
 
 Every finding carries the OWASP category code(s) it maps to. The full mapping is at [`/learn/owasp`](https://preflight.midatlantic.ai/learn/owasp) in the deployed app, with the source-of-truth dictionary in [`src/lib/stable-id.js`](./src/lib/stable-id.js).
 
@@ -116,9 +116,9 @@ See `docs/preflight-architecture-and-v1.1-plan.md` for the full architecture wri
 Under `/learn` in the app, with the full content corpus in `src/learn/`:
 
 - **Manifesto** (`manifesto.md`) — the "Vibe-Aware" positioning document.
-- **Patterns** (`patterns/*.md`) — one per probe. Six-section skeleton (What this is / Why it matters / What the failure looks like / What the fix looks like / Related / Sources). Currently published: `package-json-supply-chain`. Drafts in flight: `auth-weakness`, `next-public-misuse`, `secret-scanner`, `supabase-rls`.
-- **Field Reports** (`incidents/*.md`) — incident write-ups with CVE / CVSS / campaign / threat-actor / attack-date metadata. Currently published: `mini-shai-hulud-tanstack-2026-05`. Drafts: SAP / Bitwarden / Sapphire Sleet.
-- **Shapes** (`shapes/*.md`) — architectural pattern explainers per detected project shape.
+- **Patterns** (`patterns/*.md`) — one per probe. Six-section skeleton (What this is / Why it matters / What the failure looks like / What the fix looks like / Related / Sources). 54 patterns published, no drafts.
+- **Field Reports** (`incidents/*.md`) — incident write-ups with CVE / CVSS / campaign / threat-actor / attack-date metadata. 4 reports published (Shai-Hulud, SAP Mini Shai-Hulud, Bitwarden CLI, TanStack Mini Shai-Hulud), no drafts.
+- **Shapes** (`shapes/*.md`) — architectural pattern explainers per detected project shape. 15 shapes published, no drafts.
 
 Frontmatter shape is enforced at parse time by `src/lib/learn-content.js`. Drafts are listed with a `DRAFT` badge but their content isn't wired into the FindingCard "Learn more" links until they flip to `draft: false`.
 
@@ -152,7 +152,7 @@ Any feature that would weaken this requires deliberately breaking the manifesto,
 ```bash
 npm ci
 npm run dev               # vite dev server on :5173
-npm test                  # vitest run (573 tests across 21 files)
+npm test                  # vitest run (921 tests across 52 files)
 npm run test:self-audit   # dogfood: Pre-Flight scans its own dist/
 npm run build             # production build → dist/
 npm run preview           # preview the built dist
@@ -178,7 +178,7 @@ If Pre-Flight doesn't pass its own audit, CI fails. Dogfooding is non-negotiable
 
 ## Test coverage
 
-573 tests across 21 files, ~3s full run:
+921 tests across 52 files, ~3s full run:
 
 | Layer                        | Coverage                                                                                                                        |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -205,7 +205,7 @@ Adversarial testing philosophy: known gaps ship as `it.fails()` blocks so the te
 
 ```
 src/
-├── App.jsx                 ← orchestrator (~920 lines): state, scan flow, routing shell
+├── App.jsx                 ← orchestrator (~950 lines): state, scan flow, routing shell
 ├── ErrorBoundary.jsx       ← React class boundary with diagnostics export
 ├── main.jsx                ← entry point
 ├── components/
@@ -219,7 +219,7 @@ src/
 │   ├── learn/              ← LearnPage, IndexView, EntryView, ManifestoView
 │   └── settings/           ← SettingsPage + GeneralTab, ExplainVerifyTab, PrivateReposTab, DiagnosticsTab, AboutTab
 ├── lib/
-│   ├── probes.js           ← 43-probe registry + threat-intel + most probe implementations
+│   ├── probes.js           ← probe registry hub (96 probes across v0.4 + v0.5 phase-1/2/3) + threat-intel re-exports
 │   ├── probes/
 │   │   ├── code-correctness.js   ← acorn + acorn-jsx AST probe (undeclared identifiers)
 │   │   ├── web.js                ← URL reputation, HTML hygiene, SEO, GEO, A11y landmarks
@@ -253,7 +253,7 @@ src/
 │   ├── patterns/*.md
 │   ├── incidents/*.md
 │   └── shapes/*.md
-└── test/                   ← 573 tests across 21 files (vitest + jsdom)
+└── test/                   ← 921 tests across 52 files (vitest + jsdom)
 
 public/
 ├── maai-logo.svg

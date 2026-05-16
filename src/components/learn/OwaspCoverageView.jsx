@@ -11,6 +11,7 @@
 
 import { ExternalLink } from 'lucide-react';
 import { PROBE_OWASP_MAP, OWASP_LABELS, PROBE_META } from '../../lib/stable-id.js';
+import { PROBES } from '../../lib/probes.js';
 import { resolvePatternForProbe } from '../../lib/learn-content.js';
 import { T, fontMono, fontUI } from '../../lib/theme.js';
 
@@ -201,9 +202,9 @@ export function OwaspCoverageView() {
           lineHeight: 1.6,
         }}
       >
-        Pre-Flight's 43 probes map to {totalCategories} OWASP categories. {totalProbes} probes carry
-        at least one OWASP code; the rest cover discoverability, accessibility, or supply-chain
-        hygiene outside the OWASP scope.
+        Pre-Flight's {PROBES.length} probes map to {totalCategories} OWASP categories. {totalProbes}{' '}
+        probes carry at least one OWASP code; the rest cover discoverability, accessibility, or
+        supply-chain hygiene outside the OWASP scope.
       </p>
       <p
         style={{

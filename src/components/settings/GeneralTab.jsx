@@ -23,7 +23,7 @@ const PREFLIGHT_KEYS = [
 ];
 
 const VERSION = '0.4.0';
-const BUILD_DATE = '2026-05-12';
+const BUILD_DATE = '2026-05-16';
 const CHANGELOG_URL = 'https://github.com/midatlanticAI/PreFlight/blob/main/CHANGELOG.md';
 
 function ExplainerBlock() {

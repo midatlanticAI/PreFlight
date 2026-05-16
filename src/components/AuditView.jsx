@@ -12,6 +12,7 @@ import { Upload, Github, Loader2, FileText, AlertCircle, Zap, Folder } from 'luc
 import { T, fontMono, fontUI } from '../lib/theme.js';
 import { log } from '../lib/logger.js';
 import { track } from '../lib/analytics.js';
+import { PROBES } from '../lib/probes.js';
 import { HomeView } from './HomeView.jsx';
 import { ResultsView } from './ResultsView.jsx';
 
@@ -154,8 +155,8 @@ export function AuditView({
               fontFamily: fontMono,
             }}
           >
-            <time dateTime="2026-05-12">Updated 2026-05-12</time> · 43 probes · v0.5 · OWASP Top 10
-            2025 + OWASP LLM Top 10 2025 · Free, no signup
+            <time dateTime="2026-05-16">Updated 2026-05-16</time> · {PROBES.length} probes · v0.5 ·
+            OWASP Top 10 2025 + OWASP LLM Top 10 2025 · Free, no signup
           </p>
         </header>
       )}
