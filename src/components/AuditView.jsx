@@ -163,6 +163,7 @@ export function AuditView({
             <button
               className={`ap-tab ${mode === 'upload' ? 'ap-tab-active' : ''}`}
               onClick={() => setMode('upload')}
+              title="Read a local file or folder in this tab. The bytes never upload anywhere — the scan runs in your browser."
             >
               <Upload
                 size={12}
@@ -173,6 +174,7 @@ export function AuditView({
             <button
               className={`ap-tab ${mode === 'github' ? 'ap-tab-active' : ''}`}
               onClick={() => setMode('github')}
+              title="Scan a public repo by URL. The browser fetches the source directly from GitHub; nothing is sent to a Pre-Flight server."
             >
               <Github
                 size={12}
@@ -312,6 +314,7 @@ export function AuditView({
                     id="gh-url-input"
                     className="ap-input"
                     placeholder="https://github.com/owner/repo"
+                    title="A public repo URL, e.g. https://github.com/you/your-app. For private repos, add a token in Settings — it goes to GitHub, never to us."
                     value={githubUrl}
                     autoComplete="off"
                     role="combobox"
@@ -453,6 +456,7 @@ export function AuditView({
                   (mode === 'upload' && files.length === 0) ||
                   (mode === 'github' && !githubUrl)
                 }
+                title="Run every applicable probe over your code, in this browser tab. Language-specific probes only fire on the languages you actually use. Nothing leaves your machine."
               >
                 {scanning ? (
                   <>
