@@ -24,7 +24,6 @@ const C_IDS = ['CC-SECRETS-001', 'CC-SQL-RAW-001', 'CC-TLS-VERIFY-001'];
 const CPP_IDS = ['CPP-SECRETS-001', 'CPP-SQL-RAW-001', 'CPP-TLS-VERIFY-001'];
 const ALL = [...C_IDS, ...CPP_IDS];
 const ENTRIES = Object.values(PROBE_MANIFEST_V05).filter((e) => ALL.includes(e.probe_id));
-const byId = (id) => PROBE_MANIFEST_V05[id];
 
 const SLUG = {
   'SQL-RAW': 'xl-raw-query-interpolation',
