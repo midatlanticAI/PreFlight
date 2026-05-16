@@ -28,14 +28,14 @@
 
     <!-- Content-Security-Policy: locks down what scripts/connections/styles the page can use.
          Allows: self for code, Google Fonts (CSS host + woff host), unauthenticated GitHub API
-         + raw blob host for scan reads, the two BYOK AI providers (only contacted when the user
-         opts in by saving a key), and Cloudflare Pages Web Analytics beacon (page-view counter,
-         no PII). Inline-style is allowed because Vite-bundled component styles live inline;
+         + raw blob host for scan reads, all nine BYOK AI provider endpoints (only contacted
+         when the user opts in by saving a key for that provider), and the Cloudflare Pages
+         Web Analytics beacon. Inline-style is allowed because Vite-bundled component styles live inline;
          inline-script is NOT allowed. `frame-ancestors` is delivered via the _headers file
          instead of here — browsers ignore that directive when set via a <meta> element. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://api.openai.com https://api.anthropic.com https://cloudflareinsights.com; base-uri 'self'; form-action 'self'; object-src 'none';"
+      content="default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.mistral.ai https://api.deepseek.com https://api.groq.com https://openrouter.ai https://api.cohere.ai https://generativelanguage.googleapis.com https://cloudflareinsights.com; base-uri 'self'; form-action 'self'; object-src 'none';"
     />
 
     <!-- Canonical -->
