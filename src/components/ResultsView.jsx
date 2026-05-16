@@ -25,6 +25,7 @@ import { timeAgo } from '../lib/clipboard.js';
 import { PROBES } from '../lib/probes.js';
 import { ScoreGauge, CategoryBar } from './ScoreDisplay.jsx';
 import { FindingCard } from './FindingCard.jsx';
+import { ComplianceSummary } from './ComplianceSummary.jsx';
 
 export function ResultsView({
   // result data
@@ -697,6 +698,8 @@ export function ResultsView({
               ))}
             </div>
           </div>
+
+          <ComplianceSummary findings={filteredFindings} scannedAt={results && results.scannedAt} />
 
           <div>
             {filteredFindings.map((f) => (
