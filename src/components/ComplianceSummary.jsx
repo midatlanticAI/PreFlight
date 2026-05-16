@@ -25,8 +25,8 @@ import { T, fontMono } from '../lib/theme.js';
 import { copyToClipboard } from '../lib/clipboard.js';
 import { log } from '../lib/logger.js';
 
-export function ComplianceSummary({ findings, scannedAt }) {
-  const summary = useMemo(() => summarizeCompliance(findings), [findings]);
+export function ComplianceSummary({ findings, scope, scannedAt }) {
+  const summary = useMemo(() => summarizeCompliance(findings, scope), [findings, scope]);
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -69,7 +69,7 @@ export function ComplianceSummary({ findings, scannedAt }) {
       {open && (
         <div style={{ padding: '0 16px 16px 16px', borderTop: `1px solid ${T.border}` }}>
           {summary.frameworks.map((fw) => (
-            <div key={fw.framework} style={{ marginTop: 12 }}>
+            <div key={fw.framework} style={{ marginTop: 14 }}>
               <div
                 className="ap-mono"
                 style={{
@@ -83,27 +83,64 @@ export function ComplianceSummary({ findings, scannedAt }) {
               >
                 {fw.framework}
               </div>
-              {fw.clauses.map((c) => (
-                <div
-                  key={c.clause}
-                  className="ap-mono"
-                  style={{ fontSize: 12, color: T.textMuted, marginBottom: 2 }}
-                >
-                  <span style={{ color: c.relationship === 'direct' ? T.text : T.textMuted }}>
-                    [{c.relationship}]
-                  </span>{' '}
-                  {c.clause}
-                  {c.count > 1 ? ` ·${c.count}` : ''}{' '}
-                  <a
-                    href={c.url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    style={{ color: T.textDim }}
+
+              {fw.direct.length > 0 && (
+                <>
+                  <div
+                    className="ap-mono"
+                    style={{ fontSize: 11, color: T.text, fontWeight: 600, margin: '4px 0 2px' }}
                   >
-                    source
-                  </a>
-                </div>
-              ))}
+                    Direct — the pattern is itself the clause failure
+                  </div>
+                  {fw.direct.map((c) => (
+                    <div
+                      key={c.clause}
+                      className="ap-mono"
+                      style={{ fontSize: 12, color: T.text, marginBottom: 2 }}
+                    >
+                      {c.clause}
+                      {c.count > 1 ? ` ·${c.count}` : ''}{' '}
+                      <a
+                        href={c.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        style={{ color: T.textDim }}
+                      >
+                        source
+                      </a>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {fw.indicative.length > 0 && (
+                <>
+                  <div
+                    className="ap-mono"
+                    style={{ fontSize: 11, color: T.textMuted, margin: '6px 0 2px' }}
+                  >
+                    Indicative — needs human judgement in context
+                  </div>
+                  {fw.indicative.map((c) => (
+                    <div
+                      key={c.clause}
+                      className="ap-mono"
+                      style={{ fontSize: 12, color: T.textMuted, marginBottom: 2 }}
+                    >
+                      {c.clause}
+                      {c.count > 1 ? ` ·${c.count}` : ''}{' '}
+                      <a
+                        href={c.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        style={{ color: T.textDim }}
+                      >
+                        source
+                      </a>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           ))}
 

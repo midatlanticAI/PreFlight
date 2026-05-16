@@ -38,29 +38,53 @@ describe('journey: compliance / GRC persona', () => {
     attachProbeMeta(findings);
     expect(Array.isArray(findings[0].compliance_refs)).toBe(true);
 
+    // GRC user declared HIPAA + PCI scope.
     const html = render(
-      React.createElement(ComplianceSummary, { findings, scannedAt: '2026-05-15' })
+      React.createElement(ComplianceSummary, {
+        findings,
+        scope: ['HIPAA', 'PCI-DSS'],
+        scannedAt: '2026-05-15',
+      })
     );
     expect(html).toContain('Regulatory mapping');
-    // XL-006 maps to PCI-DSS + HIPAA + GDPR + SOC2 — header lists them
-    expect(html).toMatch(/PCI-DSS|HIPAA|GDPR|SOC2/);
-    // XSS-safe: no live script even though it renders finding-derived text
+    expect(html).toMatch(/PCI-DSS|HIPAA/);
     expect(html).not.toMatch(/<script\b/i);
   });
 });
 
-describe('journey: vibe coder (primary audience) — no compliance noise', () => {
-  it('findings with no scan-scope mapping render NO compliance lens', () => {
+describe('journey: vibe coder / un-regulated app — zero compliance noise', () => {
+  it('a MAPPED finding but NO declared scope renders NOTHING (the email-app fix)', () => {
+    // Exactly the user's scenario: a plain app with a hardcoded key. The
+    // finding carries XL-006 refs, but the user never declared a regime,
+    // so the app is NOT told it fails HIPAA/PCI/SOC2.
+    const findings = [
+      {
+        probe: 'Rust Hardcoded Secret',
+        file: 'src/main.rs',
+        line: 4,
+        title: 'Hardcoded provider key / secret in Rust source',
+        severity: 'critical',
+      },
+    ];
+    attachProbeMeta(findings);
+    expect(Array.isArray(findings[0].compliance_refs)).toBe(true); // data is present
+    const html = render(React.createElement(ComplianceSummary, { findings, scope: [] }));
+    expect(html).toBe(''); // ...but the lens stays silent
+  });
+
+  it('findings with no scan-scope mapping render NO lens even if scope declared', () => {
     const findings = [
       { probe: 'Env File Hygiene', file: '.env', line: 1, title: 't', severity: 'low' },
     ];
     attachProbeMeta(findings);
-    const html = render(React.createElement(ComplianceSummary, { findings }));
+    const html = render(React.createElement(ComplianceSummary, { findings, scope: ['HIPAA'] }));
     expect(html).toBe('');
   });
 
   it('an empty scan renders no lens', () => {
-    expect(render(React.createElement(ComplianceSummary, { findings: [] }))).toBe('');
+    expect(render(React.createElement(ComplianceSummary, { findings: [], scope: ['HIPAA'] }))).toBe(
+      ''
+    );
   });
 });
 

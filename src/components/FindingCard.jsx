@@ -17,6 +17,7 @@ import { BreakersPanel } from './BreakersPanel.jsx';
 
 export function FindingCard({
   finding,
+  complianceScope,
   expanded,
   onToggle,
   onSuppress,
@@ -146,29 +147,44 @@ export function FindingCard({
                     : 'manual'}
               </span>
             )}
-            {Array.isArray(finding.compliance_refs) && finding.compliance_refs.length > 0 && (
-              <span
-                className="ap-mono"
-                title={
-                  finding.compliance_refs
-                    .map((r) => `${r.framework} ${r.clause} (${r.relationship}) — ${r.url}`)
-                    .join('\n') +
-                  '\n\nInterpretation layer, not a compliance determination. ' +
-                  '"indicative" needs human judgement in context. Not legal advice.'
-                }
-                style={{
-                  fontSize: 11,
-                  color: T.textDim,
-                  background: T.panelAlt,
-                  border: `1px solid ${T.border}`,
-                  padding: '1px 6px',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                MAPS TO {[...new Set(finding.compliance_refs.map((r) => r.framework))].join(', ')}
-              </span>
-            )}
+            {(() => {
+              // Compliance chip is gated by the user's DECLARED regulatory
+              // scope. No declaration => no chip, even though the family
+              // carries refs. This is the fix for "a plain email app should
+              // not be told it fails HIPAA/SOC2".
+              const declared = Array.isArray(complianceScope) ? complianceScope : [];
+              if (declared.length === 0) return null;
+              const refs = Array.isArray(finding.compliance_refs)
+                ? finding.compliance_refs.filter((r) => declared.includes(r.framework))
+                : [];
+              if (refs.length === 0) return null;
+              const hasDirect = refs.some((r) => r.relationship === 'direct');
+              return (
+                <span
+                  className="ap-mono"
+                  title={
+                    refs
+                      .map((r) => `${r.framework} ${r.clause} (${r.relationship}) — ${r.url}`)
+                      .join('\n') +
+                    '\n\nYou declared this regulatory scope. Interpretation layer, ' +
+                    'not a compliance determination. "indicative" needs human ' +
+                    'judgement in context. Not legal advice.'
+                  }
+                  style={{
+                    fontSize: 11,
+                    color: hasDirect ? T.text : T.textMuted,
+                    background: T.panelAlt,
+                    border: `1px solid ${T.border}`,
+                    padding: '1px 6px',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    fontWeight: hasDirect ? 600 : 400,
+                  }}
+                >
+                  MAPS TO {[...new Set(refs.map((r) => r.framework))].join(', ')}
+                </span>
+              );
+            })()}
           </div>
           <div style={{ fontSize: 14, color: T.text, marginBottom: 4, fontWeight: 500 }}>
             {finding.title}

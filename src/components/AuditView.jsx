@@ -63,6 +63,9 @@ export function AuditView({
   githubUrl,
   setGithubUrl,
   handleScan,
+  complianceScope = [],
+  setComplianceScope,
+  complianceFrameworks = [],
   progress,
   error,
   urlSuggestions,
@@ -447,6 +450,48 @@ export function AuditView({
               </div>
             )}
 
+            {complianceFrameworks.length > 0 && setComplianceScope && (
+              <div style={{ marginTop: 20 }}>
+                <div
+                  className="ap-mono"
+                  style={{ fontSize: 11, color: T.textMuted, marginBottom: 8 }}
+                  title="Optional. Select a regime ONLY if your app processes that regulated data. This is your declaration; Pre-Flight maps technical clauses to it, it does not decide a regime applies to you. Most apps need none of these."
+                >
+                  REGULATORY SCAN (optional) — declare regimes your app is actually subject to
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {complianceFrameworks.map((fw) => {
+                    const on = complianceScope.includes(fw);
+                    return (
+                      <button
+                        key={fw}
+                        type="button"
+                        onClick={() =>
+                          setComplianceScope(
+                            on ? complianceScope.filter((x) => x !== fw) : [...complianceScope, fw]
+                          )
+                        }
+                        aria-pressed={on}
+                        className="ap-mono"
+                        style={{
+                          fontSize: 11,
+                          padding: '3px 10px',
+                          cursor: 'pointer',
+                          letterSpacing: '0.04em',
+                          color: on ? T.bg : T.textDim,
+                          background: on ? T.accentAlt : 'transparent',
+                          border: `1px solid ${on ? T.accentAlt : T.border}`,
+                          fontWeight: on ? 600 : 400,
+                        }}
+                      >
+                        {fw}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div style={{ marginTop: 24, display: 'flex', gap: 10, alignItems: 'center' }}>
               <button
                 className="ap-btn"
@@ -538,6 +583,7 @@ export function AuditView({
           diff={diff}
           topFindings={topFindings}
           filteredFindings={filteredFindings}
+          complianceScope={complianceScope}
           reset={reset}
           filter={filter}
           setFilter={setFilter}

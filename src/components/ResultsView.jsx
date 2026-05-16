@@ -39,6 +39,7 @@ export function ResultsView({
   diff,
   topFindings,
   filteredFindings,
+  complianceScope,
   // navigation
   reset,
   // filter state
@@ -699,13 +700,18 @@ export function ResultsView({
             </div>
           </div>
 
-          <ComplianceSummary findings={filteredFindings} scannedAt={results && results.scannedAt} />
+          <ComplianceSummary
+            findings={filteredFindings}
+            scope={complianceScope}
+            scannedAt={results && results.scannedAt}
+          />
 
           <div>
             {filteredFindings.map((f) => (
               <FindingCard
                 key={f.id}
                 finding={f}
+                complianceScope={complianceScope}
                 expanded={expanded.has(f.id)}
                 onToggle={() => {
                   const next = new Set(expanded);
@@ -747,6 +753,7 @@ export function ResultsView({
                 <FindingCard
                   key={f.id}
                   finding={f}
+                  complianceScope={complianceScope}
                   expanded={expanded.has(f.id)}
                   onToggle={() => {
                     const next = new Set(expanded);

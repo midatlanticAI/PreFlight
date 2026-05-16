@@ -21,6 +21,11 @@ import { SEV_ORDER, SEV_WEIGHT, computeScore } from './lib/scoring.js';
 import { buildSnippet, snippetToText } from './lib/snippet.js';
 import { downloadFile, copyToClipboard, timestampSlug, timeAgo } from './lib/clipboard.js';
 import {
+  loadComplianceScope,
+  saveComplianceScope,
+  SELECTABLE_FRAMEWORKS,
+} from './lib/compliance-scope.js';
+import {
   HISTORY_KEY,
   HISTORY_MAX,
   loadHistory,
@@ -265,6 +270,8 @@ export default function App() {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState({ stage: '', current: 0, total: 0 });
   const [results, setResults] = useState(null);
+  const [complianceScope, setComplianceScopeRaw] = useState(loadComplianceScope);
+  const setComplianceScope = (next) => setComplianceScopeRaw(saveComplianceScope(next));
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [expanded, setExpanded] = useState(new Set());
@@ -891,6 +898,9 @@ export default function App() {
                   githubUrl={githubUrl}
                   setGithubUrl={setGithubUrl}
                   handleScan={handleScan}
+                  complianceScope={complianceScope}
+                  setComplianceScope={setComplianceScope}
+                  complianceFrameworks={SELECTABLE_FRAMEWORKS}
                   progress={progress}
                   error={error}
                   urlSuggestions={urlSuggestions}
