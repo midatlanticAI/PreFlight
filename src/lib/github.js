@@ -1,13 +1,62 @@
 // src/lib/github.js
 // Fetch a public GitHub repository's tree and source contents from the browser using
 // the public REST API + raw.githubusercontent.com. Filters the tree down to files that
-// shouldScanFile() recognizes, caps at 80 files, and reports progress through onProgress.
+// shouldScanFile() recognizes, ranks them by security relevance, takes the top 80, and
+// reports progress through onProgress. The rank matters: GitHub-mode fetches each file
+// individually (sequentially) so the cap is a latency knob, not a rate-limit
+// cliff: the ones we pull must be the ones that matter most, not the first N
+// in tree order. (Files / Folder upload has no cap.)
 //
 // All errors are mapped to a friendly Error.message that explains the typical recovery
 // (rate limit → wait, sandboxed iframe → use file upload, private repo → use file upload).
 
 import { log } from './logger.js';
 import { shouldScanFile } from './probes.js';
+
+// GitHub-mode fetches each file individually under a rate-limit budget, so a
+// public scan is capped (see MAX_GITHUB_TARGETS). Tree order is meaningless
+// for security, so rank first: config / secrets / supply-chain manifests and
+// migrations (tier 0), security-named paths like auth/session/jwt (tier 1),
+// server + route entrypoints (tier 2), general source in a scanned language
+// (tier 3), everything else shouldScanFile allowed (tier 4). Lower = fetched
+// first. Pure + exported so it is unit-testable.
+//
+// Cap = 100. The unauthenticated 60/hr GitHub API limit applies only to the
+// ~2 metadata/tree calls, NOT the file fetches (those come from the
+// raw.githubusercontent.com CDN, which is not API-rate-limited). The blob
+// loop is fully SEQUENTIAL, so there is no burst/abuse-throttle risk; the
+// only cost of a higher cap is wall-clock (~one CDN round-trip per file).
+// 100 vs 80 is ~25% more time (a few seconds) for meaningfully more tail
+// coverage now that the top of the list is security-ranked. Beyond ~100 the
+// latency starts to break the "scan finishes in seconds" UX; that is the
+// real ceiling, and a large repo's escape hatch is Files / Folder upload.
+export const MAX_GITHUB_TARGETS = 100;
+
+const CONFIG_RE =
+  /(^|\/)(\.env(\.|$)|.*\.config\.(js|ts|mjs|cjs)$|next\.config\.|vite\.config\.|nuxt\.config\.|svelte\.config\.|astro\.config\.|wrangler\.toml$|netlify\.toml$|vercel\.json$|dockerfile$|docker-compose|\.npmrc$|package\.json$|requirements\.txt$|pyproject\.toml$|pipfile$|go\.mod$|cargo\.toml$|composer\.json$|gemfile$|pom\.xml$|build\.gradle|mix\.exs$|pubspec\.yaml$|.*\.csproj$|.*\.tf$|firebase\.json$|firestore\.rules$|storage\.rules$|\.github\/workflows\/)/i;
+const MIGRATION_OR_SQL_RE = /(^|\/)migrations?\/|\.sql$/i;
+const SECURITY_PATH_RE =
+  /(auth|login|logout|signin|signup|session|token|jwt|oauth|sso|secret|credential|crypto|password|passwd|admin|middleware|security|permission|policy|guard|rbac|acl)/i;
+// Basename entrypoints must be a CODE file — app.css / index.html are not
+// route entrypoints and must not eat priority slots.
+const ENTRYPOINT_RE =
+  /(^|\/)(server|app|main|index|wsgi|asgi|manage)\.(py|js|jsx|ts|tsx|mjs|cjs|rb|go|rs|java|php|kt|kts|scala|ex|exs)$|(^|\/)(api|routes|controllers|handlers)\/|(^|\/)(pages|app)\/api\//i;
+const SCANNED_LANG_RE =
+  /\.(py|js|jsx|ts|tsx|mjs|cjs|rs|go|java|rb|php|kt|kts|swift|scala|sc|ex|exs|dart|c|h|cpp|cc|cxx|hpp|cs)$/i;
+
+/**
+ * Security-relevance tier for a repo path. Lower fetches first.
+ * @param {string} path
+ * @returns {0|1|2|3|4}
+ */
+export function scanTargetRank(path) {
+  const p = String(path || '');
+  if (CONFIG_RE.test(p) || MIGRATION_OR_SQL_RE.test(p)) return 0;
+  if (SECURITY_PATH_RE.test(p)) return 1;
+  if (ENTRYPOINT_RE.test(p)) return 2;
+  if (SCANNED_LANG_RE.test(p)) return 3;
+  return 4;
+}
 
 // BYOT — Bring Your Own Token. The Personal Access Token lives in localStorage under
 // `preflight.github_pat`. When present, it's added as an `Authorization: token <pat>`
@@ -188,7 +237,12 @@ export async function fetchGitHubRepo(url, onProgress) {
     .filter(
       (node) => node.type === 'blob' && shouldScanFile(node.path) && (node.size || 0) < 200000
     )
-    .slice(0, 80);
+    // Rank by security relevance, then take the top N. Stable within a tier
+    // (original tree order breaks ties) so the selection is deterministic.
+    .map((node, i) => ({ node, i, rank: scanTargetRank(node.path) }))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i)
+    .slice(0, MAX_GITHUB_TARGETS)
+    .map((x) => x.node);
   ghLog.info('Targets selected', {
     totalEntries: treeData.tree?.length,
     targetCount: targets.length,

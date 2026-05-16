@@ -4,7 +4,13 @@
 // the load-time read + header injection inside the fetch call.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { fetchGitHubRepo, saveGitHubPAT, clearGitHubPAT } from '../lib/github.js';
+import {
+  fetchGitHubRepo,
+  saveGitHubPAT,
+  clearGitHubPAT,
+  scanTargetRank,
+  MAX_GITHUB_TARGETS,
+} from '../lib/github.js';
 
 describe('fetchGitHubRepo Authorization header', () => {
   let originalFetch;
@@ -224,5 +230,90 @@ describe('fetchGitHubRepo error messages mention BYOT in v0.4', () => {
     }
     expect(err).toBeDefined();
     expect(err.message).toMatch(/scope|token|access/i);
+  });
+});
+
+describe('scanTargetRank — fetch the files that matter most', () => {
+  it('tier 0: config / secrets / supply-chain / migrations', () => {
+    for (const p of [
+      '.env',
+      '.env.production',
+      'next.config.js',
+      'vite.config.ts',
+      'package.json',
+      'requirements.txt',
+      'go.mod',
+      'Cargo.toml',
+      'composer.json',
+      'Gemfile',
+      'pom.xml',
+      'pubspec.yaml',
+      'infra/main.tf',
+      'firestore.rules',
+      'db/migrations/001_init.sql',
+      'queries/report.sql',
+      '.github/workflows/ci.yml',
+    ]) {
+      expect(scanTargetRank(p), p).toBe(0);
+    }
+  });
+
+  it('tier 1: security-named paths', () => {
+    for (const p of [
+      'src/auth/session.ts',
+      'lib/jwt.go',
+      'app/login/page.tsx',
+      'internal/crypto/keys.rs',
+      'middleware/admin.js',
+    ]) {
+      expect(scanTargetRank(p), p).toBe(1);
+    }
+  });
+
+  it('tier 2: server / route entrypoints', () => {
+    for (const p of [
+      'server.js',
+      'src/index.ts',
+      'manage.py',
+      'app/api/users/route.ts',
+      'src/routes/x.rb',
+    ]) {
+      expect(scanTargetRank(p), p).toBe(2);
+    }
+  });
+
+  it('tier 3: general scanned-language source', () => {
+    for (const p of ['src/utils/format.ts', 'pkg/calc.go', 'lib/widget.dart']) {
+      expect(scanTargetRank(p), p).toBe(3);
+    }
+  });
+
+  it('tier 4: everything else shouldScanFile allowed', () => {
+    for (const p of ['README.md', 'styles/app.css', 'index.html']) {
+      expect(scanTargetRank(p), p).toBe(4);
+    }
+  });
+
+  it('a security-relevant file LATE in tree order still makes the capped set', () => {
+    // Simulate the real selection: 200 junk source files, one .env last.
+    const tree = [];
+    for (let i = 0; i < 200; i++) tree.push({ path: `src/gen/file${i}.ts` });
+    tree.push({ path: 'config/.env' });
+    const picked = tree
+      .map((node, i) => ({ node, i, rank: scanTargetRank(node.path) }))
+      .sort((a, b) => a.rank - b.rank || a.i - b.i)
+      .slice(0, MAX_GITHUB_TARGETS)
+      .map((x) => x.node.path);
+    expect(picked).toContain('config/.env'); // tier 0 jumps the queue
+    expect(picked[0]).toBe('config/.env');
+  });
+
+  it('the cap is 100 (sequential CDN fetch; latency-bounded, not API-bounded)', () => {
+    expect(MAX_GITHUB_TARGETS).toBe(100);
+  });
+
+  it('does not crash on falsy / odd input', () => {
+    expect(scanTargetRank(undefined)).toBe(4);
+    expect(scanTargetRank('')).toBe(4);
   });
 });
