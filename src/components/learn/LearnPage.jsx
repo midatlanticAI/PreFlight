@@ -23,6 +23,7 @@ const SUB_TABS = [
   { to: '/learn/shapes', label: 'Shapes', end: false },
   { to: '/learn/owasp', label: 'OWASP', end: false },
   { to: '/learn/glossary', label: 'Glossary', end: false },
+  { to: '/learn/breakers', label: 'Breakers', end: false },
   { to: '/learn/resources', label: 'Resources', end: false },
 ];
 
