@@ -23,6 +23,14 @@ One repository, several package.json files, services intended to deploy
 on their own schedules. The Architecture probe flags it when it finds
 multiple package.json files and reports that it saw them.
 
+## Scanner behavior
+
+Pre-Flight flags this shape: the Architecture probe raises an
+informational finding stating the boundary discipline this scale
+requires. It is one of the four shapes the scanner acts on rather than
+only classifying, because the boundary it depends on is a security
+boundary.
+
 ## Why AI defaults to it
 
 A monorepo is the path of least resistance once a project grows a second

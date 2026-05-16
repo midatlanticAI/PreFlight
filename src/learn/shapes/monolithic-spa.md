@@ -23,6 +23,13 @@ Architecture probe flags it when the largest source file crosses the
 line where a human stops being able to hold it in their head, and it
 reports the exact line count it saw.
 
+## Scanner behavior
+
+Pre-Flight flags this shape: the Architecture probe raises a
+low-severity finding with the largest file's exact line count. It is one
+of the four shapes the scanner acts on rather than only classifying,
+because past a certain size the shape actively hides other findings.
+
 ## Why AI defaults to it
 
 A model writes the file it is asked to write. "Add a settings page"

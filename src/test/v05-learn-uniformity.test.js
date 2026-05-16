@@ -18,7 +18,27 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getBySlug, LEARN_ENTRIES } from '../lib/learn-content.js';
 
-const SHAPE_PAGES = ['monolithic-spa', 'monorepo', 'static-html-build'];
+// Shapes is teaching content: it covers the architecture taxonomy the
+// classifier recognizes, not only the shapes that emit a finding. Every
+// page carries a "Scanner behavior" line differentiating "flags" from
+// "classifies". The four FINDING-emitting shapes (FLAG_SHAPES) must be a
+// subset of the pages (ecosystem-complete, like probe-coverage); the
+// rest are classify/teach-only.
+const FLAG_SHAPES = ['monolithic-spa', 'monorepo', 'static-html-build', 'ssr'];
+const SHAPE_PAGES = [
+  ...FLAG_SHAPES,
+  'modular-spa',
+  'ssg',
+  'mobile',
+  'desktop-tauri',
+  'desktop-electron',
+  'cli',
+  'cli-ink',
+  'backend-api',
+  'library',
+  'python-project',
+  'notebook',
+];
 const XL_PAGES = [
   'xl-unsafe-deserialization',
   'xl-raw-query-interpolation',
@@ -144,6 +164,31 @@ describe('learn uniformity: Shapes are comprehensive, published, on-voice', () =
       expect(p, `${slug}: gravitas phrase "${p && p[0]}"`).toBe(null);
     });
   }
+});
+
+describe('learn uniformity: Shapes differentiate flag vs classify', () => {
+  for (const slug of SHAPE_PAGES) {
+    it(`${slug} has a Scanner behavior section that says flags or classifies`, () => {
+      const body = bodyOf(rawShape(slug));
+      expect(body).toMatch(/##\s+Scanner behavior/);
+      expect(body).toMatch(/Pre-Flight (flags|classifies) this shape/);
+    });
+  }
+
+  it('flag-emitting shapes say "flags"; teach-only shapes say "classifies"', () => {
+    for (const slug of SHAPE_PAGES) {
+      const body = bodyOf(rawShape(slug));
+      if (FLAG_SHAPES.includes(slug)) {
+        expect(body, `${slug} should flag`).toMatch(/Pre-Flight flags this shape/);
+      } else {
+        expect(body, `${slug} should classify`).toMatch(/Pre-Flight classifies this shape/);
+      }
+    }
+  });
+
+  it('every FINDING-emitting shape has a page (ecosystem-complete)', () => {
+    for (const s of FLAG_SHAPES) expect(SHAPE_PAGES).toContain(s);
+  });
 });
 
 describe('learn uniformity: no draft ever ships', () => {

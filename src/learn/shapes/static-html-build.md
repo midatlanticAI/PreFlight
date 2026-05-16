@@ -25,6 +25,13 @@ static HTML (with or without a build step) and emits an informational
 hardening checklist rather than a defect, because the shape is a
 decision, not a bug.
 
+## Scanner behavior
+
+Pre-Flight flags this shape: the Architecture probe raises an
+informational hardening checklist, and the HTML / SEO / A11y probes
+check each item. It is one of the four shapes the scanner acts on,
+because for a static site that checklist is the security posture.
+
 ## Why AI defaults to it
 
 Asked for "a landing page," a model produces exactly the page and stops.
