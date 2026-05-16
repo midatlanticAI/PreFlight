@@ -29,9 +29,16 @@ describe('BREAKERS catalogue shape', () => {
   it('every entry has a non-trivial payload, where, and effect', () => {
     for (const [probeName, entries] of Object.entries(BREAKERS)) {
       for (const entry of entries) {
-        expect(entry.payload.length, `${probeName}: ${entry.name} payload too short`).toBeGreaterThan(0);
-        expect(entry.where.length, `${probeName}: ${entry.name} where too short`).toBeGreaterThan(20);
-        expect(entry.effect.length, `${probeName}: ${entry.name} effect too short`).toBeGreaterThan(20);
+        expect(
+          entry.payload.length,
+          `${probeName}: ${entry.name} payload too short`
+        ).toBeGreaterThan(0);
+        expect(entry.where.length, `${probeName}: ${entry.name} where too short`).toBeGreaterThan(
+          20
+        );
+        expect(entry.effect.length, `${probeName}: ${entry.name} effect too short`).toBeGreaterThan(
+          20
+        );
       }
     }
   });
@@ -72,9 +79,7 @@ describe('Breakers safety contract', () => {
         for (const url of hosts) {
           const okay = ALLOWED_HOSTS.some((h) => url.includes(h));
           if (!okay) {
-            expect.fail(
-              `${probeName} > ${entry.name}: payload contains non-anonymized URL ${url}`
-            );
+            expect.fail(`${probeName} > ${entry.name}: payload contains non-anonymized URL ${url}`);
           }
         }
       }

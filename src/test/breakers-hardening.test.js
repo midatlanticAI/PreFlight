@@ -86,16 +86,12 @@ describe('Breakers render safety', () => {
 
   it('renderToStaticMarkup of BreakersPanel for every catalogue probe produces no executable <script> tag', () => {
     for (const probeName of Object.keys(BREAKERS)) {
-      const html = renderToStaticMarkup(
-        React.createElement(BreakersPanel, { probeName })
-      );
+      const html = renderToStaticMarkup(React.createElement(BreakersPanel, { probeName }));
       // The output may contain the literal text "<script>" as escaped HTML
       // entities (e.g., "&lt;script&gt;"). What it must NOT contain is an
       // un-escaped <script> opening tag that the browser would execute.
       const liveScriptTagRe = /<script(?:\s|>)/i;
-      expect(html, `${probeName}: panel emitted a live <script> tag`).not.toMatch(
-        liveScriptTagRe
-      );
+      expect(html, `${probeName}: panel emitted a live <script> tag`).not.toMatch(liveScriptTagRe);
     }
   });
 
@@ -123,12 +119,9 @@ describe('Breakers render safety', () => {
     // becomes `&gt;`. Once that holds, any text inside the escaped tag
     // (including `onerror=alert(2)`) is inert browser content, not an
     // executable HTML attribute.
-    const Synthetic = ({ payload }) =>
-      React.createElement('pre', null, payload);
+    const Synthetic = ({ payload }) => React.createElement('pre', null, payload);
     const payload = '<script>alert(1)</script><img src=x onerror=alert(2)>';
-    const html = renderToStaticMarkup(
-      React.createElement(Synthetic, { payload })
-    );
+    const html = renderToStaticMarkup(React.createElement(Synthetic, { payload }));
     // Live tag check: no un-escaped <script> opening tag exists in the
     // rendered HTML.
     expect(html).not.toMatch(/<script(?:\s|>)/i);
@@ -172,7 +165,9 @@ describe('Breakers structural validity', () => {
         /\bOR\b/i.test(entry.payload) ||
         /\bUNION\b/i.test(entry.payload) ||
         /;\s*(?:DROP|INSERT|UPDATE|DELETE)/i.test(entry.payload);
-      expect(hasMetaChar, `SQL Injection > ${entry.name}: payload lacks SQL meta-characters`).toBe(true);
+      expect(hasMetaChar, `SQL Injection > ${entry.name}: payload lacks SQL meta-characters`).toBe(
+        true
+      );
     }
   });
 
@@ -186,7 +181,9 @@ describe('Breakers structural validity', () => {
         /^\/etc\//.test(entry.payload) ||
         /^\/proc\//.test(entry.payload) ||
         /^[A-Z]:\\\\?/.test(entry.payload);
-      expect(hasTraversal, `Path Traversal > ${entry.name}: payload lacks traversal markers`).toBe(true);
+      expect(hasTraversal, `Path Traversal > ${entry.name}: payload lacks traversal markers`).toBe(
+        true
+      );
     }
   });
 
@@ -245,7 +242,10 @@ describe('Breakers structural validity', () => {
     expect(ts).toBeDefined();
     for (const entry of ts) {
       const hasBidi = /[‪-‮⁦-⁩]/.test(entry.payload);
-      expect(hasBidi, `Trojan Source > ${entry.name}: payload lacks U+202A-U+202E / U+2066-U+2069 bidi control`).toBe(true);
+      expect(
+        hasBidi,
+        `Trojan Source > ${entry.name}: payload lacks U+202A-U+202E / U+2066-U+2069 bidi control`
+      ).toBe(true);
     }
   });
 
@@ -258,7 +258,10 @@ describe('Breakers structural validity', () => {
         /maintenance mode/i.test(entry.payload) ||
         /do not mention/i.test(entry.payload) ||
         /you are now/i.test(entry.payload);
-      expect(hasOverride, `AI Rules Files > ${entry.name}: payload lacks instruction-override phrasing`).toBe(true);
+      expect(
+        hasOverride,
+        `AI Rules Files > ${entry.name}: payload lacks instruction-override phrasing`
+      ).toBe(true);
     }
   });
 
@@ -271,7 +274,10 @@ describe('Breakers structural validity', () => {
         /system prompt/i.test(entry.payload) ||
         /hidden instruction/i.test(entry.payload) ||
         /do not (?:mention|reveal)/i.test(entry.payload);
-      expect(hasInjection, `LLM Security > ${entry.name}: payload lacks prompt-injection phrasing`).toBe(true);
+      expect(
+        hasInjection,
+        `LLM Security > ${entry.name}: payload lacks prompt-injection phrasing`
+      ).toBe(true);
     }
   });
 
@@ -290,7 +296,9 @@ describe('Breakers structural validity', () => {
         /onclick|onload|onerror|on[a-z]+\s*=/i.test(entry.payload) ||
         /target\s*=\s*["']?_blank/i.test(entry.payload) ||
         /<script/i.test(entry.payload);
-      expect(hasVector, `HTML Hygiene > ${entry.name}: payload lacks an HTML attack vector`).toBe(true);
+      expect(hasVector, `HTML Hygiene > ${entry.name}: payload lacks an HTML attack vector`).toBe(
+        true
+      );
     }
   });
 
@@ -354,9 +362,7 @@ describe('Breakers accessibility primitives', () => {
       // The entry name should appear in a way a screen reader can pick out.
       // We render it as a styled span; the heading semantics live in the
       // section. Confirm the entry name appears in the output.
-      expect(html, `entry "${entry.name}" missing from rendered output`).toContain(
-        entry.name
-      );
+      expect(html, `entry "${entry.name}" missing from rendered output`).toContain(entry.name);
     }
   });
 

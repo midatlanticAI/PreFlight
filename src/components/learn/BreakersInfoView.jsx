@@ -36,9 +36,9 @@ export function BreakersInfoView() {
           lineHeight: 1.6,
         }}
       >
-        Breakers are the concrete adversarial inputs paired with each finding. When you
-        expand a finding, you see what an attacker would type or upload to exploit it. {totalEntries}{' '}
-        entries across {totalProbes} probe classes, growing as new probes ship.
+        Breakers are the concrete adversarial inputs paired with each finding. When you expand a
+        finding, you see what an attacker would type or upload to exploit it. {totalEntries} entries
+        across {totalProbes} probe classes, growing as new probes ship.
       </p>
 
       <section
@@ -68,11 +68,27 @@ export function BreakersInfoView() {
           Static-only safety contract
         </h2>
         <ul style={{ margin: 0, paddingLeft: 18, color: T.textDim, fontSize: 14, lineHeight: 1.7 }}>
-          <li>Every Breaker entry is a <strong style={{ color: T.text }}>string</strong>. We render it; we never execute it.</li>
-          <li>Pre-Flight does not send the payload anywhere. The Copy button writes to your clipboard only when you click it.</li>
-          <li>No payload references a real production hostname; placeholders only (example.com, attacker.example).</li>
-          <li>No payload includes a real credential, token, or working exploit against a named third party.</li>
-          <li>The contract is enforced by tests under <code className="ap-mono">src/test/breakers.test.js</code>: payload-only, anonymized hosts, no credential-shaped values.</li>
+          <li>
+            Every Breaker entry is a <strong style={{ color: T.text }}>string</strong>. We render
+            it; we never execute it.
+          </li>
+          <li>
+            Pre-Flight does not send the payload anywhere. The Copy button writes to your clipboard
+            only when you click it.
+          </li>
+          <li>
+            No payload references a real production hostname; placeholders only (example.com,
+            attacker.example).
+          </li>
+          <li>
+            No payload includes a real credential, token, or working exploit against a named third
+            party.
+          </li>
+          <li>
+            The contract is enforced by tests under{' '}
+            <code className="ap-mono">src/test/breakers.test.js</code>: payload-only, anonymized
+            hosts, no credential-shaped values.
+          </li>
         </ul>
       </section>
 
@@ -88,7 +104,12 @@ export function BreakersInfoView() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-          <AlertTriangle size={12} color={T.textMuted} aria-hidden="true" style={{ flexShrink: 0, marginTop: 3 }} />
+          <AlertTriangle
+            size={12}
+            color={T.textMuted}
+            aria-hidden="true"
+            style={{ flexShrink: 0, marginTop: 3 }}
+          />
           <span>
             Use these on systems you own or have explicit authorization to test. Replaying these
             against systems you do not own is unauthorized access in most jurisdictions. Breakers
@@ -105,8 +126,8 @@ export function BreakersInfoView() {
         Coverage by probe
       </h2>
       <p style={{ margin: '0 0 14px', fontSize: 13, color: T.textDim, lineHeight: 1.6 }}>
-        Each probe listed below has one or more Breaker entries shown alongside its findings on
-        the scan page. Click a probe name to open the matching pattern explainer.
+        Each probe listed below has one or more Breaker entries shown alongside its findings on the
+        scan page. Click a probe name to open the matching pattern explainer.
       </p>
 
       <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -115,10 +136,7 @@ export function BreakersInfoView() {
           const slug = PROBE_META[probeName]?.learn_more_slug;
           const pattern = slug ? resolvePatternForProbe(slug) : null;
           const linkBody = (
-            <span
-              className="ap-display"
-              style={{ fontSize: 14, fontWeight: 700, color: T.text }}
-            >
+            <span className="ap-display" style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
               {probeName}
             </span>
           );
@@ -153,10 +171,7 @@ export function BreakersInfoView() {
                 ) : (
                   linkBody
                 )}
-                <div
-                  className="ap-mono"
-                  style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}
-                >
+                <div className="ap-mono" style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}>
                   {entries.map((e) => e.name).join(' · ')}
                 </div>
               </div>
