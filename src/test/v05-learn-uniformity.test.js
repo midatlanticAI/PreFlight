@@ -16,8 +16,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getBySlug } from '../lib/learn-content.js';
+import { getBySlug, LEARN_ENTRIES } from '../lib/learn-content.js';
 
+const SHAPE_PAGES = ['monolithic-spa', 'monorepo', 'static-html-build'];
 const XL_PAGES = [
   'xl-unsafe-deserialization',
   'xl-raw-query-interpolation',
@@ -48,6 +49,8 @@ const SLOP_PHRASES =
   /it'?s (important|worth) (to )?note|in the realm of|fast-paced|ever-evolving|in a world where|stands? as a testament|shed light on|when it comes to|in essence,|in conclusion|ultimately,|navigate the complexit/i;
 
 const raw = (slug) => readFileSync(join(process.cwd(), 'src/learn/patterns', `${slug}.md`), 'utf8');
+const rawShape = (slug) =>
+  readFileSync(join(process.cwd(), 'src/learn/shapes', `${slug}.md`), 'utf8');
 const bodyOf = (text) => {
   // strip the leading --- frontmatter --- block
   const m = text.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
@@ -112,4 +115,40 @@ describe('learn uniformity: compliance pages state scope + disclaimer', () => {
       expect(bodyOf(raw(slug))).toMatch(/does not scan for/i);
     });
   }
+});
+
+describe('learn uniformity: Shapes are comprehensive, published, on-voice', () => {
+  for (const slug of SHAPE_PAGES) {
+    it(`${slug} is a published shape with complete frontmatter`, () => {
+      const e = getBySlug(slug);
+      expect(e, `${slug} not in registry`).toBeDefined();
+      expect(e.slug).toBe(slug);
+      expect(e.type).toBe('shape');
+      expect(e.draft).toBe(false);
+      expect(typeof e.title).toBe('string');
+      expect(e.summary.trim().length).toBeGreaterThan(20);
+      expect(Array.isArray(e.sources)).toBe(true);
+      expect(e.sources.length).toBeGreaterThan(0);
+    });
+
+    it(`${slug} is comprehensive (not a stub) and on-voice`, () => {
+      const body = bodyOf(rawShape(slug));
+      // a real page, not the old "content coming soon" placeholder
+      expect(body).not.toMatch(/content coming soon|_Draft/i);
+      expect(body.length).toBeGreaterThan(1200);
+      expect((body.match(/^##\s+\S/gm) || []).length).toBeGreaterThanOrEqual(4);
+      expect(body.includes('—'), `${slug}: em-dash in body`).toBe(false);
+      const w = body.match(BANNED);
+      expect(w, `${slug}: AI-slop word "${w && w[0]}"`).toBe(null);
+      const p = body.match(SLOP_PHRASES);
+      expect(p, `${slug}: gravitas phrase "${p && p[0]}"`).toBe(null);
+    });
+  }
+});
+
+describe('learn uniformity: no draft ever ships', () => {
+  it('every Learn entry in the registry is published (no draft:true)', () => {
+    const drafts = LEARN_ENTRIES.filter((e) => e.draft === true).map((e) => e.slug);
+    expect(drafts, `draft Learn entries: ${drafts.join(', ')}`).toEqual([]);
+  });
 });
