@@ -8,6 +8,8 @@
   "author": "Johnathan Viruet / Mid-Atlantic AI <john@midatlantic.ai>",
   "scripts": {
     "dev": "vite",
+    "gen:sitemap": "node scripts/gen-sitemap.mjs",
+    "prebuild": "node scripts/gen-sitemap.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
