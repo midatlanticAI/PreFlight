@@ -108,7 +108,16 @@ describe('self-audit: our own dist/ should pass our own probes', () => {
         /\.(js|json|html?|txt)$/i.test(f.path) &&
         !/(^|\/)test\//.test(f.path) &&
         !/\.test\.|\.spec\./.test(f.path) &&
-        !/(^|\/)App\.jsx$/.test(f.path) // App.jsx contains the regex patterns themselves as string literals
+        !/(^|\/)App\.jsx$/.test(f.path) && // App.jsx contains the regex patterns themselves as string literals
+        // Prerendered Learn teaching pages (dist/learn/{patterns,incidents,
+        // shapes}/**) are documentation ABOUT these patterns: the secret /
+        // env / key examples are the lesson, exactly like the fake AKIA /
+        // sk_live in test fixtures, and exactly like the source .md they
+        // render from (never in scope: .md is not a scanned extension). The
+        // example values are non-functional doc placeholders (e.g. AWS's
+        // own AKIAIOSFODNN7EXAMPLE). A real shipped secret would be in app
+        // JS/JSON/config, which stays fully in scope.
+        !/(^|\/)learn\/(patterns|incidents|shapes)\//.test(f.path)
     );
     const findings = probeSecrets(targets);
     const real = findings.filter((f) => f.severity === 'critical' || f.severity === 'high');

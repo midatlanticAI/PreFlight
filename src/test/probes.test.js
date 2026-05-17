@@ -823,6 +823,18 @@ describe('probeSEOHygiene', () => {
     expect(f.find((x) => x.title.includes('description'))).toBeDefined();
   });
 
+  // REGRESSION: a double-quoted description may legitimately contain
+  // apostrophes ("HIPAA's", "don't"). The old [^"']{20,} regex flagged any
+  // description with an apostrophe in its first 20 chars as "thin".
+  it('does NOT flag a valid description containing an apostrophe', () => {
+    const f = probeSEOHygiene([
+      entryHtml(
+        `<title>X</title><meta name="description" content="HIPAA's Security Rule sets technical safeguards for protected health information">`
+      ),
+    ]);
+    expect(f.find((x) => x.title.includes('thin <meta name="description"'))).toBeUndefined();
+  });
+
   it('flags missing canonical', () => {
     const f = probeSEOHygiene([
       entryHtml(
