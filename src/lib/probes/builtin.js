@@ -24,7 +24,12 @@ import {
   NEXT_PUBLIC_DANGER_NAMES,
   NEXT_PUBLIC_DANGER_VALUES,
 } from '../threat-intel.js';
-import { isTestFile, isScannerSelfSource, isMetaDocFile } from '../file-filter.js';
+import {
+  isTestFile,
+  isScannerSelfSource,
+  isMetaDocFile,
+  isEnvTemplateFile,
+} from '../file-filter.js';
 
 export function probeSecrets(files) {
   const findings = [];
@@ -249,21 +254,24 @@ export function probeEnvFiles(files) {
   const findings = [];
   files.forEach((file) => {
     if (!/(^|\/)\.env(\..+)?$/i.test(file.path)) return;
-    const isExample = /\.example$|\.sample$|\.template$/i.test(file.path);
-    if (!isExample) {
-      findings.push({
-        id: `env-tracked-${file.path}`,
-        probe: 'Env Hygiene',
-        title: '.env file present in repository',
-        severity: 'high',
-        category: 'Data Breach',
-        cwe: 'CWE-538',
-        file: file.path,
-        line: 1,
-        evidence: file.path,
-        remediation: `Real .env files should never be committed to git. Add .env, .env.local, .env.production to .gitignore. Use .env.example with placeholder values for documentation. If this file has been committed to a public repo, treat every value in it as compromised and rotate.`,
-      });
-    }
+    // Template / documentation env files (.env.example, .env-example,
+    // .env.dist, ...) are SUPPOSED to be committed and hold placeholders.
+    // Flagging their mere presence as high-risk "Data Breach" was a real
+    // false positive reported by an early user. A real secret pasted into
+    // one is still caught by the secret scanner (it inspects content).
+    if (isEnvTemplateFile(file.path)) return;
+    findings.push({
+      id: `env-tracked-${file.path}`,
+      probe: 'Env Hygiene',
+      title: '.env file present in repository',
+      severity: 'high',
+      category: 'Data Breach',
+      cwe: 'CWE-538',
+      file: file.path,
+      line: 1,
+      evidence: file.path,
+      remediation: `Real .env files should never be committed to git. Add .env, .env.local, .env.production to .gitignore. Use .env.example with placeholder values for documentation. If this file has been committed to a public repo, treat every value in it as compromised and rotate.`,
+    });
   });
   return findings;
 }

@@ -14,6 +14,14 @@ import { riskTier } from './theme.js';
 import { snippetToText } from './snippet.js';
 import sam from './personas/sam.js';
 
+// Severity presence for the severity-aware tier label, so exported reports
+// show the same fair tier as the in-app headline (no critical/high present
+// => never CRITICAL/HIGH regardless of score).
+const sevPresence = (findings) => ({
+  hasCritical: findings.some((f) => f.severity === 'critical'),
+  hasHigh: findings.some((f) => f.severity === 'high'),
+});
+
 export function formatJSON(results) {
   return JSON.stringify(
     {
@@ -22,7 +30,7 @@ export function formatJSON(results) {
       source: results.source,
       filesScanned: results.filesScanned,
       score: results.score,
-      riskTier: riskTier(results.score).label,
+      riskTier: riskTier(results.score, sevPresence(results.findings)).label,
       summary: {
         total: results.findings.length,
         bySeverity: results.findings.reduce((a, f) => {
@@ -56,7 +64,7 @@ export function formatJSON(results) {
 }
 
 export function formatMarkdown(results) {
-  const tier = riskTier(results.score);
+  const tier = riskTier(results.score, sevPresence(results.findings));
   const sevCounts = results.findings.reduce((a, f) => {
     a[f.severity] = (a[f.severity] || 0) + 1;
     return a;
@@ -91,7 +99,7 @@ export function formatMarkdown(results) {
 
 // PR-comment Markdown: fits in a collapsed <details> block, links findings by file path, summary tagline.
 export function formatPRComment(results) {
-  const tier = riskTier(results.score);
+  const tier = riskTier(results.score, sevPresence(results.findings));
   const sevCounts = results.findings.reduce((a, f) => {
     a[f.severity] = (a[f.severity] || 0) + 1;
     return a;
@@ -151,7 +159,7 @@ export function formatPRComment(results) {
 // correct outcome here for fixes that require unseen context. That refusal
 // signals to the downstream AI that the fix is harder than it looks.
 export function formatAgentPrompt(results) {
-  const tier = riskTier(results.score);
+  const tier = riskTier(results.score, sevPresence(results.findings));
   const top = results.findings.slice(0, 30);
 
   let p = '';

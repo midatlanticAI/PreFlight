@@ -42,6 +42,36 @@ describe('computeScore', () => {
   it('ignores unknown severities (treats as 0)', () => {
     expect(computeScore([{ severity: 'rumor' }])).toBe(100);
   });
+
+  // REGRESSION: two early users reported a frontend repo scoring ~32
+  // ("CRITICAL") off nothing but sparse SEO meta. Low-severity bands now
+  // have a capped TOTAL contribution so volume cannot crater the score.
+  it('caps the medium band so cosmetic volume cannot tank the score', () => {
+    const many = Array.from({ length: 100 }, () => ({ severity: 'medium' }));
+    // 100 * 5 = 500 uncapped; capped at 30 -> score 70, not 0.
+    expect(computeScore(many)).toBe(70);
+  });
+
+  it('caps low and info bands too', () => {
+    const lows = Array.from({ length: 100 }, () => ({ severity: 'low' }));
+    expect(computeScore(lows)).toBe(88); // cap 12
+    const infos = Array.from({ length: 100 }, () => ({ severity: 'info' }));
+    expect(computeScore(infos)).toBe(95); // cap 5
+  });
+
+  it('a cosmetic-only repo floors at 53 (never near zero)', () => {
+    const cosmetic = [
+      ...Array.from({ length: 40 }, () => ({ severity: 'medium' })),
+      ...Array.from({ length: 40 }, () => ({ severity: 'low' })),
+      ...Array.from({ length: 40 }, () => ({ severity: 'info' })),
+    ];
+    expect(computeScore(cosmetic)).toBe(53); // 100 - (30 + 12 + 5)
+  });
+
+  it('critical and high stay uncapped (real issues still tank it)', () => {
+    const crits = Array.from({ length: 5 }, () => ({ severity: 'critical' }));
+    expect(computeScore(crits)).toBe(0); // 5 * 25 = 125, clamped
+  });
 });
 
 describe('riskTier', () => {
@@ -56,6 +86,27 @@ describe('riskTier', () => {
   });
   it('10 → CRITICAL RISK', () => {
     expect(riskTier(10).label).toBe('CRITICAL RISK');
+  });
+
+  // Severity-aware labelling (the headline + exports pass this). The label
+  // must reflect the worst real finding, not the volume of cosmetic ones.
+  it('no critical/high present is never CRITICAL or HIGH, even at a low score', () => {
+    expect(riskTier(32, { hasCritical: false, hasHigh: false }).label).toBe('MODERATE RISK');
+    expect(riskTier(10, { hasCritical: false, hasHigh: false }).label).toBe('MODERATE RISK');
+    expect(riskTier(95, { hasCritical: false, hasHigh: false }).label).toBe('LOW RISK');
+  });
+
+  it('a critical present reads CRITICAL even with a high numeric score', () => {
+    expect(riskTier(90, { hasCritical: true, hasHigh: false }).label).toBe('CRITICAL RISK');
+  });
+
+  it('a high (no critical) reads HIGH regardless of score', () => {
+    expect(riskTier(88, { hasCritical: false, hasHigh: true }).label).toBe('HIGH RISK');
+  });
+
+  it('omitting severity context keeps the original numeric mapping', () => {
+    expect(riskTier(32).label).toBe('CRITICAL RISK');
+    expect(riskTier(70).label).toBe('MODERATE RISK');
   });
 });
 

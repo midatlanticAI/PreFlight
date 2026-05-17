@@ -205,6 +205,29 @@ describe('probeEnvFiles', () => {
   it('does not flag .env.example', () => {
     expect(probeEnvFiles([file('.env.example', 'X=placeholder')])).toEqual([]);
   });
+
+  // REGRESSION: an early user reported a template named `.env-example`
+  // (hyphen, not dot) classed high risk. The old check only exempted a dot
+  // before "example". Every common template convention must be exempt.
+  it.each([
+    '.env-example',
+    '.env_example',
+    '.env.sample',
+    '.env.template',
+    '.env.dist',
+    '.env.defaults',
+    '.env.local.example',
+    'config/.env-example',
+  ])('does not flag template env file %s', (path) => {
+    expect(probeEnvFiles([file(path, 'API_KEY=your-key-here')])).toEqual([]);
+  });
+
+  it.each(['.env', '.env.local', '.env.production', 'app/.env'])(
+    'still flags real env file %s',
+    (path) => {
+      expect(probeEnvFiles([file(path, 'SECRET=abc')])).toHaveLength(1);
+    }
+  );
 });
 
 describe('probeAuthWeakness', () => {

@@ -50,9 +50,32 @@ export const fontCondensed = "'Roboto Condensed', 'Roboto', 'Helvetica Neue', Ar
 export const fontEyebrow = "'Impact', 'Haettenschweiler', 'Arial Narrow Bold', sans-serif";
 export const fontMono = "ui-monospace, 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace";
 
-export function riskTier(score) {
-  if (score >= 80) return { label: 'LOW RISK', color: T.good, ring: T.good };
-  if (score >= 60) return { label: 'MODERATE RISK', color: T.sev.medium.fg, ring: T.sev.medium.fg };
-  if (score >= 40) return { label: 'HIGH RISK', color: T.sev.high.fg, ring: T.sev.high.fg };
-  return { label: 'CRITICAL RISK', color: T.sev.critical.fg, ring: T.sev.critical.fg };
+const TIER = {
+  low: { label: 'LOW RISK', color: T.good, ring: T.good },
+  moderate: { label: 'MODERATE RISK', color: T.sev.medium.fg, ring: T.sev.medium.fg },
+  high: { label: 'HIGH RISK', color: T.sev.high.fg, ring: T.sev.high.fg },
+  critical: { label: 'CRITICAL RISK', color: T.sev.critical.fg, ring: T.sev.critical.fg },
+};
+
+// Risk tier label. The score answers "how much"; severity answers "how bad".
+// When severity context is supplied (the headline + exports do this), the
+// label is clamped to the worst real finding so a repo whose only issues are
+// cosmetic (SEO meta, missing canonical) is never shown as CRITICAL/HIGH
+// "what attackers can do right now", and a repo with a real critical is
+// never softened to LOW/MODERATE by a high numeric score.
+//
+// opts is optional: callers that pass only a score (history rows, the gauge
+// colour band) keep the original purely-numeric mapping unchanged.
+export function riskTier(score, opts) {
+  if (opts) {
+    if (opts.hasCritical) return TIER.critical;
+    if (opts.hasHigh) return TIER.high;
+    // No critical and no high: cosmetic / medium / low / info only. Cannot
+    // be HIGH or CRITICAL no matter the count. Score splits LOW vs MODERATE.
+    return score >= 80 ? TIER.low : TIER.moderate;
+  }
+  if (score >= 80) return TIER.low;
+  if (score >= 60) return TIER.moderate;
+  if (score >= 40) return TIER.high;
+  return TIER.critical;
 }

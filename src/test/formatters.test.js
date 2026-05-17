@@ -73,7 +73,10 @@ describe('formatMarkdown', () => {
   it('contains the headline and risk tier', () => {
     const md = formatMarkdown(sampleResults());
     expect(md).toMatch(/^# Pre-Flight Security Audit/);
-    expect(md).toMatch(/MODERATE RISK/);
+    // Severity-aware: the fixture has a critical finding, so the tier is
+    // CRITICAL regardless of the 65 numeric score (the old code mislabelled
+    // this MODERATE, the reverse of the cosmetic-only false alarm).
+    expect(md).toMatch(/CRITICAL RISK/);
     expect(md).toMatch(/score 65/);
   });
 
@@ -93,7 +96,7 @@ describe('formatMarkdown', () => {
 describe('formatPRComment', () => {
   it('starts with a summary heading and severity counts', () => {
     const md = formatPRComment(sampleResults());
-    expect(md).toMatch(/^## .* MODERATE RISK \(65\/100\)/m);
+    expect(md).toMatch(/^## .* CRITICAL RISK \(65\/100\)/m);
     expect(md).toMatch(/1 critical/);
     expect(md).toMatch(/1 medium/);
   });

@@ -91,6 +91,29 @@ export function isMetaDocFile(path) {
   return false;
 }
 
+// True for the conventional ".env documentation" filenames: a template that
+// is SUPPOSED to be committed and holds placeholder values, not secrets.
+// Covers every common separator and marker we have seen in the wild:
+//   .env.example  .env-example  .env_example  .env.sample  .env.template
+//   .env.dist  .env.defaults  .env.tpl  .env.local.example  env.example
+// A real ".env" / ".env.local" / ".env.production" is NOT a template and
+// must still be flagged. An early user hit this: a template named
+// `.env-example` was classed high risk because the old check only matched a
+// dot before "example". Presence of a template file is normal and safe;
+// a real secret accidentally pasted into one is still caught by the secret
+// scanner, which inspects content independently.
+const ENV_TEMPLATE_MARKER = /(?:example|sample|template|dist|defaults|tpl|placeholder)/i;
+export function isEnvTemplateFile(path) {
+  if (!path) return false;
+  const base = path.split('/').pop() || '';
+  if (!/^\.?env(?=$|[.\-_])/i.test(base)) return false;
+  // Strip the leading ".env" / "env" then look for a template marker token
+  // among the remaining dot/dash/underscore-separated segments.
+  const rest = base.replace(/^\.?env/i, '');
+  if (!rest) return false; // bare ".env" / "env" is NOT a template
+  return ENV_TEMPLATE_MARKER.test(rest);
+}
+
 export const FILE_INCLUDE = [
   /(^|\/)\.env(\..+)?$/i,
   /package\.json$/,

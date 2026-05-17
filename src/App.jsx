@@ -776,7 +776,12 @@ export default function App() {
   }, [results, partitioned.visible]);
 
   const maxCat = Math.max(1, ...Object.values(catCounts));
-  const tier = results ? riskTier(liveScore) : null;
+  const tier = results
+    ? riskTier(liveScore, {
+        hasCritical: (sevCounts.critical || 0) > 0,
+        hasHigh: (sevCounts.high || 0) > 0,
+      })
+    : null;
   const topFindings = partitioned.visible.slice(0, 3);
   // Compare current scan to prior scan of the same source (history is newest-first).
   // The current scan IS the head of history (just appended), so we look for a same-source entry below.

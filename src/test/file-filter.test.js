@@ -7,10 +7,37 @@ import {
   isTestFile,
   isScannerSelfSource,
   isMetaDocFile,
+  isEnvTemplateFile,
   shouldScanFile,
   FILE_INCLUDE,
   FILE_EXCLUDE,
 } from '../lib/file-filter.js';
+
+describe('isEnvTemplateFile', () => {
+  it.each([
+    '.env.example',
+    '.env-example',
+    '.env_example',
+    '.env.sample',
+    '.env.template',
+    '.env.dist',
+    '.env.defaults',
+    '.env.tpl',
+    '.env.placeholder',
+    '.env.local.example',
+    'env.example',
+    'config/.env-example',
+  ])('treats %s as a template', (p) => {
+    expect(isEnvTemplateFile(p)).toBe(true);
+  });
+
+  it.each(['.env', '.env.local', '.env.production', 'app/.env', 'envoy.yaml', '', null])(
+    'does not treat %s as a template',
+    (p) => {
+      expect(isEnvTemplateFile(p)).toBe(false);
+    }
+  );
+});
 
 describe('isTestFile', () => {
   it('matches *.test.js / .test.jsx / .test.ts / .test.tsx', () => {
