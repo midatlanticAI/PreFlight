@@ -350,9 +350,7 @@ export function probeSEOHygiene(files) {
       // contain apostrophes ("HIPAA's", "don't") and vice versa. The old
       // [^"']{20,} forbade both quote chars, so any description with an
       // apostrophe in its first 20 chars was a false "thin" positive.
-      if (
-        !/<meta[^>]*name=["']description["'][^>]*content=(?:"[^"]{20,}"|'[^']{20,}')/i.test(head)
-      )
+      if (!/<meta[^>]*name=["']description["'][^>]*content=(?:"[^"]{20,}"|'[^']{20,}')/i.test(head))
         issues.push({
           k: 'no-description',
           t: 'Missing or thin <meta name="description">',

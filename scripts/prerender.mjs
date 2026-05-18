@@ -76,13 +76,9 @@ try {
     const meta = getRouteMeta(path);
 
     let html = applyHead(TEMPLATE, meta);
-    html = html.replace(
-      ROOT_DIV,
-      `<div id="root" role="presentation">${appHtml}</div>`
-    );
+    html = html.replace(ROOT_DIV, `<div id="root" role="presentation">${appHtml}</div>`);
 
-    const outPath =
-      path === '/' ? join(DIST, 'index.html') : join(DIST, path, 'index.html');
+    const outPath = path === '/' ? join(DIST, 'index.html') : join(DIST, path, 'index.html');
     mkdirSync(dirname(outPath), { recursive: true });
     writeFileSync(outPath, html, 'utf8');
     written += 1;

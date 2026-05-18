@@ -76,7 +76,8 @@ const STATIC = {
   },
   '/terms': {
     title: 'Terms | Pre-Flight',
-    description: 'Terms of use for Pre-Flight, the free in-browser static security audit by Mid-Atlantic AI.',
+    description:
+      'Terms of use for Pre-Flight, the free in-browser static security audit by Mid-Atlantic AI.',
   },
 };
 
@@ -107,9 +108,7 @@ export function getRouteMeta(pathname) {
       // meaningful description above the probe's minimum.
       const summary = (entry.summary || '').trim();
       description =
-        summary.length >= 50
-          ? summary.slice(0, 200)
-          : `${entry.title}. ${HOME_DESC}`.slice(0, 200);
+        summary.length >= 50 ? summary.slice(0, 200) : `${entry.title}. ${HOME_DESC}`.slice(0, 200);
     }
   }
 
