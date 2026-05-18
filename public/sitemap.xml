@@ -40,6 +40,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://preflight.midatlantic.ai/learn/social</loc>
+    <lastmod>2026-05-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://preflight.midatlantic.ai/learn/owasp</loc>
     <lastmod>2026-05-18</lastmod>
     <changefreq>monthly</changefreq>
@@ -50,6 +56,12 @@
     <lastmod>2026-05-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://preflight.midatlantic.ai/learn/the-climb</loc>
+    <lastmod>2026-05-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/glossary</loc>

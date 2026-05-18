@@ -19,6 +19,7 @@ import { ScrollableTabs } from '../ScrollableTabs.jsx';
 const SUB_TABS = [
   { to: '/learn', label: 'Vibe-Aware', end: true },
   { to: '/learn/how-it-works', label: 'How it works', end: false },
+  { to: '/learn/the-climb', label: 'The Climb', end: false },
   { to: '/learn/patterns', label: 'Patterns', end: false },
   { to: '/learn/incidents', label: 'Field Reports', end: false },
   { to: '/learn/shapes', label: 'Shapes', end: false },
@@ -26,6 +27,7 @@ const SUB_TABS = [
   { to: '/learn/glossary', label: 'Glossary', end: false },
   { to: '/learn/breakers', label: 'Breakers', end: false },
   { to: '/learn/resources', label: 'Resources', end: false },
+  { to: '/learn/social', label: 'Social', end: false },
 ];
 
 export function LearnPage() {

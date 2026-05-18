@@ -59,6 +59,11 @@ const STATIC = {
     description:
       'How Pre-Flight scans in your browser tab: pure-function probes over text, findings built locally, nothing uploaded.',
   },
+  '/learn/the-climb': {
+    title: 'The Climb | Pre-Flight',
+    description:
+      'A roadmap from the floor of vibe coding to the ceiling of agentic engineering. Six tiers of judgment, what each can ship, and how to climb.',
+  },
   '/learn/glossary': {
     title: 'Security Glossary | Pre-Flight',
     description:
@@ -68,6 +73,11 @@ const STATIC = {
     title: 'Breakers | Pre-Flight',
     description:
       'For each finding class, the concrete adversarial input an attacker would type, so you can reproduce the failure and confirm the fix.',
+  },
+  '/learn/social': {
+    title: 'Social | Pre-Flight',
+    description:
+      'Social learning for vibe coders, shippers, and builders. The communities where people get better together, including Vibe Coding is Life.',
   },
   '/privacy': {
     title: 'Privacy | Pre-Flight',

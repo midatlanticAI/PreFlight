@@ -221,6 +221,8 @@ const BreakersInfoView = lazyNamed(
   'BreakersInfoView'
 );
 const HowToView = lazyNamed(() => import('./components/learn/HowToView.jsx'), 'HowToView');
+const SocialView = lazyNamed(() => import('./components/learn/SocialView.jsx'), 'SocialView');
+const TheClimbView = lazyNamed(() => import('./components/learn/TheClimbView.jsx'), 'TheClimbView');
 const SettingsPage = lazyNamed(
   () => import('./components/settings/SettingsPage.jsx'),
   'SettingsPage'
@@ -925,8 +927,10 @@ export default function App() {
               <Route path="shapes" element={<IndexView type="shape" />} />
               <Route path="shapes/:slug" element={<EntryView />} />
               <Route path="resources" element={<ResourcesView />} />
+              <Route path="social" element={<SocialView />} />
               <Route path="owasp" element={<OwaspCoverageView />} />
               <Route path="how-it-works" element={<HowToView />} />
+              <Route path="the-climb" element={<TheClimbView />} />
               <Route path="glossary" element={<GlossaryView />} />
               <Route path="breakers" element={<BreakersInfoView />} />
             </Route>

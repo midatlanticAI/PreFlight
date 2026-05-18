@@ -30,6 +30,8 @@ import { OwaspCoverageView } from './components/learn/OwaspCoverageView.jsx';
 import { GlossaryView } from './components/learn/GlossaryView.jsx';
 import { BreakersInfoView } from './components/learn/BreakersInfoView.jsx';
 import { HowToView } from './components/learn/HowToView.jsx';
+import { SocialView } from './components/learn/SocialView.jsx';
+import { TheClimbView } from './components/learn/TheClimbView.jsx';
 import { PrivacyView } from './components/PrivacyView.jsx';
 import { TermsView } from './components/TermsView.jsx';
 
@@ -41,6 +43,7 @@ export function render(url) {
           <Route path="/learn" element={<LearnPage />}>
             <Route index element={<ManifestoView />} />
             <Route path="how-it-works" element={<HowToView />} />
+            <Route path="the-climb" element={<TheClimbView />} />
             <Route path="patterns" element={<IndexView type="pattern" />} />
             <Route path="patterns/:slug" element={<EntryView />} />
             <Route path="incidents" element={<IndexView type="incident" />} />
@@ -48,6 +51,7 @@ export function render(url) {
             <Route path="shapes" element={<IndexView type="shape" />} />
             <Route path="shapes/:slug" element={<EntryView />} />
             <Route path="resources" element={<ResourcesView />} />
+            <Route path="social" element={<SocialView />} />
             <Route path="owasp" element={<OwaspCoverageView />} />
             <Route path="glossary" element={<GlossaryView />} />
             <Route path="breakers" element={<BreakersInfoView />} />
