@@ -24,6 +24,8 @@ export const STATIC_ROUTES = [
   { path: '/learn/owasp', priority: '0.7', changefreq: 'monthly' },
   { path: '/learn/how-it-works', priority: '0.6', changefreq: 'monthly' },
   { path: '/learn/the-climb', priority: '0.8', changefreq: 'weekly' },
+  { path: '/learn/flight-school', priority: '0.8', changefreq: 'weekly' },
+  { path: '/learn/tools', priority: '0.7', changefreq: 'weekly' },
   { path: '/learn/glossary', priority: '0.6', changefreq: 'monthly' },
   { path: '/learn/breakers', priority: '0.6', changefreq: 'monthly' },
   { path: '/privacy', priority: '0.3', changefreq: 'yearly' },

@@ -20,6 +20,8 @@ const SUB_TABS = [
   { to: '/learn', label: 'Vibe-Aware', end: true },
   { to: '/learn/how-it-works', label: 'How it works', end: false },
   { to: '/learn/the-climb', label: 'The Climb', end: false },
+  { to: '/learn/flight-school', label: 'FlightSchool', end: false },
+  { to: '/learn/tools', label: 'Tools', end: false },
   { to: '/learn/patterns', label: 'Patterns', end: false },
   { to: '/learn/incidents', label: 'Field Reports', end: false },
   { to: '/learn/shapes', label: 'Shapes', end: false },

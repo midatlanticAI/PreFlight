@@ -223,6 +223,11 @@ const BreakersInfoView = lazyNamed(
 const HowToView = lazyNamed(() => import('./components/learn/HowToView.jsx'), 'HowToView');
 const SocialView = lazyNamed(() => import('./components/learn/SocialView.jsx'), 'SocialView');
 const TheClimbView = lazyNamed(() => import('./components/learn/TheClimbView.jsx'), 'TheClimbView');
+const FlightSchoolView = lazyNamed(
+  () => import('./components/learn/FlightSchoolView.jsx'),
+  'FlightSchoolView'
+);
+const ToolsView = lazyNamed(() => import('./components/learn/ToolsView.jsx'), 'ToolsView');
 const SettingsPage = lazyNamed(
   () => import('./components/settings/SettingsPage.jsx'),
   'SettingsPage'
@@ -931,6 +936,8 @@ export default function App() {
               <Route path="owasp" element={<OwaspCoverageView />} />
               <Route path="how-it-works" element={<HowToView />} />
               <Route path="the-climb" element={<TheClimbView />} />
+              <Route path="flight-school" element={<FlightSchoolView />} />
+              <Route path="tools" element={<ToolsView />} />
               <Route path="glossary" element={<GlossaryView />} />
               <Route path="breakers" element={<BreakersInfoView />} />
             </Route>

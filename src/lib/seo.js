@@ -64,6 +64,16 @@ const STATIC = {
     description:
       'A roadmap from the floor of vibe coding to the ceiling of agentic engineering. Six tiers of judgment, what each can ship, and how to climb.',
   },
+  '/learn/flight-school': {
+    title: 'FlightSchool | Pre-Flight',
+    description:
+      'A curated role-by-tier index of the best free resources for shipping software safely. Six roles, mapped to The Climb, with a safety note at every step.',
+  },
+  '/learn/tools': {
+    title: 'Tools | Pre-Flight',
+    description:
+      'A neutral catalog of the AI coding and build tools, strengths and weaknesses both, sourced and dated. No affiliate, no sponsored placement.',
+  },
   '/learn/glossary': {
     title: 'Security Glossary | Pre-Flight',
     description:

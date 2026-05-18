@@ -32,6 +32,8 @@ import { BreakersInfoView } from './components/learn/BreakersInfoView.jsx';
 import { HowToView } from './components/learn/HowToView.jsx';
 import { SocialView } from './components/learn/SocialView.jsx';
 import { TheClimbView } from './components/learn/TheClimbView.jsx';
+import { FlightSchoolView } from './components/learn/FlightSchoolView.jsx';
+import { ToolsView } from './components/learn/ToolsView.jsx';
 import { PrivacyView } from './components/PrivacyView.jsx';
 import { TermsView } from './components/TermsView.jsx';
 
@@ -44,6 +46,8 @@ export function render(url) {
             <Route index element={<ManifestoView />} />
             <Route path="how-it-works" element={<HowToView />} />
             <Route path="the-climb" element={<TheClimbView />} />
+            <Route path="flight-school" element={<FlightSchoolView />} />
+            <Route path="tools" element={<ToolsView />} />
             <Route path="patterns" element={<IndexView type="pattern" />} />
             <Route path="patterns/:slug" element={<EntryView />} />
             <Route path="incidents" element={<IndexView type="incident" />} />
