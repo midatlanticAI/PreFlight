@@ -254,38 +254,67 @@ export async function fetchGitHubRepo(url, onProgress) {
 
   const out = [];
   let blobFailures = 0;
+  let firstFailureDetail = null;
+  let usingApiFallback = isPrivate; // private repos always use the api/contents path
   // Path segments need to be individually URL-encoded so that spaces / unicode / hashes in
   // file names don't break the contents-endpoint URL. raw.githubusercontent.com is more
   // lenient but we encode either way for consistency.
   const encodePath = (p) => p.split('/').map(encodeURIComponent).join('/');
-  // Build per-file blob fetcher. For private repos with a PAT we use the api.github.com
-  // contents endpoint with `Accept: application/vnd.github.raw` because raw.gh ignores the
-  // Authorization header for private blobs. For public repos we keep the CDN-fast path.
-  const fetchBlob = isPrivate
-    ? (path) =>
-        fetch(
-          `https://api.github.com/repos/${owner}/${repo}/contents/${encodePath(path)}?ref=${encodeURIComponent(branch)}`,
-          { headers: { ...authHeaders, Accept: 'application/vnd.github.raw' } }
-        )
-    : (path) =>
-        fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodePath(path)}`, {
-          headers: authHeaders,
-        });
+  // Two per-file blob fetchers. raw.githubusercontent.com is the CDN-fast path for public
+  // repos. api.github.com/contents is the auth-respecting fallback used unconditionally for
+  // private repos AND as a recovery path for public repos when raw.gh is unreachable. The
+  // contents endpoint costs rate-limit budget (60/hr unauth, 5000/hr with PAT) whereas the
+  // CDN does not, so we prefer raw.gh first and only fall back on failure.
+  const rawGhFetch = (path) =>
+    fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodePath(path)}`, {
+      headers: authHeaders,
+    });
+  const apiContentsFetch = (path) =>
+    fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${encodePath(path)}?ref=${encodeURIComponent(branch)}`,
+      { headers: { ...authHeaders, Accept: 'application/vnd.github.raw' } }
+    );
+  // Returns { ok, content } or { ok: false, detail }. Catches network throws and non-OK
+  // responses uniformly so the caller can treat them the same way.
+  async function tryFetch(fetcher, path) {
+    try {
+      const r = await fetcher(path);
+      if (r.ok) return { ok: true, content: await r.text() };
+      return { ok: false, detail: `HTTP ${r.status} ${r.statusText || ''}`.trim() };
+    } catch (e) {
+      return { ok: false, detail: `network: ${e?.message || String(e)}` };
+    }
+  }
   for (let i = 0; i < targets.length; i++) {
     const t = targets[i];
     onProgress?.({ stage: `Fetching ${t.path}`, current: i + 1, total: targets.length });
-    try {
-      const r = await fetchBlob(t.path);
-      if (r.ok) {
-        const content = await r.text();
-        out.push({ path: t.path, content });
+    let result = await tryFetch(usingApiFallback ? apiContentsFetch : rawGhFetch, t.path);
+    if (!result.ok && !usingApiFallback) {
+      // raw.gh failed on a public repo. Try the api/contents path for THIS blob. If that
+      // works, latch onto the fallback for the rest of the scan so we don't burn time
+      // double-fetching every file. Mobile networks (cellular carriers, strict-privacy
+      // browser shields, cached failed CORS preflights) commonly block raw.gh while
+      // leaving api.github.com reachable.
+      const fallbackResult = await tryFetch(apiContentsFetch, t.path);
+      if (fallbackResult.ok) {
+        ghLog.warn('raw.gh failed; switching to api.github.com/contents fallback', {
+          rawFailure: result.detail,
+        });
+        usingApiFallback = true;
+        result = fallbackResult;
       } else {
-        blobFailures++;
-        ghLog.debug('Blob fetch non-OK', { path: t.path, status: r.status });
+        result = {
+          ok: false,
+          detail: `raw.gh: ${result.detail}; api/contents: ${fallbackResult.detail}`,
+        };
       }
-    } catch (e) {
+    }
+    if (result.ok) {
+      out.push({ path: t.path, content: result.content });
+    } else {
       blobFailures++;
-      ghLog.debug('Blob fetch threw', { path: t.path, error: e?.message });
+      if (!firstFailureDetail) firstFailureDetail = result.detail;
+      ghLog.debug('Blob fetch failed', { path: t.path, detail: result.detail });
     }
   }
   if (blobFailures > 0) {
@@ -293,13 +322,16 @@ export async function fetchGitHubRepo(url, onProgress) {
       fetched: out.length,
       failed: blobFailures,
       private: isPrivate,
+      usingApiFallback,
+      firstFailure: firstFailureDetail,
     });
   }
   if (out.length === 0) {
+    const detail = firstFailureDetail ? ` First failure: ${firstFailureDetail}.` : '';
     throw new Error(
       isPrivate
-        ? `All ${targets.length} private-repo blob fetches failed. The PAT was accepted for repo metadata but rejected for file content. Verify the token has "Contents: read" repo access (fine-grained PAT) or the classic "repo" scope, then re-scan. Fallback: use Files / Folder upload.`
-        : `All ${targets.length} blob fetches failed. Likely a sandboxed-iframe restriction or a transient GitHub outage. Use Files / Folder upload as a workaround.`
+        ? `All ${targets.length} private-repo blob fetches failed.${detail} The PAT was accepted for repo metadata but rejected for file content. Verify the token has "Contents: read" repo access (fine-grained PAT) or the classic "repo" scope, then re-scan. Fallback: use Files / Folder upload.`
+        : `All ${targets.length} blob fetches failed.${detail} Both raw.githubusercontent.com and api.github.com/contents were unreachable from this browser. On mobile this is often a carrier-level block, a strict-privacy browser shield (Brave / DuckDuckGo / Firefox Focus), or a cached failed CORS preflight. Try switching between WiFi and cellular, disabling the privacy shield for this site, or use the Files / Folder tab.`
     );
   }
   return out;
