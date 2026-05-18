@@ -40,12 +40,30 @@ export function useScrollFades() {
     };
   }, [update]);
 
+  // Center the active tab by scrolling ONLY the strip, never the page.
+  // scrollIntoView() walks up scrollable ancestors and on mobile/tablet
+  // yanks the whole viewport (vertical jump + iOS horizontal lurch) on
+  // every route change. scrollTo on the strip element cannot move the
+  // page. Reduced-motion aware; jsdom-safe.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const active = el.querySelector('[aria-current="page"]');
-    if (active && typeof active.scrollIntoView === 'function') {
-      active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    if (!active) return;
+    const reduce =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const navRect = el.getBoundingClientRect();
+    const aRect = active.getBoundingClientRect();
+    const target = Math.max(
+      0,
+      el.scrollLeft + (aRect.left - navRect.left) - (el.clientWidth - aRect.width) / 2
+    );
+    if (typeof el.scrollTo === 'function') {
+      el.scrollTo({ left: target, behavior: reduce ? 'auto' : 'smooth' });
+    } else {
+      el.scrollLeft = target;
     }
   }, [location.pathname]);
 
@@ -59,6 +77,11 @@ export function ScrollFadeStyles() {
         scrollbar-width: none;
         -ms-overflow-style: none;
         scroll-behavior: smooth;
+        /* keep the horizontal swipe inside the strip: no page pan, no
+           swipe-to-go-back, no scroll chaining to the document on touch */
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
       }
       .ap-scrolltabs::-webkit-scrollbar { display: none; }
       .ap-scrolltabs-fade {
@@ -78,7 +101,10 @@ export function ScrollFadeStyles() {
 export function ScrollableTabs({ children, ariaLabel, style = {} }) {
   const { ref, showLeft, showRight } = useScrollFades();
   return (
-    <div className="ap-scrolltabs-wrap" style={{ position: 'relative', ...style }}>
+    <div
+      className="ap-scrolltabs-wrap"
+      style={{ position: 'relative', maxWidth: '100%', minWidth: 0, ...style }}
+    >
       <nav
         aria-label={ariaLabel}
         ref={ref}

@@ -43,10 +43,11 @@ export function LearnPage() {
           className="ap-display"
           style={{
             margin: '0 0 8px',
-            fontSize: 39,
+            fontSize: 'clamp(24px, 6vw, 39px)',
             fontWeight: 700,
             color: T.text,
             letterSpacing: '-0.01em',
+            overflowWrap: 'break-word',
           }}
         >
           A library for vibers building vibeware.

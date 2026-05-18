@@ -124,7 +124,13 @@ export function SocialView() {
       <h1
         id="social-heading"
         className="ap-display"
-        style={{ margin: '0 0 6px', fontSize: 26, fontWeight: 700, color: T.text }}
+        style={{
+          margin: '0 0 6px',
+          fontSize: 'clamp(22px, 5vw, 26px)',
+          fontWeight: 700,
+          color: T.text,
+          overflowWrap: 'break-word',
+        }}
       >
         Social
       </h1>

@@ -162,7 +162,13 @@ export function ToolsView() {
       <h1
         id="tools-heading"
         className="ap-display"
-        style={{ margin: '0 0 6px', fontSize: 30, fontWeight: 700, color: T.text }}
+        style={{
+          margin: '0 0 6px',
+          fontSize: 'clamp(22px, 5.5vw, 30px)',
+          fontWeight: 700,
+          color: T.text,
+          overflowWrap: 'break-word',
+        }}
       >
         Tools
       </h1>
