@@ -1192,7 +1192,8 @@ export function probeAIRulesFiles(files) {
 // exfiltrated, and the dead-man's-switch handler will `rm -rf ~/` if its stolen GitHub
 // token gets revoked.
 //
-// Confirmed IOCs (Aikido, Snyk, Socket, Wiz, StepSecurity, TanStack postmortem):
+// Confirmed IOCs (verified against the TanStack postmortem, the GHSA advisory,
+// and independent IOC tracking — see the Mini Shai-Hulud field report in Learn):
 //   • Files dropped on disk:
 //       .claude/router_runtime.js   .claude/setup.mjs   .vscode/setup.mjs
 //       tanstack_runner.js          router_init.js  (committed at package root)
@@ -1255,7 +1256,7 @@ export function probeMaliciousArtifacts(files) {
           file: file.path,
           line: 1,
           evidence: `File path matches known Mini Shai-Hulud (TanStack, May 11, 2026) drop-file`,
-          remediation: `This file is dropped by the Mini Shai-Hulud npm worm to survive \`npm uninstall\`. If it exists, the host that ran \`npm install\` is compromised — assume every credential the build process touched has been exfiltrated (npm tokens, GitHub tokens, OIDC tokens, cloud creds, crypto wallets, browser session cookies). Steps: 1) DO NOT revoke your GitHub token yet — the worm runs \`rm -rf ~/\` when its stolen token returns 40x. First disconnect the machine from the network. 2) Pull a known-good system. 3) Rotate every credential offline. 4) Audit CI for the malicious GitHub Actions workflows the worm tries to inject. Public IOC tracking: Aikido, Snyk, Socket, Wiz, StepSecurity (May 2026).`,
+          remediation: `This file is dropped by the Mini Shai-Hulud npm worm to survive \`npm uninstall\`. If it exists, the host that ran \`npm install\` is compromised — assume every credential the build process touched has been exfiltrated (npm tokens, GitHub tokens, OIDC tokens, cloud creds, crypto wallets, browser session cookies). Steps: 1) DO NOT revoke your GitHub token yet — the worm runs \`rm -rf ~/\` when its stolen token returns 40x. First disconnect the machine from the network. 2) Pull a known-good system. 3) Rotate every credential offline. 4) Audit CI for the malicious GitHub Actions workflows the worm tries to inject. See the Mini Shai-Hulud field report in Learn for the full IOC list and operational sequence.`,
         });
         return; // one path-based finding per file is enough; don't also string-scan it
       }

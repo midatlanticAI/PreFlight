@@ -275,7 +275,7 @@ docs/
 
 ## License
 
-Code is **MIT** (see [`LICENSE`](./LICENSE)). Threat-intel data manifest is **CC-BY-4.0** (see [`LICENSE-DATA`](./LICENSE-DATA)). The split is intentional:
+Code is **MIT** (see [`LICENSE`](./LICENSE)). Threat-intel data manifest is **CC-BY-4.0** (see [`LICENSE-DATA`](./LICENSE-DATA)). **This section, together with `LICENSE-DATA`, is the authoritative statement of the dual-license split.** The `LICENSE` file is deliberately kept as the unmodified MIT text so automated license-detection tooling (GitHub's classifier and similar) classifies the repository correctly; the data carve-out below is the binding definition of what is _not_ MIT. The split is intentional:
 
 - **Code** (everything under `src/`, `public/`, `.github/`, config files, `package.json`) → MIT. Use, fork, ship — no attribution required for the source code itself.
 - **Threat-intel data** (`src/data/compromised-packages.js` and any future `src/data/*-data.{js,json}` manifests) → CC-BY-4.0. Take the data, integrate it into your own scanner, but credit the source as "Mid-Atlantic AI / PreFlight Audit Tool" with a link to [preflight.midatlantic.ai](https://preflight.midatlantic.ai/) or [github.com/midatlanticAI/PreFlight](https://github.com/midatlanticAI/PreFlight).

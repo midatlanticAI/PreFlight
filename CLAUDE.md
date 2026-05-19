@@ -32,6 +32,7 @@ Both voices share the rules below. They differ only in person (I/we vs third-per
 - No wellness encouragement: no "you've got this", no soft motivational scaffolding.
 - No hedging filler: no "it is worth noting", "in some sense", "at the end of the day".
 - No competing security platforms named in public-facing copy (Aikido, Snyk, Veracode, Checkmarx, Socket, Wiz, OX, Semgrep, etc.). Sources cite OWASP, MITRE/CWE, CISA, vendor official docs, W3C/WAI, MDN, named research orgs (GTIG/Mandiant, Microsoft Threat Intel).
+- Sourcing convention (applies to Learn `incident`/`pattern` citations too, not just prose): prefer primary sources in this order — the victim's own postmortem, the official advisory (GHSA/CVE/CISA), the affected vendor's docs, then independent news orgs and named research orgs. Security-vendor blogs (the platforms above) are interchangeable commodities in an oversaturated market; do not cite or name them even when they broke the story. Any incident worth a field report is independently covered by primary sources. If a fact only exists in a vendor blog, restate it as "independent tracking" / "independent analysis" without the name.
 - AI providers (OpenAI, Anthropic, Google, xAI, Mistral) are NOT competitors. Naming them in the BYOK provider list is fine.
 
 ### Audience

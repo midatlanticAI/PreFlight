@@ -1,7 +1,7 @@
 // src/lib/threat-intel.js
 // Detection patterns + threat-intel constants. Pure data, no scanning logic.
-// Updated as 2025-2026 incidents are published; sourced from CISA, Snyk, Socket, Wiz,
-// Aikido, StepSecurity, Pillar Security, and OX Security advisories.
+// Updated as 2025-2026 incidents are published; sourced from CISA, official
+// advisories (GHSA/CVE), affected-vendor postmortems, and independent IOC tracking.
 
 import compromisedPackagesManifest from '../data/compromised-packages.js';
 

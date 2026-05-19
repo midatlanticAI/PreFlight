@@ -184,16 +184,61 @@ export { HomeView, ResultsView, AuditView, Nav };
 // ship in the Learn chunk; the Settings chunk holds the BYOK / BYOT forms. Users on the
 // Audit page never download either chunk.
 //
-// lazyNamed() wraps React.lazy with a named-export adapter + a .catch that logs the
-// failure to our diagnostics buffer before re-throwing. Re-throwing is required so the
-// surrounding <ErrorBoundary> still surfaces the failure to the user instead of leaving
-// a blank route element when a chunk 404s.
+// lazyNamed() wraps React.lazy with a named-export adapter + stale-deploy recovery.
+//
+// The common failure mode for a dynamic import here is NOT a code bug: it's a
+// redeploy between page loads. The index.html a user already has open references
+// content-hashed chunk URLs (e.g. EntryView-C5gvgKUJ.js). Cloudflare Pages rotates
+// those hashes on every deploy, so navigating to a lazy route (Learn / Settings)
+// after a deploy requests a chunk that 404s. Re-throwing straight to ErrorBoundary
+// (the old behavior) showed an "UNRECOVERABLE RENDER ERROR" screen whose "Try Again"
+// re-imported the same dead URL and failed again — a trap.
+//
+// Fix: on the first failure, reload once so the browser fetches the fresh
+// index.html with new chunk URLs and the route resolves transparently. A
+// sessionStorage guard (per component) prevents an infinite reload loop if the
+// chunk is genuinely missing (real build/deploy breakage) rather than just
+// rotated — in that case we surface to ErrorBoundary as before. A successful
+// load clears the guard so a later deploy gets the same one-shot recovery.
 function lazyNamed(loader, name) {
+  const guardKey = `pf:chunk-reload:${name}`;
+  const readGuard = () => {
+    try {
+      return sessionStorage.getItem(guardKey) === '1';
+    } catch {
+      return false;
+    }
+  };
+  const writeGuard = (v) => {
+    try {
+      if (v) sessionStorage.setItem(guardKey, '1');
+      else sessionStorage.removeItem(guardKey);
+    } catch {
+      /* private mode / storage disabled: degrade to throw-through */
+    }
+  };
   return React.lazy(() =>
     loader()
-      .then((m) => ({ default: m[name] }))
+      .then((m) => {
+        writeGuard(false);
+        return { default: m[name] };
+      })
       .catch((e) => {
-        log.error('[lazy] chunk load failed', { component: name, error: e?.message });
+        if (!readGuard() && typeof window !== 'undefined' && window.location?.reload) {
+          writeGuard(true);
+          log.error('[lazy] chunk load failed — reloading once for fresh deploy', {
+            component: name,
+            error: e?.message,
+          });
+          window.location.reload();
+          // Hold Suspense on the fallback until the reload navigates away.
+          // Throwing here would flash the ErrorBoundary before reload takes effect.
+          return new Promise(() => {});
+        }
+        log.error('[lazy] chunk load failed after reload — surfacing to ErrorBoundary', {
+          component: name,
+          error: e?.message,
+        });
         throw e;
       })
   );

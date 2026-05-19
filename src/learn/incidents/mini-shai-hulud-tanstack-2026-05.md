@@ -18,35 +18,27 @@ related_incident_slugs:
   - mini-shai-hulud-sap-npm-2026-04
   - intercom-client-bitwarden-cli-2026-04
 sources:
+  - title: 'TanStack postmortem — npm supply-chain compromise (official)'
+    url: 'https://tanstack.com/blog/npm-supply-chain-compromise-postmortem'
+  - title: 'TanStack — Hardening TanStack After the npm Compromise (follow-up)'
+    url: 'https://tanstack.com/blog/incident-followup'
   - title: 'TanStack Issue #7383 (initial report)'
     url: 'https://github.com/TanStack/router/issues/7383'
-  - title: 'StepSecurity — Mini Shai-Hulud Is Back'
-    url: 'https://www.stepsecurity.io/blog/mini-shai-hulud-is-back-a-self-spreading-supply-chain-attack-hits-the-npm-ecosystem'
-  - title: 'Socket — TanStack npm Packages Compromised'
-    url: 'https://socket.dev/blog/tanstack-npm-packages-compromised-mini-shai-hulud-supply-chain-attack'
-  - title: 'Wiz — Mini Shai-Hulud Strikes Again'
-    url: 'https://www.wiz.io/blog/mini-shai-hulud-strikes-again-tanstack-more-npm-packages-compromised'
-  - title: 'Snyk — TanStack npm Packages Hit by Mini Shai-Hulud'
-    url: 'https://snyk.io/blog/tanstack-npm-packages-compromised/'
-  - title: 'Semgrep — TanStack Router Packages Hit'
-    url: 'https://semgrep.dev/blog/2026/tanstack-router-packages-hit-by-coordinated-supply-chain-attack/'
-  - title: 'Aikido — Mini Shai-Hulud Is Back'
-    url: 'https://www.aikido.dev/blog/mini-shai-hulud-is-back-tanstack-compromised'
-  - title: 'Upwind — Shai-Hulud Across TanStack'
-    url: 'https://www.upwind.io/feed/shai-hulud-tanstack-supply-chain-worm'
+  - title: 'GitHub Advisory Database — GHSA-g7cv-rxg3-hmpx'
+    url: 'https://github.com/advisories/GHSA-g7cv-rxg3-hmpx'
   - title: 'The Hacker News — Mini Shai-Hulud Compromises TanStack, Mistral AI, Guardrails'
     url: 'https://thehackernews.com/2026/05/mini-shai-hulud-worm-compromises.html'
-  - title: 'GHSA-g7cv-rxg3-hmpx'
-    url: 'https://github.com/advisories/GHSA-g7cv-rxg3-hmpx'
-  - title: 'OX Security — Shai-Hulud, Here We Go Again (170+ Packages Hit)'
-    url: 'https://www.ox.security/shai-hulud-here-we-go-again-170-packages-hit-across-npm-pypi/'
   - title: 'Microsoft Threat Intelligence — MistralAI PyPI compromise (May 12, 2026)'
     url: 'https://gbhackers.com/microsoft-mistralai-pypi-package-compromised/'
+  - title: 'OpenAI — Our response to the TanStack npm supply chain attack'
+    url: 'https://openai.com/index/our-response-to-the-tanstack-npm-supply-chain-attack/'
+  - title: 'Infosecurity Magazine — Mini Shai-Hulud Hits TanStack npm Packages'
+    url: 'https://www.infosecurity-magazine.com/news/mini-shai-hulud-tanstack-npm/'
 ---
 
 # Mini Shai-Hulud Strikes the TanStack Ecosystem
 
-On May 11, 2026, between 19:20 and 19:26 UTC, a threat actor calling itself TeamPCP published 84 malicious versions across 42 packages in the `@tanstack/*` npm namespace, including `@tanstack/react-router`, which has roughly 12 million weekly downloads. The window was six minutes. By the end of the day, the same campaign had spread to packages in `@uipath/*`, `@mistralai/*`, `@squawk/*`, `@tallyui/*`, `@beproduct/*`, `@draftlab/*`, `@draftauth/*`, `@taskflow-corp/*`, `@tolka/*`, unscoped names like `safe-action` and `cmux-agent-mcp`, plus PyPI packages including `guardrails-ai@0.10.1` and `mistralai`. OX Security puts the total at 170+ packages with a cumulative 518 million monthly downloads, and the spread is still moving as of this writing.
+On May 11, 2026, between 19:20 and 19:26 UTC, a threat actor calling itself TeamPCP published 84 malicious versions across 42 packages in the `@tanstack/*` npm namespace, including `@tanstack/react-router`, which has roughly 12 million weekly downloads. The window was six minutes. By the end of the day, the same campaign had spread to packages in `@uipath/*`, `@mistralai/*`, `@squawk/*`, `@tallyui/*`, `@beproduct/*`, `@draftlab/*`, `@draftauth/*`, `@taskflow-corp/*`, `@tolka/*`, unscoped names like `safe-action` and `cmux-agent-mcp`, plus PyPI packages including `guardrails-ai@0.10.1` and `mistralai`. Independent tracking puts the total at 170+ packages with a cumulative 518 million monthly downloads, and the spread is still moving as of this writing.
 
 If you installed any affected version on a developer machine, a CI runner, or a container build host on May 11, your environment is compromised. There is a specific sequence to follow.
 

@@ -7,8 +7,8 @@ Mid-Atlantic AI for the Pre-Flight Audit Tool. Specifically:
 
 - src/data/compromised-packages.js  — known-compromised npm/PyPI package
                                        versions, with attribution to public
-                                       advisories (CISA, Snyk, Socket, Wiz,
-                                       Aikido, StepSecurity, vendor blogs).
+                                       advisories (CISA, GHSA/CVE, affected-
+                                       vendor postmortems, independent tracking).
 - Any future src/data/*-data.{js,json} files that contain similar curated
   threat-intel content.
 
