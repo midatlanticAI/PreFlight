@@ -58,7 +58,7 @@ Three reasons in order of immediacy:
 
 ## What the failure looks like
 
-The shapes Pre-Flight scans for:
+The shapes PreFlight scans for:
 
 | Provider                | Shape                                             | Notes                                                          |
 | ----------------------- | ------------------------------------------------- | -------------------------------------------------------------- |
@@ -76,7 +76,7 @@ The shapes Pre-Flight scans for:
 | Database URL with creds | `postgres://user:pass@host`                       | `mysql://`, `mongodb://`, and others follow the same pattern   |
 | Private key block       | `-----BEGIN ... PRIVATE KEY-----`                 | RSA, EC, PGP, OpenSSH all match                                |
 
-Pre-Flight skips files it can identify as deliberate test fixtures (paths matching `*.test.*`, `*.spec.*`, `tests/`, `__tests__/`), markdown documentation files where the key is part of an example, and Pre-Flight's own threat-intel manifests (where the patterns are listed as detection rules, not as live keys).
+PreFlight skips files it can identify as deliberate test fixtures (paths matching `*.test.*`, `*.spec.*`, `tests/`, `__tests__/`), markdown documentation files where the key is part of an example, and PreFlight's own threat-intel manifests (where the patterns are listed as detection rules, not as live keys).
 
 ## Why AI coding tools produce this
 

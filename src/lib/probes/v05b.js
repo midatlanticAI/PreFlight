@@ -97,7 +97,7 @@ export function probeSourceMapExposure(files) {
     }
 
     // Source-map URL comment in a JS/CSS file. Almost always indicates a built
-    // artifact that wasn't supposed to ship to production. Pre-Flight skips
+    // artifact that wasn't supposed to ship to production. PreFlight skips
     // dist/ in self-source, but a scan of a third-party deploy will find them.
     if (/\.(?:js|css|mjs)$/.test(file.path) && !file.path.includes('node_modules')) {
       const lines = file.content.split('\n');

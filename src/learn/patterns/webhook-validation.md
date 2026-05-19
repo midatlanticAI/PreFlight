@@ -44,7 +44,7 @@ The blast radius depends on what the handler does. A "mark order as paid" webhoo
 
 ## What the failure looks like
 
-Pre-Flight scans for:
+PreFlight scans for:
 
 - Stripe webhook handlers (typically `stripe-webhook.js`, `/api/stripe/webhook`, or matching imports) that call `req.json()` without `stripe.webhooks.constructEvent`.
 - GitHub webhook handlers that read the body without checking `X-Hub-Signature-256`.

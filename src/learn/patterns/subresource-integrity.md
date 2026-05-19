@@ -49,7 +49,7 @@ SRI is the cheapest defense available against this class. The hash is computed o
 
 ## What the failure looks like
 
-Pre-Flight scans HTML, JSX, TSX, Astro, Vue, and Svelte files for:
+PreFlight scans HTML, JSX, TSX, Astro, Vue, and Svelte files for:
 
 - `<script>` tags with a cross-origin `src` attribute (any URL starting with `http://`, `https://`, or `//`) and no `integrity` attribute.
 - `<link rel="stylesheet">` tags with a cross-origin `href` attribute and no `integrity` attribute.

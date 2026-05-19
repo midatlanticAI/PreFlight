@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Project context for Claude Code and other AI coding assistants working on Pre-Flight.
+Project context for Claude Code and other AI coding assistants working on PreFlight.
 
 ## What this is
 
@@ -10,9 +10,9 @@ The voice and stance live in [`src/learn/manifesto.md`](./src/learn/manifesto.md
 
 ## The founding principle
 
-**Hardened titanium.** Dogfood-as-CI-gate. Pre-Flight has to pass its own audit. If a change makes the dogfood scan fail, fix the change. Do not suppress the finding.
+**Hardened titanium.** Dogfood-as-CI-gate. PreFlight has to pass its own audit. If a change makes the dogfood scan fail, fix the change. Do not suppress the finding.
 
-`npm run test:self-audit` runs after every build and asserts Pre-Flight's own `dist/` produces zero critical/high findings. This is non-negotiable.
+`npm run test:self-audit` runs after every build and asserts PreFlight's own `dist/` produces zero critical/high findings. This is non-negotiable.
 
 ## Voice
 
@@ -40,7 +40,7 @@ Vibe coders — people building real products from natural-language prompts. Cap
 
 ## Personas
 
-Pre-Flight ships four named agents under `src/lib/personas/`. Each is a Persona+ spec with an activation gate and structured-command modes.
+PreFlight ships four named agents under `src/lib/personas/`. Each is a Persona+ spec with an activation gate and structured-command modes.
 
 - **Sam** (Secure Advise Mobilize) — security fix generation. Dual-mode: `SAM_COMMAND_FULL` (Apply Fix, full file) and `SAM_COMMAND_SNIPPET` (Copy Agent Prompt, snippet only).
 - **Demi** (Design Engineering Mechanics Instructor) — Vibe-Aware educational content. Dual-mode: `DEMI_MODE_AUTHOR` and `DEMI_MODE_GRADE`.
@@ -91,7 +91,7 @@ npm run format         # prettier write
 npm run format:check   # prettier check
 npm run build          # production build -> dist/
 npm run preview        # preview the built dist
-npm run test:self-audit # Pre-Flight scans its own dist; required to pass
+npm run test:self-audit # PreFlight scans its own dist; required to pass
 npm run og             # regenerate public/og-card.png from the SVG via Sharp
 ```
 
@@ -120,7 +120,7 @@ Architecturally enforced, not promised. If you ever build a backend, you break t
 2. `npm test` — 100% pass required.
 3. `npm run lint` — clean.
 4. `npm run build` — succeeds.
-5. `npm run test:self-audit` — Pre-Flight passes its own audit.
+5. `npm run test:self-audit` — PreFlight passes its own audit.
 6. Commit + push. Cloudflare auto-deploys.
 
 If any of those fails, the change isn't ready. Especially #5 — that's the founding principle.

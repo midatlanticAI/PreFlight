@@ -59,7 +59,7 @@ Several 2024-2026 incidents started here. A compromised action, executed in a pr
 
 ## What the failure looks like
 
-Pre-Flight scans `.github/workflows/*.yml` for:
+PreFlight scans `.github/workflows/*.yml` for:
 
 - `on: pull_request_target` workflows that include `uses: actions/checkout` with `ref:` pointing at `github.event.pull_request.head.sha` or similar untrusted-PR-code references.
 - `uses: <org>/<action>@<ref>` where `<ref>` is not a 40-character SHA. Branches (`@main`, `@master`) and tags (`@v4`, `@latest`) are mutable refs and produce the finding.

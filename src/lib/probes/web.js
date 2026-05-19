@@ -171,7 +171,7 @@ export function probeExternalURLs(files) {
       evidence,
       remediation:
         `This URL trips a heuristic associated with abuse infrastructure (raw IP, suspicious TLD, shortener, or HTTP-only). The probe doesn't claim the domain is malicious; it asks you to verify.\n\n` +
-        `One-click reputation checks (Pre-Flight can't query these from the browser due to CORS):\n` +
+        `One-click reputation checks (PreFlight can't query these from the browser due to CORS):\n` +
         `• VirusTotal: https://www.virustotal.com/gui/domain/${encodeURIComponent(host)}\n` +
         `• urlhaus (abuse.ch): https://urlhaus.abuse.ch/browse.php?search=${encodeURIComponent(host)}\n` +
         `• whois: https://who.is/whois/${encodeURIComponent(host)}\n\n` +

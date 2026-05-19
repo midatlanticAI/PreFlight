@@ -146,7 +146,7 @@ describe('shouldScanFile', () => {
     expect(shouldScanFile('index.html')).toBe(true);
   });
 
-  it('includes the discoverability + Pre-Flight config files', () => {
+  it('includes the discoverability + PreFlight config files', () => {
     expect(shouldScanFile('public/llms.txt')).toBe(true);
     expect(shouldScanFile('public/robots.txt')).toBe(true);
     expect(shouldScanFile('public/sitemap.xml')).toBe(true);

@@ -51,7 +51,7 @@ Anywhere a value is meant to be unguessable, `Math.random()` is the wrong primit
 
 ## What the failure looks like
 
-Pre-Flight scans for `Math.random()` calls within a few lines of a name suggesting security use: `token`, `secret`, `password`, `key`, `nonce`, `csrf`, `session`, `otp`, `verification`, `reset`, `signature`, `hash`, `salt`, `recovery`, `magic`, `invite`, `verify`.
+PreFlight scans for `Math.random()` calls within a few lines of a name suggesting security use: `token`, `secret`, `password`, `key`, `nonce`, `csrf`, `session`, `otp`, `verification`, `reset`, `signature`, `hash`, `salt`, `recovery`, `magic`, `invite`, `verify`.
 
 The probe excludes contexts that suggest UI / animation use: `jitter`, `delay`, `shuffle`, `animation`, `fade`, `color`, `hsl`, `rgb`, `pixel`, `particle`, `sample`, `preview`, `placeholder`, `mock`. Those uses are fine.
 

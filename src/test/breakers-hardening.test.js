@@ -2,7 +2,7 @@
 // the catalogue is well-formed and the safety regex passes. This file proves
 // the rest:
 //
-//   - Dogfood self-source exclusion: Pre-Flight scanning its own breakers.js
+//   - Dogfood self-source exclusion: PreFlight scanning its own breakers.js
 //     does not fire pattern-matching probes on the payload strings.
 //   - XSS-safe render: BreakersPanel uses React text-children only (no
 //     dangerouslySetInnerHTML), and renderToStaticMarkup of the panel
@@ -19,7 +19,7 @@
 // adversarial-input feature. The bar for adversarial-input content has to
 // be higher than the bar for normal content, because hostile-looking text
 // in a webapp is the exact failure mode XSS / injection prevention exists
-// to defeat. Pre-Flight's founding principle: dogfood-as-CI-gate.
+// to defeat. PreFlight's founding principle: dogfood-as-CI-gate.
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -43,7 +43,7 @@ const BREAKERS_PANEL_SOURCE = readFileSync(BREAKERS_PANEL_PATH, 'utf8');
 //
 // src/lib/breakers.js contains attack-shaped strings (SQL injection literals,
 // traversal paths, JWT alg-none tokens, bidi control chars). Pattern-matching
-// probes would absolutely fire on them. The contract: Pre-Flight's own scan
+// probes would absolutely fire on them. The contract: PreFlight's own scan
 // must skip the catalogue file via isScannerSelfSource.
 
 describe('Breakers dogfood coverage', () => {
@@ -51,7 +51,7 @@ describe('Breakers dogfood coverage', () => {
     expect(isScannerSelfSource('src/lib/breakers.js')).toBe(true);
   });
 
-  it('the exclusion holds for nested-path variants Pre-Flight might see at scan time', () => {
+  it('the exclusion holds for nested-path variants PreFlight might see at scan time', () => {
     expect(isScannerSelfSource('audit-app/src/lib/breakers.js')).toBe(true);
     expect(isScannerSelfSource('/repos/preflight/src/lib/breakers.js')).toBe(true);
     expect(isScannerSelfSource('./src/lib/breakers.js')).toBe(true);

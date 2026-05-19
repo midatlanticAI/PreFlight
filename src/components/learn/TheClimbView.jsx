@@ -8,7 +8,7 @@
 //
 // The community accelerant points only at free, open communities
 // (CommunityNote). There is no paid reference anywhere on this page or
-// anywhere else on the site: Pre-Flight asks for nothing. CommunityNote
+// anywhere else on the site: PreFlight asks for nothing. CommunityNote
 // is a simple list, more communities get appended to COMMUNITIES.
 
 import { T, fontMono } from '../../lib/theme.js';
@@ -91,11 +91,11 @@ const TIERS = [
     resources:
       'The Missing Semester of Your CS Education, free MIT course on the tools (shell, git, debugging) no one teaches you. "Git: the simple guide," short, free, enough to get started. Vercel\'s deployment docs, free, ship something today. OWASP Top 10 (2025) overview, free, read once at a conceptual level.',
     preflight: {
-      title: 'Pre-Flight enters here.',
-      body: 'This is the tier where Pre-Flight becomes a daily tool. Scan your projects. See what is broken. Read the explanations. The findings are the curriculum at this tier. Each one is a rung-climbing moment.',
+      title: 'PreFlight enters here.',
+      body: 'This is the tier where PreFlight becomes a daily tool. Scan your projects. See what is broken. Read the explanations. The findings are the curriculum at this tier. Each one is a rung-climbing moment.',
     },
     checkpoint:
-      'You have crossed L1 when you can ship a working app to the internet that does one thing well, read AI output and catch at least one thing that is wrong before you accept it, run your project through Pre-Flight and understand what the findings mean, and use git to recover from a mistake without panicking.',
+      'You have crossed L1 when you can ship a working app to the internet that does one thing well, read AI output and catch at least one thing that is wrong before you accept it, run your project through PreFlight and understand what the findings mean, and use git to recover from a mistake without panicking.',
     time: '40 to 80 hours of building real things with AI assistance.',
     dontFall:
       'L1 is real, and L1 is a hobby, not a career anymore. The field has moved on. If you want this to be how you make money, you have to keep climbing. The "shipped an app that lost a customer\'s data" stories all stop here. If your project will handle other people\'s data, money, or trust, do not ship it from L1.',
@@ -127,11 +127,11 @@ const TIERS = [
     resources:
       'The Pragmatic Programmer (Hunt & Thomas), paid, every chapter is a tier-climbing tool. OWASP Cheat Sheets, free, reference by topic. Web Security Academy by PortSwigger, free, hands-on, the OWASP Top 10 made tactile. The Twelve-Factor App, free, short, every word matters.',
     preflight: {
-      title: 'Pre-Flight role at L2.',
-      body: 'Pre-Flight is now catching things you partially recognize. The findings should mostly make sense. When they do not, you research, learn, and move up. Auth-config probe, secrets in code, deserialization findings, these are the daily safety net.',
+      title: 'PreFlight role at L2.',
+      body: 'PreFlight is now catching things you partially recognize. The findings should mostly make sense. When they do not, you research, learn, and move up. Auth-config probe, secrets in code, deserialization findings, these are the daily safety net.',
     },
     checkpoint:
-      'You have crossed L2 when you can ship a SaaS feature with auth that you would let a friend pay to use, read a stack trace and identify the actual problem in under five minutes, explain why a specific Pre-Flight finding matters without looking it up, and recover from a deployed bug under pressure without breaking other things.',
+      'You have crossed L2 when you can ship a SaaS feature with auth that you would let a friend pay to use, read a stack trace and identify the actual problem in under five minutes, explain why a specific PreFlight finding matters without looking it up, and recover from a deployed bug under pressure without breaking other things.',
     time: '200 to 500 hours of shipping real things and dealing with real failures.',
     dontFall:
       'The failure mode at L2 is overconfidence. You can ship things. You forget that "I can ship this" and "this should be shipped" are different sentences. Healthcare, finance, regulated domains, do not ship there from L2. Get to L3 first.',
@@ -467,8 +467,8 @@ export function TheClimbView() {
       <P>
         We are currently somewhere between Assisted and Intent-Based, with leading-edge teams
         already operating in Autonomous Engineering territory. The climb up this ladder is not
-        optional. The industry is moving up it whether individual practitioners do or not.
-        Pre-Flight exists because the climb has security gaps the industry has not closed yet.
+        optional. The industry is moving up it whether individual practitioners do or not. PreFlight
+        exists because the climb has security gaps the industry has not closed yet.
       </P>
 
       <H2>How long this used to take versus now</H2>
@@ -519,8 +519,8 @@ export function TheClimbView() {
       >
         Built by Johnathan Scott Viruet. I am somewhere between L3 and L4, climbing without a CS
         degree, shipping production AI systems mostly solo. This map is the one I wish I had had.
-        Pre-Flight is the tool I built for the L1 to L2 transition, because that is where I watched
-        the most people fall. The rest of this map is what I am building toward: Pre-Flight Learn as
+        PreFlight is the tool I built for the L1 to L2 transition, because that is where I watched
+        the most people fall. The rest of this map is what I am building toward: PreFlight Learn as
         the climbing infrastructure for vibe coders becoming engineers.
         <br />
         <br />

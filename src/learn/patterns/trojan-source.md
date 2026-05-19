@@ -42,7 +42,7 @@ For AI-coded apps the risk is amplified one level: AI assistants typically rende
 
 ## What the failure looks like
 
-Pre-Flight scans every file for the bidi character ranges:
+PreFlight scans every file for the bidi character ranges:
 
 ```
 U+202A through U+202E

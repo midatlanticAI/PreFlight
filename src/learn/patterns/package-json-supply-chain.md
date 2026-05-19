@@ -71,17 +71,17 @@ Models are statistical, and the statistical answer to "how do I include this dep
 
 None of this is the model trying to do anything malicious. It's pattern completion. The pattern that completes to "install script that pipes a remote URL to a shell" is a pattern that exists in the training data, because it exists in the wild, because real packages do that. The model has no concept of "this pattern is the same one Shai-Hulud used."
 
-## What Pre-Flight checks.
+## What PreFlight checks.
 
-Pre-Flight's `Package.json` probe flags three shapes in your manifest:
+PreFlight's `Package.json` probe flags three shapes in your manifest:
 
 1. **postinstall / preinstall / install / prepare hooks** that invoke `curl`, `wget`, `bash -c`, `sh -e`, or pipe a remote URL to a shell. Any of these is a critical-severity finding.
 2. **Non-registry dependency specs** that start with `git+`, `http:`, or `file:`. These bypass the registry's signing and revocation channels.
 3. **Floating versions** like `*` or `latest`. A floating version means whatever was published most recently. Most recently sometimes means malicious.
 
-Pre-Flight's `Compromised Packages` probe checks every `dependencies` and `devDependencies` entry against the hard-coded list of ~170 known-malicious versions from named 2025-2026 incidents. If you installed `axios@1.14.1` on March 18, 2026 (the Sapphire Sleet window), the probe tells you specifically that version, from that date, has documented post-install behavior, and points you at the incident page.
+PreFlight's `Compromised Packages` probe checks every `dependencies` and `devDependencies` entry against the hard-coded list of ~170 known-malicious versions from named 2025-2026 incidents. If you installed `axios@1.14.1` on March 18, 2026 (the Sapphire Sleet window), the probe tells you specifically that version, from that date, has documented post-install behavior, and points you at the incident page.
 
-Pre-Flight's `Package Manager Hardening` probe is the prevention layer. It checks for the presence of an `.npmrc` with the two settings that close the install-script blast radius:
+PreFlight's `Package Manager Hardening` probe is the prevention layer. It checks for the presence of an `.npmrc` with the two settings that close the install-script blast radius:
 
 ```ini
 ignore-scripts=true
@@ -94,7 +94,7 @@ min-release-age=604800
 
 ## What to do right now.
 
-If Pre-Flight is flagging any of these in your repo:
+If PreFlight is flagging any of these in your repo:
 
 - A `postinstall` or `preinstall` hook you didn't deliberately write. **Remove it.** Then look at what it was going to run. If it was `node setup.mjs`, look at that script. If it was `curl ... | sh`, you have a problem that's bigger than `package.json`.
 - A `git+https://` dependency in production. **Replace it with a registry version, or vendor the code in.** A git dependency is an unsigned tarball pulled from a server you don't control.

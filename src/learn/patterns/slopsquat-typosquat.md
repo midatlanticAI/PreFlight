@@ -34,7 +34,7 @@ A `npm install lodahs` runs the postinstall hook of `lodahs`, which is whatever 
 
 **Slopsquatting** (term coined by Lasso Security in 2024): register a package whose name an LLM commonly hallucinates but that does not exist in the registry. When a vibe-coder asks a model "what library should I use for X" and the model invents a plausible-sounding package name, the attacker registers that name. The next time the model hallucinates the same name, the developer pastes the install command and gets the attacker's package.
 
-LLMs hallucinate package names following recognizable patterns: `auth-helper`, `api-tool`, `db-utils`, `string-helpers`, `validator-pro`. Pre-Flight's heuristic targets this shape directly.
+LLMs hallucinate package names following recognizable patterns: `auth-helper`, `api-tool`, `db-utils`, `string-helpers`, `validator-pro`. PreFlight's heuristic targets this shape directly.
 
 ## Why it matters
 
@@ -44,7 +44,7 @@ The distinguishing property of these attacks is that they target the install its
 
 ## What the failure looks like
 
-Pre-Flight scans `package.json` and lockfiles for:
+PreFlight scans `package.json` and lockfiles for:
 
 - Known typosquats from a curated list (`lodahs`, `expreess`, `reactt`, `axioss`, `requst`, etc.).
 - Generic-shape heuristics for likely slopsquats: `<thing>-tool`, `<thing>-helper`, `<thing>-utils`, `<thing>-pro`, `<thing>-validator`, `<thing>-handler` patterns plus a few others. These produce a lower-confidence finding because the heuristic is noisy.

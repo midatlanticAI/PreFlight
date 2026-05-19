@@ -131,7 +131,7 @@ describe('learn uniformity: compliance pages state scope + disclaimer', () => {
     });
   }
   for (const slug of EDU_PAGES) {
-    it(`${slug} states Pre-Flight does NOT scan for it`, () => {
+    it(`${slug} states PreFlight does NOT scan for it`, () => {
       expect(bodyOf(raw(slug))).toMatch(/does not scan for/i);
     });
   }
@@ -171,7 +171,7 @@ describe('learn uniformity: Shapes differentiate flag vs classify', () => {
     it(`${slug} has a Scanner behavior section that says flags or classifies`, () => {
       const body = bodyOf(rawShape(slug));
       expect(body).toMatch(/##\s+Scanner behavior/);
-      expect(body).toMatch(/Pre-Flight (flags|classifies) this shape/);
+      expect(body).toMatch(/PreFlight (flags|classifies) this shape/);
     });
   }
 
@@ -179,9 +179,9 @@ describe('learn uniformity: Shapes differentiate flag vs classify', () => {
     for (const slug of SHAPE_PAGES) {
       const body = bodyOf(rawShape(slug));
       if (FLAG_SHAPES.includes(slug)) {
-        expect(body, `${slug} should flag`).toMatch(/Pre-Flight flags this shape/);
+        expect(body, `${slug} should flag`).toMatch(/PreFlight flags this shape/);
       } else {
-        expect(body, `${slug} should classify`).toMatch(/Pre-Flight classifies this shape/);
+        expect(body, `${slug} should classify`).toMatch(/PreFlight classifies this shape/);
       }
     }
   });

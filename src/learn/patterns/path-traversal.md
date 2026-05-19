@@ -47,7 +47,7 @@ Variants on the same pattern: `fs.writeFile(userPath, content)` becomes arbitrar
 
 ## What the failure looks like
 
-Pre-Flight scans for filesystem calls (`fs.readFile`, `fs.writeFile`, `fs.createReadStream`, `path.join`, `path.resolve`, and others) where:
+PreFlight scans for filesystem calls (`fs.readFile`, `fs.writeFile`, `fs.createReadStream`, `path.join`, `path.resolve`, and others) where:
 
 - A user-input-shaped variable appears in the same statement or nearby context (`req.body`, `req.query`, `req.params`, `req.headers`, `req.cookies`, `searchParams`).
 - No visible normalization or guard (`path.normalize`, `path.isAbsolute`, an allowlist, a sanitizer call) appears within a few lines.

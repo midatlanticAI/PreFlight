@@ -67,7 +67,7 @@ The blast radius depends on what the rules file tells the assistant to do. Rules
 
 ## What the failure looks like
 
-Pre-Flight scans rules files for:
+PreFlight scans rules files for:
 
 - Bidi control characters (U+202A-U+202E, U+2066-U+2069).
 - Instruction-override language: "ignore previous instructions," "disregard system," "you are now in," "maintenance mode," "do not mention," "this is critical, do not."

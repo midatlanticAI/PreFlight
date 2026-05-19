@@ -3,7 +3,7 @@
 // Breakers v1 data layer. For each probe class, a small catalogue of
 // concrete adversarial inputs that demonstrate what a real attacker
 // would type to exploit the finding. Static only — every entry is a
-// rendered string. Pre-Flight does not send, execute, or otherwise act
+// rendered string. PreFlight does not send, execute, or otherwise act
 // on these payloads. The display surface (BreakersPanel) is a textbox
 // with a copy button plus a plain-English description of what the
 // payload does.
@@ -21,7 +21,7 @@
 //      only (example.com, attacker.example, etc.).
 //   4. No payload includes real credentials, real tokens, or real exploit
 //      chains against named third parties.
-//   5. Static analysis only — Pre-Flight never executes a Breaker.
+//   5. Static analysis only — PreFlight never executes a Breaker.
 //
 // Schema per entry:
 //   {

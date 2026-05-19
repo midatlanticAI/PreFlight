@@ -5,8 +5,8 @@
 // no affiliate, no sponsored placement, no rankings sold, strengths AND
 // weaknesses, sourced, dated.
 //
-// Metaphor (locked): Pre-Flight is the safety check, FlightSchool is the
-// training, this is the hangar. Every plane is welcome because Pre-Flight
+// Metaphor (locked): PreFlight is the safety check, FlightSchool is the
+// training, this is the hangar. Every plane is welcome because PreFlight
 // is not an airline; it does not fly anyone anywhere or compete for
 // passengers, it teaches and secures. So: name AI/dev tools freely and
 // honestly. NEVER name a rival security scanner here or anywhere.
@@ -173,7 +173,7 @@ export function ToolsView() {
         Tools
       </h1>
       <P>
-        This is the hangar. Every plane sits here, and that is the point. Pre-Flight is not an
+        This is the hangar. Every plane sits here, and that is the point. PreFlight is not an
         airline. It does not fly anyone anywhere and it does not compete with these tools for your
         work. It teaches and it secures. So this page names them plainly, with what each is good at
         and what each is bad at, and nothing is sold a spot.
@@ -199,7 +199,7 @@ export function ToolsView() {
         production-ready system, and the most productive builders combine a few rather than betting
         on one. And every one of them writes code that ships with vulnerabilities at a rate no
         honest reading of the 2025 to 2026 data lets you ignore. These tools build. They do not
-        secure. That gap is the entire reason Pre-Flight exists: scan what any of them generated,
+        secure. That gap is the entire reason PreFlight exists: scan what any of them generated,
         before it ships.
       </P>
 
@@ -216,8 +216,8 @@ export function ToolsView() {
           maxWidth: 760,
         }}
       >
-        Best fit maps to the tiers in The Climb. Whatever you fly, run it through Pre-Flight before
-        anyone else does. Everything here is free guidance. Pre-Flight asks for nothing.
+        Best fit maps to the tiers in The Climb. Whatever you fly, run it through PreFlight before
+        anyone else does. Everything here is free guidance. PreFlight asks for nothing.
       </p>
     </section>
   );

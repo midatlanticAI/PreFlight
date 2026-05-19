@@ -1,6 +1,6 @@
 // src/lib/glossary.js
 //
-// The Pre-Flight glossary. Every concept Pre-Flight names anywhere in the app
+// The PreFlight glossary. Every concept PreFlight names anywhere in the app
 // (probe findings, patterns, field reports, Sam / Demi / Drew / Vera, the
 // manifesto) has a one-line definition here and a link to an authoritative
 // free reference. The component at /learn/glossary renders it; nothing else
@@ -13,9 +13,9 @@
 //      MDN, OWASP, MITRE CWE, RFCs, official spec / vendor docs, named
 //      research organizations. No paywalled book pages. No competing
 //      security platforms.
-//   3. Where Pre-Flight has its own pattern / field-report page, the entry's
+//   3. Where PreFlight has its own pattern / field-report page, the entry's
 //      `internal` field links to it. The external link is the broader
-//      reference; the internal link is the Pre-Flight-specific deep dive.
+//      reference; the internal link is the PreFlight-specific deep dive.
 //   4. Groups are ordered roughly by how often a viber will encounter the
 //      vocabulary: security first, AI/LLM second, CS fundamentals later for
 //      readers who want to keep going.
@@ -25,7 +25,7 @@
 //     term: 'Display name',
 //     definition: 'One sentence, plain English.',
 //     link: 'https://...',           // external authoritative source
-//     internal?: '/learn/...',       // optional internal Pre-Flight page
+//     internal?: '/learn/...',       // optional internal PreFlight page
 //     aliases?: ['acronym', 'syn.'], // optional alternate names for search
 //   }
 
@@ -388,7 +388,7 @@ export const GLOSSARY_GROUPS = [
   {
     id: 'ai-llm',
     title: 'AI and LLM security',
-    intro: 'OWASP LLM Top 10 vocabulary plus the AI-tooling specifics Pre-Flight scans for.',
+    intro: 'OWASP LLM Top 10 vocabulary plus the AI-tooling specifics PreFlight scans for.',
     entries: [
       {
         term: 'LLM (Large Language Model)',
@@ -482,7 +482,7 @@ export const GLOSSARY_GROUPS = [
       {
         term: 'Persona / Persona+',
         definition:
-          "A structured prompt spec that defines an agent's role, skills, voice, and refusals. Pre-Flight ships four.",
+          "A structured prompt spec that defines an agent's role, skills, voice, and refusals. PreFlight ships four.",
         link: '/learn',
         internal: '/learn/manifesto',
       },
@@ -945,7 +945,7 @@ export const GLOSSARY_GROUPS = [
       {
         term: 'Logging',
         definition:
-          "Emitting structured records of events for later inspection. Pre-Flight's Security Logging probe scans for this.",
+          "Emitting structured records of events for later inspection. PreFlight's Security Logging probe scans for this.",
         link: 'https://opentelemetry.io/docs/concepts/signals/logs/',
         internal: '/learn/patterns/security-logging',
       },
@@ -1094,7 +1094,7 @@ export const GLOSSARY_GROUPS = [
   {
     id: 'web-platform',
     title: 'Web platform',
-    intro: "The browser primitives Pre-Flight's probes scan against.",
+    intro: "The browser primitives PreFlight's probes scan against.",
     entries: [
       {
         term: 'DOM (Document Object Model)',
@@ -1145,7 +1145,7 @@ export const GLOSSARY_GROUPS = [
   {
     id: 'tooling',
     title: 'Build and tooling',
-    intro: 'The stack underneath modern JS / TS projects, including Pre-Flight itself.',
+    intro: 'The stack underneath modern JS / TS projects, including PreFlight itself.',
     entries: [
       {
         term: 'ESLint',
@@ -1265,18 +1265,18 @@ export const GLOSSARY_GROUPS = [
   },
 
   // ============================================================================
-  // Pre-Flight-specific
+  // PreFlight-specific
   // ============================================================================
   {
     id: 'pre-flight',
-    title: 'Pre-Flight vocabulary',
+    title: 'PreFlight vocabulary',
     intro:
-      'Terms that exist inside Pre-Flight: probes, personas, the manifesto, the safety contracts.',
+      'Terms that exist inside PreFlight: probes, personas, the manifesto, the safety contracts.',
     entries: [
       {
         term: 'Probe',
         definition:
-          'A pure function that scans file content and returns findings. Pre-Flight has 43 of them.',
+          'A pure function that scans file content and returns findings. PreFlight has 43 of them.',
         link: '/learn',
         internal: '/learn/patterns/code-correctness',
       },
@@ -1301,7 +1301,7 @@ export const GLOSSARY_GROUPS = [
       {
         term: 'BYOK (Bring Your Own Key)',
         definition:
-          "Pre-Flight's pattern for AI features: you supply the API key, requests go directly to your provider.",
+          "PreFlight's pattern for AI features: you supply the API key, requests go directly to your provider.",
         link: '/learn',
       },
       {
@@ -1312,14 +1312,14 @@ export const GLOSSARY_GROUPS = [
       {
         term: 'Vibeware',
         definition:
-          "Software built primarily through natural-language prompts to an AI tool. Pre-Flight's audience.",
+          "Software built primarily through natural-language prompts to an AI tool. PreFlight's audience.",
         link: '/learn/manifesto',
         internal: '/learn',
       },
       {
         term: 'Vibe-Aware',
         definition:
-          'The stance Pre-Flight takes: capable practitioners, mechanics-instructor register, no preaching.',
+          'The stance PreFlight takes: capable practitioners, mechanics-instructor register, no preaching.',
         link: '/learn',
         internal: '/learn',
       },
@@ -1354,7 +1354,7 @@ export const GLOSSARY_GROUPS = [
       {
         term: 'Dogfood-as-CI-gate',
         definition:
-          "Pre-Flight's founding principle: the tool has to pass its own audit on every build, or the build fails.",
+          "PreFlight's founding principle: the tool has to pass its own audit on every build, or the build fails.",
         link: '/learn/manifesto',
       },
     ],

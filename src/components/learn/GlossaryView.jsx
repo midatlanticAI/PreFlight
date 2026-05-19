@@ -1,8 +1,8 @@
 // src/components/learn/GlossaryView.jsx
 //
-// The "Glossary" sub-tab under /learn. Every concept Pre-Flight names anywhere
+// The "Glossary" sub-tab under /learn. Every concept PreFlight names anywhere
 // has a one-line definition + a link to an authoritative free reference
-// (Wikipedia, MDN, OWASP, CWE, RFC, vendor spec). Where Pre-Flight has its
+// (Wikipedia, MDN, OWASP, CWE, RFC, vendor spec). Where PreFlight has its
 // own pattern / field-report page on the topic, the entry's internal link
 // goes there.
 //
@@ -10,7 +10,7 @@
 // group, terms list with definition + external + internal links.
 //
 // Token economy: definitions are short on purpose. Outbound links carry the
-// depth. Pre-Flight curates which terms matter; we don't try to be the
+// depth. PreFlight curates which terms matter; we don't try to be the
 // encyclopedia.
 
 import { useMemo, useState } from 'react';
@@ -68,9 +68,9 @@ function EntryRow({ entry }) {
                 letterSpacing: '0.04em',
                 whiteSpace: 'nowrap',
               }}
-              title={`Open Pre-Flight page: ${entry.internal}`}
+              title={`Open PreFlight page: ${entry.internal}`}
             >
-              Pre-Flight pattern →
+              PreFlight pattern →
             </Link>
           )}
           <a
@@ -165,8 +165,7 @@ export function GlossaryView() {
       >
         {totalEntries} terms across {totalGroups} groups. Every definition is one sentence; every
         entry links to an authoritative free reference (Wikipedia, MDN, OWASP, MITRE CWE, RFCs,
-        vendor spec docs). When Pre-Flight has its own page on the topic, the entry also links
-        there.
+        vendor spec docs). When PreFlight has its own page on the topic, the entry also links there.
       </p>
       <p
         style={{

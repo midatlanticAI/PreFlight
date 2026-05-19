@@ -73,7 +73,7 @@ export function BreakersInfoView() {
             it; we never execute it.
           </li>
           <li>
-            Pre-Flight does not send the payload anywhere. The Copy button writes to your clipboard
+            PreFlight does not send the payload anywhere. The Copy button writes to your clipboard
             only when you click it.
           </li>
           <li>

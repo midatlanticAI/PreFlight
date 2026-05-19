@@ -176,7 +176,7 @@ export function BreakersPanel({ probeName, xlFamily }) {
         }}
       >
         Concrete examples of what an attacker would type to exploit this finding. Static only.
-        Pre-Flight does not send, run, or otherwise act on these payloads. They are here so you can
+        PreFlight does not send, run, or otherwise act on these payloads. They are here so you can
         reproduce the failure in your own dev environment and confirm the fix.
       </p>
 

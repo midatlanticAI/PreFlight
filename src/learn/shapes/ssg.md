@@ -26,7 +26,7 @@ Generator.
 
 ## Scanner behavior
 
-Pre-Flight classifies this shape (informational). It does not raise a
+PreFlight classifies this shape (informational). It does not raise a
 shape-specific finding for it. The hardening that matters here overlaps
 with the static-HTML checklist, and the HTML/SEO/secret probes still
 run on the output and the source.

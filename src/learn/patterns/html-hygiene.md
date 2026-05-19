@@ -21,7 +21,7 @@ summary: A cluster of HTML antipatterns: inline event handlers, `target="_blank"
 
 ## What this is
 
-Six patterns Pre-Flight scans for in `.html`, `.jsx`, `.tsx`, `.vue`, and `.svelte` files:
+Six patterns PreFlight scans for in `.html`, `.jsx`, `.tsx`, `.vue`, and `.svelte` files:
 
 **Inline event handlers:**
 
@@ -80,11 +80,11 @@ Same risk as [Auth weaknesses](/learn/patterns/auth-weakness) covers, surfaced i
 
 Each pattern is a defense-in-depth bypass rather than a primary exploit. Inline handlers and inline scripts make CSP toothless. `target="_blank"` without `noopener` turns every external link into a tabnabbing vector. Mixed content destroys HTTPS guarantees for resources that arrive over plain HTTP.
 
-In isolation, any one of these is a small risk. Pre-Flight flags them because they accumulate; a page with all six is operating without the browser-level controls modern web security depends on.
+In isolation, any one of these is a small risk. PreFlight flags them because they accumulate; a page with all six is operating without the browser-level controls modern web security depends on.
 
 ## What the failure looks like
 
-Pre-Flight scans HTML and JSX/TSX for the six patterns. JSX uses the same DOM attributes, so `onClick="..."` (string handler) on a JSX element produces the same finding as the HTML form.
+PreFlight scans HTML and JSX/TSX for the six patterns. JSX uses the same DOM attributes, so `onClick="..."` (string handler) on a JSX element produces the same finding as the HTML form.
 
 ## What the fix looks like
 

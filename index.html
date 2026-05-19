@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
     <!-- Core -->
-    <title>Pre-Flight — Educational Audit for Vibers Building Vibeware</title>
+    <title>PreFlight — Educational Audit for Vibers Building Vibeware</title>
     <meta
       name="description"
       content="Free in-browser static security audit for apps built with Lovable, Cursor, Bolt, Replit, Claude Code, or any AI tool. 96 probes covering OWASP Top 10 2025, OWASP LLM Top 10, 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI rules-file backdoors, post-infection IOC detection, secrets, RLS misconfig, AST code-correctness, supply-chain hooks, and multi-language adapters (Python, Go, Ruby, PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust). No upload, no signup, no data collection."
@@ -53,11 +53,11 @@
     <meta property="og:site_name" content="Mid-Atlantic AI" />
     <meta
       property="og:title"
-      content="Pre-Flight — Educational Audit for Vibers Building Vibeware"
+      content="PreFlight — Educational Audit for Vibers Building Vibeware"
     />
     <meta
       property="og:description"
-      content="Free, in-browser security audit for AI-built apps. Explains every finding so you learn the pattern, not just the fix. By Mid-Atlantic AI."
+      content="Flying blind is bad. PreFlight handles the safety checks, so we can all fly with confidence. Free, in-browser, by Mid-Atlantic AI."
     />
     <meta property="og:url" content="https://preflight.midatlantic.ai/" />
     <!-- 1200×630 PNG per Facebook / LinkedIn / iMessage recommended dimensions. Most social
@@ -70,7 +70,7 @@
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="Pre-Flight — An educational audit tool for vibers building vibeware. Free, in-browser. By Mid-Atlantic AI."
+      content="PreFlight — An educational audit tool for vibers building vibeware. Free, in-browser. By Mid-Atlantic AI."
     />
     <meta property="og:locale" content="en_US" />
 
@@ -78,16 +78,16 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="Pre-Flight — Educational Audit for Vibers Building Vibeware"
+      content="PreFlight — Educational Audit for Vibers Building Vibeware"
     />
     <meta
       name="twitter:description"
-      content="Free, in-browser security audit for AI-built apps. Explains every finding so you learn the pattern, not just the fix. By Mid-Atlantic AI."
+      content="Flying blind is bad. PreFlight handles the safety checks, so we can all fly with confidence. Free, in-browser, by Mid-Atlantic AI."
     />
     <meta name="twitter:image" content="https://preflight.midatlantic.ai/og-card.png" />
     <meta
       name="twitter:image:alt"
-      content="Pre-Flight — An educational audit tool for vibers building vibeware."
+      content="PreFlight — An educational audit tool for vibers building vibeware."
     />
 
     <!-- Brand fonts: preconnect to cut connection-setup latency, then a regular stylesheet
@@ -110,8 +110,8 @@
           {
             "@type": "SoftwareApplication",
             "@id": "https://preflight.midatlantic.ai/#app",
-            "name": "Pre-Flight Audit Tool",
-            "alternateName": "Mid-Atlantic AI Pre-Flight Audit",
+            "name": "PreFlight Audit Tool",
+            "alternateName": "Mid-Atlantic AI PreFlight Audit",
             "applicationCategory": "SecurityApplication",
             "applicationSubCategory": "Static Application Security Testing",
             "operatingSystem": "Any (browser-based)",
@@ -173,7 +173,7 @@
             "@type": "WebSite",
             "@id": "https://preflight.midatlantic.ai/#website",
             "url": "https://preflight.midatlantic.ai/",
-            "name": "Pre-Flight Audit Tool",
+            "name": "PreFlight Audit Tool",
             "publisher": { "@id": "https://midatlantic.ai/#org" },
             "inLanguage": "en-US"
           },
@@ -183,7 +183,7 @@
             "mainEntity": [
               {
                 "@type": "Question",
-                "name": "Does Pre-Flight send my source code to a server?",
+                "name": "Does PreFlight send my source code to a server?",
                 "acceptedAnswer": {
                   "@type": "Answer",
                   "text": "No. All scanning happens in your browser tab. When you select files or a folder, contents are read locally with the File API and never uploaded. When you scan a public GitHub URL, the tool fetches raw blobs from raw.githubusercontent.com directly from your browser. The tool's origin never sees them. No analytics beacons, no remote storage."
@@ -191,7 +191,7 @@
               },
               {
                 "@type": "Question",
-                "name": "What does Pre-Flight check?",
+                "name": "What does PreFlight check?",
                 "acceptedAnswer": {
                   "@type": "Answer",
                   "text": "96 probes covering hardcoded secrets (AWS, Stripe, OpenAI, Anthropic, GitHub, etc.), NEXT_PUBLIC_ leak of server secrets, Supabase Row-Level-Security misconfigurations, Firebase permissive rules, JWT algorithm: none, package.json supply-chain hooks, known-compromised package versions (Shai-Hulud / Axios / Mini Shai-Hulud / TanStack worm), typosquatted and LLM-hallucinated package names, MCP server command-injection patterns, Cursor / Copilot rules-file backdoors, Trojan Source Unicode, prompt-injection sinks, system-prompt leakage to client bundles, missing security headers, CORS wildcards, SSRF and open-redirect patterns, HTML hygiene (inline handlers, mixed content, CSP, target=_blank without rel=noopener), SQL injection via template literals, path traversal, weak randomness, stack-trace leaks, subresource integrity, source-map exposure, iframe sandbox, security logging, RAG ingestion, vector / embedding weaknesses, and multi-language adapters (Python, Go, Ruby, PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust). Every finding carries its OWASP category code(s)."
@@ -199,7 +199,7 @@
               },
               {
                 "@type": "Question",
-                "name": "Is Pre-Flight free?",
+                "name": "Is PreFlight free?",
                 "acceptedAnswer": {
                   "@type": "Answer",
                   "text": "Yes. No signup, no credit card, no usage limits. Free forever for the browser tool itself. Optional AI features (Explain & Verify, agent-prompt formatting) require you to bring your own API key; whatever the AI provider charges goes to them, not to us."
@@ -215,7 +215,7 @@
               },
               {
                 "@type": "Question",
-                "name": "Can Pre-Flight catch supply-chain attacks from 2025-2026?",
+                "name": "Can PreFlight catch supply-chain attacks from 2025-2026?",
                 "acceptedAnswer": {
                   "@type": "Answer",
                   "text": "Yes, by exact version. We hard-code known-compromised versions from Shai-Hulud (Sept 2025), Axios / Sapphire Sleet (March 2026), Mini Shai-Hulud SAP (April 2026), Bitwarden CLI 2026.4.0, the Mini Shai-Hulud TanStack worm (May 11, 2026), and more. Citations include CISA cybersecurity advisories, GTIG/Mandiant threat intelligence, Microsoft Threat Intelligence, the affected vendors' own security advisories, and the corresponding GitHub Security Advisory records."
@@ -223,10 +223,10 @@
               },
               {
                 "@type": "Question",
-                "name": "Does Pre-Flight work with apps not built by AI?",
+                "name": "Does PreFlight work with apps not built by AI?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Yes. Most probes are framework-agnostic and apply to any JavaScript, TypeScript, Python, Go, Ruby, HTML, or SQL project. The vibe-coding framing is about who needs the help most, not about what code Pre-Flight is technically capable of scanning."
+                  "text": "Yes. Most probes are framework-agnostic and apply to any JavaScript, TypeScript, Python, Go, Ruby, HTML, or SQL project. The vibe-coding framing is about who needs the help most, not about what code PreFlight is technically capable of scanning."
                 }
               }
             ]
@@ -251,7 +251,7 @@
       >
         <h1>JavaScript is required</h1>
         <p>
-          The Pre-Flight Audit Tool runs entirely in your browser — scanning happens locally so your
+          The PreFlight Audit Tool runs entirely in your browser — scanning happens locally so your
           source never leaves the tab. That requires JavaScript to be enabled. Enable it for this
           page and refresh.
         </p>

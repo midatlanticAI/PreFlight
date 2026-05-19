@@ -1,5 +1,5 @@
 ---
-title: FERPA (education records) — why Pre-Flight teaches but does not scan
+title: FERPA (education records) — why PreFlight teaches but does not scan
 slug: compliance-ferpa
 type: pattern
 last_updated: 2026-05-15
@@ -10,7 +10,7 @@ sources:
     url: https://www.govinfo.gov/content/pkg/USCODE-2021-title20/html/USCODE-2021-title20-chap31-subchapIII-part4-sec1232g.htm
   - title: 34 CFR Part 99 — FERPA regulations
     url: https://www.ecfr.gov/current/title-34/subtitle-A/part-99
-summary: FERPA governs the privacy of student education records. Whether a system is FERPA-compliant depends on consent, disclosure, and institutional policy, not on a code pattern. Pre-Flight teaches FERPA but does not scan for it.
+summary: FERPA governs the privacy of student education records. Whether a system is FERPA-compliant depends on consent, disclosure, and institutional policy, not on a code pattern. PreFlight teaches FERPA but does not scan for it.
 ---
 
 ## What this is
@@ -28,15 +28,15 @@ those records are disclosed and consented to, not only to how they are
 stored. Building the consent and access model wrong is the common
 failure, and it is an architecture and policy problem.
 
-## Why Pre-Flight does not scan for FERPA
+## Why PreFlight does not scan for FERPA
 
 FERPA compliance is determined by consent flows, disclosure logging,
 institutional agreements, and the legitimate-educational-interest test.
 None of that is reliably detectable from source code. A static scanner
 that claimed to check FERPA would be making a claim it cannot support.
-Pre-Flight does not map any probe to FERPA.
+PreFlight does not map any probe to FERPA.
 
-What Pre-Flight can still help with is the generic security underneath:
+What PreFlight can still help with is the generic security underneath:
 the same hardcoded-secret, raw-SQL, and transport probes apply to an
 ed-tech app like any other. Those findings are security findings, not
 FERPA findings, and the tool labels them as such.

@@ -22,7 +22,7 @@ end. The classifier detects the bin entry and reports it as a CLI.
 
 ## Scanner behavior
 
-Pre-Flight classifies this shape (informational). It does not raise a
+PreFlight classifies this shape (informational). It does not raise a
 shape-specific finding for it; the language and injection probes run on
 the source.
 

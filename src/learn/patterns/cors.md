@@ -37,7 +37,7 @@ The pattern shows up most in vibe-built APIs because "fix the CORS error" tutori
 
 ## What the failure looks like
 
-Pre-Flight scans server-side code for:
+PreFlight scans server-side code for:
 
 ```js
 res.setHeader('Access-Control-Allow-Origin', '*');

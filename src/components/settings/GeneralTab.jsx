@@ -2,7 +2,7 @@
 // Default Settings sub-route. Privacy posture explainer, "Clear all local data" with
 // confirmation, version info, changelog link.
 //
-// "Clear all local data" wipes every Pre-Flight localStorage key + suppression store +
+// "Clear all local data" wipes every PreFlight localStorage key + suppression store +
 // in-memory log buffer, then hard-reloads the page so React state resets cleanly. This
 // is the only path to a true factory-default; clearing one panel at a time leaves
 // orphan state.
@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { Trash2, AlertTriangle, ExternalLink } from 'lucide-react';
 import { T, fontMono } from '../../lib/theme.js';
 
-// Every Pre-Flight localStorage key in one place. Keep this in sync as new stores
+// Every PreFlight localStorage key in one place. Keep this in sync as new stores
 // land; the Clear-All button reads only this list.
 const PREFLIGHT_KEYS = [
   'audit-app:history:v1',
@@ -41,7 +41,7 @@ function ExplainerBlock() {
         PRIVACY POSTURE
       </div>
       <p style={{ margin: 0, fontSize: 14, color: T.textDim, lineHeight: 1.7 }}>
-        Pre-Flight stores everything in your browser. Nothing leaves this tab unless you scan a
+        PreFlight stores everything in your browser. Nothing leaves this tab unless you scan a
         public GitHub URL (which fetches from GitHub directly, not through us) or opt into Explain
         &amp; Verify (which sends to your chosen AI provider with your own key).
       </p>
@@ -78,8 +78,8 @@ export function GeneralTab() {
         </h3>
         <p style={{ margin: '0 0 12px', fontSize: 14, color: T.textDim, lineHeight: 1.7 }}>
           Wipe scan history, the diagnostics log buffer, your AI settings, your GitHub token, the
-          suppression store, and the analytics counter — everything Pre-Flight remembers locally.
-          The page reloads to a fresh state when you confirm.
+          suppression store, and the analytics counter — everything PreFlight remembers locally. The
+          page reloads to a fresh state when you confirm.
         </p>
         {!showConfirm ? (
           <button
@@ -165,7 +165,7 @@ export function GeneralTab() {
           VERSION
         </h3>
         <div style={{ fontSize: 14, color: T.text, fontFamily: fontMono }}>
-          Pre-Flight v{VERSION} · built {BUILD_DATE}
+          PreFlight v{VERSION} · built {BUILD_DATE}
         </div>
         <a
           href={CHANGELOG_URL}

@@ -1,8 +1,8 @@
-# Pre-Flight Audit Tool
+# PreFlight Audit Tool
 
 > A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 96 probes covering OWASP Top 10 2025 (A01-A10) and OWASP LLM Top 10 2025 (LLM01, LLM02, LLM04, LLM06, LLM07, LLM08), plus 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, multi-language adapters (Python, Go, Ruby, PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust), and conventional SAST checks. Every finding carries the OWASP category code(s) it maps to. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
 
-The Pre-Flight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai). Contact: John@midatlantic.ai. License: free for individual and team use.
+The PreFlight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai). Contact: John@midatlantic.ai. License: free for individual and team use.
 
 ## What it does
 

@@ -23,7 +23,7 @@ the dangerous capability is present by default and must be switched off.
 
 ## Scanner behavior
 
-Pre-Flight classifies this shape (informational). It does not raise a
+PreFlight classifies this shape (informational). It does not raise a
 shape-specific finding for it; the JavaScript probes run on both the
 main and renderer code.
 

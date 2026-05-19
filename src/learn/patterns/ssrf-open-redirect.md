@@ -52,7 +52,7 @@ An attacker submits `url=http://169.254.169.254/latest/meta-data/iam/security-cr
 
 ## What the failure looks like
 
-Pre-Flight scans server-side code for:
+PreFlight scans server-side code for:
 
 - `res.redirect(<expr>)` where the expression traces back to `req.body`, `req.query`, or `req.params`.
 - `fetch(<expr>)` (or `axios.get(<expr>)`, `request(...)`, etc.) where the URL traces back to user input.

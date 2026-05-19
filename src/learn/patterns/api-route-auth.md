@@ -48,7 +48,7 @@ The common shape: an app ships login, the developer reasons "the admin section i
 
 ## What the failure looks like
 
-Pre-Flight scans server route handlers for:
+PreFlight scans server route handlers for:
 
 - Destructive HTTP methods (`DELETE`, `PUT`, `PATCH`) with no auth function call in the handler body.
 - Handlers under `admin`, `dashboard`, `internal` paths with no auth function call.

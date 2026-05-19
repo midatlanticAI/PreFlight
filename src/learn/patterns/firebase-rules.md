@@ -51,7 +51,7 @@ A `match /users/{userId}` rule with `allow read: if true` exposes every user doc
 
 ## What the failure looks like
 
-Pre-Flight scans `firestore.rules`, `database.rules.json`, and `storage.rules` files for:
+PreFlight scans `firestore.rules`, `database.rules.json`, and `storage.rules` files for:
 
 - `allow read: if true` (or `if true` on any operation).
 - `allow read, write: if request.auth != null` on storage rules without further conditions.

@@ -54,7 +54,7 @@ OWASP ranks A09 (Security Logging and Monitoring Failures) at #9 in the Top 10 b
 
 ## What the failure looks like
 
-Pre-Flight uses a path heuristic. Files in security-sensitive paths (`auth/`, `login/`, `logout/`, `register/`, `signup/`, `password/`, `admin/`, `permission/`, `role/`, `access/`) or files containing a `DELETE` route handler are checked. If the file contains no recognizable logging call (`log.`, `logger.`, `console.error`, `audit.`, `track.`, `Sentry.captureException`, etc.), the file gets flagged.
+PreFlight uses a path heuristic. Files in security-sensitive paths (`auth/`, `login/`, `logout/`, `register/`, `signup/`, `password/`, `admin/`, `permission/`, `role/`, `access/`) or files containing a `DELETE` route handler are checked. If the file contains no recognizable logging call (`log.`, `logger.`, `console.error`, `audit.`, `track.`, `Sentry.captureException`, etc.), the file gets flagged.
 
 The probe is conservative on purpose. The heuristic catches the "no logging anywhere" case; it does not flag handlers that emit logs but skip the right details. That's a different, harder-to-detect failure.
 

@@ -24,7 +24,7 @@ classifier detects the manifest and reports it as Mobile.
 
 ## Scanner behavior
 
-Pre-Flight classifies this shape (informational). It does not raise a
+PreFlight classifies this shape (informational). It does not raise a
 shape-specific finding for it, but the JavaScript and the native-layer
 probes (and, for the platform code, the Swift / Kotlin language
 adapters) still run on the source.

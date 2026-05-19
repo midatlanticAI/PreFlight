@@ -24,7 +24,7 @@ the majority of the code. The classifier reports it as a Modular SPA
 
 ## Scanner behavior
 
-Pre-Flight classifies this shape (informational). It does not raise a
+PreFlight classifies this shape (informational). It does not raise a
 shape-specific finding for it, because there is nothing to act on: this
 is the target the monolith finding is pointing you toward. The language
 and security probes still run on every file.

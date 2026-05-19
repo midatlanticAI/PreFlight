@@ -47,11 +47,11 @@ The component renders. The render path that touches `urlHighlight` throws. Whoev
 
 This class of bug is silent under normal testing. The test suite may not exercise every render path. ESLint catches it, but vibe coders frequently do not run ESLint. Type checkers catch it, but the same vibe coders often skip them. The bug ships to production and waits for a user.
 
-Pre-Flight's Code Correctness probe is an AST-based scope check that catches the bug at scan time, before the test suite or the user. The probe is not a substitute for ESLint or `tsc`; it is the same check moved upstream into the pre-commit / pre-merge audit.
+PreFlight's Code Correctness probe is an AST-based scope check that catches the bug at scan time, before the test suite or the user. The probe is not a substitute for ESLint or `tsc`; it is the same check moved upstream into the pre-commit / pre-merge audit.
 
 ## What the failure looks like
 
-Pre-Flight parses every `.js` / `.jsx` / `.mjs` / `.cjs` file with acorn + acorn-jsx and:
+PreFlight parses every `.js` / `.jsx` / `.mjs` / `.cjs` file with acorn + acorn-jsx and:
 
 1. Collects every binding the file declares: imports, var/let/const, function/class declarations, params, destructuring patterns, catch clauses, re-exports.
 2. Walks every identifier reference.
@@ -74,7 +74,7 @@ In each case, the fix is local and obvious. The hard part is finding the referen
 
 ## Worked example
 
-Pre-Flight scanning Pre-Flight itself caught two undeclared references in `scripts/generate-og.mjs`:
+PreFlight scanning PreFlight itself caught two undeclared references in `scripts/generate-og.mjs`:
 
 ```js
 const __dirname = dirname(fileURLToPath(import.meta.url));

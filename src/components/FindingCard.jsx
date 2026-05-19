@@ -339,7 +339,7 @@ export function FindingCard({
           </div>
           {/* Breakers — adversarial inputs (v1, feature/breakers-v1 branch).
               Static-only display of what an attacker would type to exploit this finding.
-              Pre-Flight never executes the payloads; they ship as strings with copy buttons
+              PreFlight never executes the payloads; they ship as strings with copy buttons
               and explanations of where and how the input is processed. */}
           <BreakersPanel probeName={finding.probe} xlFamily={finding.xl_family} />
           {/* Explain & Verify — BYOK AI feature.

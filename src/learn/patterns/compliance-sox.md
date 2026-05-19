@@ -10,7 +10,7 @@ sources:
     url: https://www.govinfo.gov/content/pkg/PLAW-107publ204/html/PLAW-107publ204.htm
   - title: SEC — Sarbanes-Oxley Section 404
     url: https://www.sec.gov/rules-regulations/2003/06/managements-reports-internal-control-over-financial-reporting
-summary: SOX Section 404 requires public companies to assess internal control over financial reporting. Whether a control is effective is an audit conclusion about process, not a code property. Pre-Flight teaches SOX but does not scan for it.
+summary: SOX Section 404 requires public companies to assess internal control over financial reporting. Whether a control is effective is an audit conclusion about process, not a code property. PreFlight teaches SOX but does not scan for it.
 ---
 
 ## What this is
@@ -27,12 +27,12 @@ If a system feeds the financial close, its change and access controls
 are in ICFR scope. The risk in an AI-built tool is usually missing
 segregation of duties and missing audit trails, not a single code line.
 
-## Why Pre-Flight does not scan for SOX
+## Why PreFlight does not scan for SOX
 
 SOX effectiveness is concluded from how changes are approved and
 deployed, who can alter financial data, and whether the audit trail is
 complete and reviewed, over a reporting period. That is process
-evidence, not a static code pattern. Pre-Flight maps no probe to SOX.
+evidence, not a static code pattern. PreFlight maps no probe to SOX.
 
 The underlying security probes still apply to a financial app as
 security findings. They are not, and are not labelled as, SOX controls.

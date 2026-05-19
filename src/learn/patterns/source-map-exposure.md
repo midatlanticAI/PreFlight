@@ -59,7 +59,7 @@ The pattern is mostly about reducing recon, not preventing exploitation. Source 
 
 ## What the failure looks like
 
-Pre-Flight scans for:
+PreFlight scans for:
 
 - **Vite config** with `build.sourcemap: true` (or `'inline'` / `'hidden'` followed by no upload step).
 - **Next.js config** with `productionBrowserSourceMaps: true`.

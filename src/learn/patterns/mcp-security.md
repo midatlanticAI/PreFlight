@@ -82,7 +82,7 @@ A shell-spawning MCP server in a developer's config means a single prompt inject
 
 ## What the failure looks like
 
-Pre-Flight scans MCP configuration files (`mcp.json`, `.mcp/`, `claude_desktop_config.json`, `cursor.json`) for:
+PreFlight scans MCP configuration files (`mcp.json`, `.mcp/`, `claude_desktop_config.json`, `cursor.json`) for:
 
 - `command: bash`, `command: sh`, `command: powershell`, `command: cmd` paired with `-c`, `-Command`, or similar inline-execution flags.
 - `0.0.0.0`, `::`, or `host: 0.0.0.0` in MCP server env or args.

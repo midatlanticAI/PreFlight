@@ -18,7 +18,7 @@ summary: Two patterns AI tools produce often that correlate strongly with securi
 
 ## What this is
 
-Two specific code shapes Pre-Flight scans for because they correlate with under-validated code:
+Two specific code shapes PreFlight scans for because they correlate with under-validated code:
 
 **Empty catch blocks.**
 
@@ -53,7 +53,7 @@ The patterns also explicitly defeat defense-in-depth. An empty catch turns "veri
 
 ## What the failure looks like
 
-Pre-Flight scans for:
+PreFlight scans for:
 
 - `catch {}` or `catch (e) {}` with no body other than whitespace or a comment.
 - `: any` in TypeScript function parameters, especially handlers, route handlers, and webhook endpoints.

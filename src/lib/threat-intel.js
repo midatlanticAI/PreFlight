@@ -255,7 +255,7 @@ export const URL_SAFE_HOSTS = new Set([
   'pnpm.io',
   'yarnpkg.com',
   // Established AI / LLM provider hosts. Documented endpoints, owned by
-  // well-known companies, used by the Pre-Flight BYOK integration in src/lib/ai.js.
+  // well-known companies, used by the PreFlight BYOK integration in src/lib/ai.js.
   // Criterion for inclusion: the host appears in the provider's official
   // developer documentation as the canonical API base, the company has a
   // verifiable corporate identity, and the host has been stable for 12+ months.

@@ -209,7 +209,7 @@ const RAW_MODULES = import.meta.glob('../learn/**/*.md', {
 
 // Module-level error tracking. Every parse failure gets pushed here at load time
 // so the UI can surface a banner instead of just rendering "0 entries" and
-// hoping the user opens Diagnostics. This is Pre-Flight: silent corpus
+// hoping the user opens Diagnostics. This is PreFlight: silent corpus
 // failures are the failure mode we exist to catch.
 export const LEARN_PARSE_ERRORS = [];
 
@@ -289,7 +289,7 @@ export const LEARN_ENTRIES = Object.entries(RAW_MODULES)
 
 // Corpus-level sanity check. If the build glob found markdown files but every
 // single one failed to parse, that's a critical bug (e.g., browser-incompat in
-// the parser, or a bundling issue). Pre-Flight should NEVER silently render
+// the parser, or a bundling issue). PreFlight should NEVER silently render
 // an empty Learn surface in this case.
 export const LEARN_HEALTH = {
   filesFound: ALL_MODULE_PATHS.length,

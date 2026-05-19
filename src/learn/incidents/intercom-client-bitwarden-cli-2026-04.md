@@ -48,7 +48,7 @@ The Bitwarden security team pulled the malicious release approximately 18 hours 
 
 **The AI-tooling credential angle was new.** Prior worms went after npm tokens, GitHub PATs, AWS keys, and the standard cloud-provider credential pile. The Bitwarden CLI compromise added a new tier: API keys for Anthropic, OpenAI, and similar, plus session tokens for AI coding assistants. Two reasons this matters: (1) those credentials are typically high-value because they grant API access that bills per token, and (2) they are often less-protected than cloud-provider credentials because the threat model around them is newer. Many developers held `sk-ant-` and `sk-proj-` keys in plaintext in `.env.local` files at home directory paths the Bitwarden hook could read.
 
-**The intercom-client incident worked for the same reasons as the parallel SAP CAP wave**, with the additional amplifier that intercom-client is a transitively-included package in many SaaS apps. A developer building on top of an intercom integration may not have intercom-client in their direct dependencies, but it shows up in their lockfile through some `analytics-toolkit` or `user-engagement-helper` higher up the chain. Pre-Flight's [Package.json probe](/learn/patterns/package-json-supply-chain) flags any project whose lockfile resolves intercom-client to the affected versions, including transitive resolutions.
+**The intercom-client incident worked for the same reasons as the parallel SAP CAP wave**, with the additional amplifier that intercom-client is a transitively-included package in many SaaS apps. A developer building on top of an intercom integration may not have intercom-client in their direct dependencies, but it shows up in their lockfile through some `analytics-toolkit` or `user-engagement-helper` higher up the chain. PreFlight's [Package.json probe](/learn/patterns/package-json-supply-chain) flags any project whose lockfile resolves intercom-client to the affected versions, including transitive resolutions.
 
 ## What the response looked like
 
@@ -71,7 +71,7 @@ Four motions. Three are repeated from the prior incidents in this series; one is
 
 **Apply `min-release-age=604800` and `ignore-scripts=true` to every CI runner.** Same configuration as discussed in [Sapphire Sleet](/learn/incidents/sapphire-sleet-axios-2026-03) and [Mini Shai-Hulud SAP](/learn/incidents/mini-shai-hulud-sap-npm-2026-04). The combination prevents the entire class of incidents from reaching CI builds.
 
-**Audit for the Malicious Artifacts persistence drops on every developer machine.** Same `.claude/router_runtime.js`, `.vscode/setup.mjs`, `__DAEMONIZED`, `filev2.getsession.org` signatures Pre-Flight scans for. The intercom-client wave used the identical persistence pattern as the SAP CAP wave because it was the same actor family.
+**Audit for the Malicious Artifacts persistence drops on every developer machine.** Same `.claude/router_runtime.js`, `.vscode/setup.mjs`, `__DAEMONIZED`, `filev2.getsession.org` signatures PreFlight scans for. The intercom-client wave used the identical persistence pattern as the SAP CAP wave because it was the same actor family.
 
 **Pin and lockfile-audit transitive dependencies.** A `npm ls intercom-client` plus `npm ls lightning` against a representative project's lockfile catches the transitive-inclusion case. If either resolves to an affected version, the project is exposed even if neither package is in the direct dependencies.
 

@@ -41,7 +41,7 @@ export function HowToView() {
         How it works
       </h1>
       <P>
-        Pre-Flight is a free in-browser security audit for AI-built apps. Open the page, point it at
+        PreFlight is a free in-browser security audit for AI-built apps. Open the page, point it at
         your code, read what it found, fix what matters. Nothing leaves your machine. This page is
         the full tour.
       </P>
@@ -83,7 +83,7 @@ export function HowToView() {
         </LI>
         <LI>
           <b>Breakers.</b> Inside the expanded finding, the concrete adversarial input an attacker
-          would type. Static strings with a copy button. Pre-Flight never runs them.
+          would type. Static strings with a copy button. PreFlight never runs them.
         </LI>
         <LI>
           <b>Explain &amp; Verify.</b> An optional pass that uses your own AI key (BYOK) to talk
@@ -97,7 +97,7 @@ export function HowToView() {
 
       <H2>Coverage is scoped: not everything fires every time</H2>
       <P>
-        Pre-Flight covers 14 languages. Every probe is scoped to the files and constructs it applies
+        PreFlight covers 14 languages. Every probe is scoped to the files and constructs it applies
         to. A Rust deserialization probe only looks at Rust; a Django setting probe only looks at
         Python config. On a single-language project the probes for other languages stay silent by
         design. You see signal for the code you actually wrote, not a wall of irrelevant checks.
@@ -108,7 +108,7 @@ export function HowToView() {
         When a scan produces findings that map to a regulatory clause, a collapsible Regulatory
         mapping panel appears above the list. It rolls every mapping up by framework and clause so a
         non-coder can read the picture without opening 40 cards, and it exports a plain-text auditor
-        handoff. It also states plainly what Pre-Flight does not scan. FERPA, SOX, FDA 21 CFR 11,
+        handoff. It also states plainly what PreFlight does not scan. FERPA, SOX, FDA 21 CFR 11,
         FTC, and the EU AI Act are taught in the Learn pages, not detected, because they are not
         decidable from source code.
       </P>
@@ -123,7 +123,7 @@ export function HowToView() {
 
       <H2>Re-scan, baseline, export</H2>
       <P>
-        Scan the same source again and Pre-Flight shows the delta since last time: what is new, what
+        Scan the same source again and PreFlight shows the delta since last time: what is new, what
         is fixed, what is still open. Export the full result as JSON or Markdown, a PR comment, or
         an agent prompt. History and suppressions live in your browser only.
       </P>

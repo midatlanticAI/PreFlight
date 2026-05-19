@@ -25,7 +25,7 @@ multiple package.json files and reports that it saw them.
 
 ## Scanner behavior
 
-Pre-Flight flags this shape: the Architecture probe raises an
+PreFlight flags this shape: the Architecture probe raises an
 informational finding stating the boundary discipline this scale
 requires. It is one of the four shapes the scanner acts on rather than
 only classifying, because the boundary it depends on is a security

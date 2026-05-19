@@ -69,9 +69,9 @@ Three reasons this happens most often in AI-built apps:
 
 ## What the failure looks like
 
-Pre-Flight scans Supabase migration files (`supabase/migrations/*.sql`) and the schema-policy files often committed alongside them. Three findings:
+PreFlight scans Supabase migration files (`supabase/migrations/*.sql`) and the schema-policy files often committed alongside them. Three findings:
 
-**Table created without `enable row level security`.** A `CREATE TABLE foo (...)` statement with no subsequent `ALTER TABLE foo ENABLE ROW LEVEL SECURITY;` in the same file. (Multi-file sequences are allowed; Pre-Flight only flags when the same file creates a table and never enables RLS for it.)
+**Table created without `enable row level security`.** A `CREATE TABLE foo (...)` statement with no subsequent `ALTER TABLE foo ENABLE ROW LEVEL SECURITY;` in the same file. (Multi-file sequences are allowed; PreFlight only flags when the same file creates a table and never enables RLS for it.)
 
 **Permissive policy.** A `CREATE POLICY ... USING (true)` is functionally equivalent to no RLS. Same for `WITH CHECK (true)` on insert/update policies.
 

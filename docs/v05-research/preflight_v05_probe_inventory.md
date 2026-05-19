@@ -1,4 +1,4 @@
-# Pre-Flight v0.5 Probe Inventory
+# PreFlight v0.5 Probe Inventory
 
 **Version:** v0.5.0-merge
 **Generated:** May 14, 2026
@@ -71,15 +71,15 @@ or string-table extraction. MIXED = any combination.
 
 ### Autofix taxonomy (new in v0.5)
 
-**mechanical**: Pre-Flight can apply the fix automatically with zero behavior
+**mechanical**: PreFlight can apply the fix automatically with zero behavior
 risk. Example: adding `timeout=10` kwarg to a requests.get call that has no
 timeout. Example: changing `yaml.load(x)` to `yaml.safe_load(x)`.
 
-**review-needed**: Pre-Flight suggests the fix but flags it for human review
+**review-needed**: PreFlight suggests the fix but flags it for human review
 because the rewrite touches semantically significant code. Example: converting
 string-built SQL to parameterized queries (might break compound WHERE clauses).
 
-**manual**: Pre-Flight explains the fix but does not propose a code change.
+**manual**: PreFlight explains the fix but does not propose a code change.
 Example: removing an `unsafe` block in Rust (requires understanding the safety
 invariants the block was holding).
 
@@ -466,9 +466,9 @@ For probes that adapt a cross-language family, the `xl_ref` mapping is:
 
 ---
 
-## Pre-Flight Multi-Language Probe Candidate Research
+## PreFlight Multi-Language Probe Candidate Research
 
-**Research foundation for Pre-Flight v0.5+ language expansion.** Compiled May 2026. All recommendations are static-analysis probes (regex, AST, manifest, config inspection) suitable for client-side browser execution with no dynamic analysis, network calls, or LLM inference at scan time.
+**Research foundation for PreFlight v0.5+ language expansion.** Compiled May 2026. All recommendations are static-analysis probes (regex, AST, manifest, config inspection) suitable for client-side browser execution with no dynamic analysis, network calls, or LLM inference at scan time.
 
 **Cross-cutting notes that apply to every language section below:**
 
@@ -1340,7 +1340,7 @@ Mirror Python; relevant SDKs: `openai-go`, `anthropic-sdk-go`, `langchaingo`, `o
 #### PROBE: sync.Mutex passed by value
 
 - **Language:** Go | **Category:** Concurrency | **Severity:** high
-- **What it catches:** Struct containing `sync.Mutex` (not pointer) passed by value; copies the mutex, leading to non-atomic access. `go vet` catches this; surfacing in Pre-Flight gives early signal.
+- **What it catches:** Struct containing `sync.Mutex` (not pointer) passed by value; copies the mutex, leading to non-atomic access. `go vet` catches this; surfacing in PreFlight gives early signal.
 - **Detection approach:** AST: function param `Foo` where `Foo` contains an unexported `sync.Mutex` field (non-pointer).
 
 #### PROBE: defer in for loop without scope
@@ -1364,7 +1364,7 @@ Mirror Python; relevant SDKs: `openai-go`, `anthropic-sdk-go`, `langchaingo`, `o
 #### PROBE: Body not closed
 
 - **Language:** Go | **Category:** Resource | **Severity:** medium
-- **What it catches:** `resp, _ := http.Get(...)` without `defer resp.Body.Close()`. Linters catch this (bodyclose); replicating it as a Pre-Flight probe gives early-stage signal.
+- **What it catches:** `resp, _ := http.Get(...)` without `defer resp.Body.Close()`. Linters catch this (bodyclose); replicating it as a PreFlight probe gives early-stage signal.
 - **Detection approach:** AST: `http.Get`/`http.Post`/`client.Do` whose `resp` is used without a `Close()` call in the same function.
 
 ### Category 5; Supply Chain Patterns (Go / go modules)
@@ -3685,7 +3685,7 @@ Elixir/BEAM has unique patterns:
 #### PROBE: Known compromised Hex package (IOC list)
 
 - **Language:** Elixir | **Category:** Supply chain | **Severity:** critical
-- **IOC list:** Pre-2017 Plug.Static null-byte injection CVE-2017-1000052 (RCE class; still relevant for legacy Plug versions); the broader 2025–2026 Hex ecosystem has had fewer named mass incidents than npm/PyPI/Packagist, but `mix_audit` and the Elixir Advisory Database (originally dependabot/elixir-security-advisories, now mostly GHSA-fed) cover known vulnerabilities. Pre-Flight should bundle current GHSA Hex advisories.
+- **IOC list:** Pre-2017 Plug.Static null-byte injection CVE-2017-1000052 (RCE class; still relevant for legacy Plug versions); the broader 2025–2026 Hex ecosystem has had fewer named mass incidents than npm/PyPI/Packagist, but `mix_audit` and the Elixir Advisory Database (originally dependabot/elixir-security-advisories, now mostly GHSA-fed) cover known vulnerabilities. PreFlight should bundle current GHSA Hex advisories.
 - **Detection approach:** MAN diff against bundled JSON.
 
 #### PROBE: mix_audit / Sobelow not in CI
@@ -3933,7 +3933,7 @@ Emerging surface; `langchain_dart`, `dart_openai`, `google_generative_ai` (Gemin
 #### PROBE: Known compromised pub package (IOC list)
 
 - **Language:** Dart | **Category:** Supply chain | **Severity:** critical
-- **IOC list:** No publicly named mass campaigns against pub.dev as of May 2026 comparable to npm/PyPI/Packagist. Pre-Flight should bundle the current GHSA-fed advisory database for Hex and watch for pub-specific advisories.
+- **IOC list:** No publicly named mass campaigns against pub.dev as of May 2026 comparable to npm/PyPI/Packagist. PreFlight should bundle the current GHSA-fed advisory database for Hex and watch for pub-specific advisories.
 - **Detection approach:** MAN diff against bundled JSON.
 
 ### Category 6; Build / Deploy Patterns (Dart)
@@ -3985,7 +3985,7 @@ The following probe families are cross-cutting and apply to every language secti
 
 ### Cross-Cutting Pattern: Secret Detection (all languages)
 
-Every language section above references hardcoded provider keys; here is the consolidated detection-pattern bank Pre-Flight should bundle once and apply to every source file regardless of language.
+Every language section above references hardcoded provider keys; here is the consolidated detection-pattern bank PreFlight should bundle once and apply to every source file regardless of language.
 
 | Provider              | Pattern                                                                             | Severity                           |
 | --------------------- | ----------------------------------------------------------------------------------- | ---------------------------------- | -------- |
@@ -4021,13 +4021,13 @@ False-positive guard: exclude obvious placeholders (`your_key`, `EXAMPLE`, `xxxx
 
 ### Cross-Cutting Pattern: Slopsquatting / Hallucinated-Package Defense (all package managers)
 
-For each language's dependency manifest, Pre-Flight should bundle two lists:
+For each language's dependency manifest, PreFlight should bundle two lists:
 
 1. **High-popularity allowlist (~top 2,000 packages per ecosystem).** Any manifest entry whose name has Levenshtein distance ≤ 2 from a name on this list, but is NOT exactly on the list, is flagged as **high severity / suspected typosquat or slopsquat**. The Wikipedia / USENIX 2025 / Socket research bank shows 38% of LLM-hallucinated package names are conflations (`express-mongoose`), 13% are typo variants, 51% are pure fabrications, and 8.7% of Python-hallucinated names are valid JavaScript packages. The conflation case is detectable by checking whether the manifest name contains substrings of two top-1000 names.
 
 2. **Known-malicious deny list (per ecosystem, refreshed from public IOCs).** Exact name+version matches blocked. The bundled IOC lists per ecosystem were enumerated within each language section above. The cumulative volume across npm, PyPI, Maven Central, NuGet, RubyGems, crates.io, Packagist, Hex, pub.dev, and Go modules now exceeds 1.233M known-malicious packages (Sonatype 2026 SSCR).
 
-Severity rubric: exact match on IOC list → critical, never confirm. Near-match (edit-distance ≤ 2) on top-2000 → high, surface for review. Reasonable-looking name not in top-2000 → low / info, suggest dependency-cooldown wait. The 7–14-day dependency cooldown (per GitGuardian and security researcher William Woodruff's research) would have prevented 8 of 10 major 2025 supply-chain attacks; Pre-Flight should report manifest entries pinning to a package version less than 7 days old as informational.
+Severity rubric: exact match on IOC list → critical, never confirm. Near-match (edit-distance ≤ 2) on top-2000 → high, surface for review. Reasonable-looking name not in top-2000 → low / info, suggest dependency-cooldown wait. The 7–14-day dependency cooldown (per GitGuardian and security researcher William Woodruff's research) would have prevented 8 of 10 major 2025 supply-chain attacks; PreFlight should report manifest entries pinning to a package version less than 7 days old as informational.
 
 ### Cross-Cutting Pattern: CI / GitHub Actions Audit (all languages)
 
@@ -4071,7 +4071,7 @@ Per the cross-tool concern in the task brief, MCP servers are a 2026 attack surf
 - MCP `resources` exposed to clients with no path normalization; high (path traversal)
 - MCP server reading `.env` and exposing it as a resource (observed in early MCP demos); critical
 
-### Implementation Guidance for Pre-Flight v0.5+
+### Implementation Guidance for PreFlight v0.5+
 
 1. **Parsing infrastructure.** Use tree-sitter (with browser-compiled WASM grammars) for all 14 languages; already proven for `tree-sitter-python`, `tree-sitter-rust`, `tree-sitter-go`, `tree-sitter-java`, `tree-sitter-kotlin`, `tree-sitter-swift`, `tree-sitter-c-sharp`, `tree-sitter-c`, `tree-sitter-cpp`, `tree-sitter-ruby`, `tree-sitter-php`, `tree-sitter-scala`, `tree-sitter-elixir`, `tree-sitter-dart`. Manifest parsing uses native browser parsers: JSON for npm/Cargo.lock/composer.json, TOML for pyproject/Cargo, YAML for pubspec/mix/GitHub Actions, XML for pom/AndroidManifest/plist.
 
@@ -4083,7 +4083,7 @@ Per the cross-tool concern in the task brief, MCP servers are a 2026 attack surf
 - Placeholder allowlist: exclude obvious placeholder strings inside literals.
 - Repository-shape gating: distinguish "library project" (don't enforce pin-strictness on dependencies) from "application/service project" (do enforce). Heuristic markers: presence of `Dockerfile`, `Procfile`, `wsgi.py`, `manage.py`, `application.properties` server section, `Cargo.toml` `[[bin]]`, `package.json` `"private": true`, `main()` entry point.
 
-4. **IOC list maintenance.** Pre-Flight should bundle a static JSON snapshot at release, plus optionally a feature flag for "fetch latest IOC list from preflight.midatlantic.ai" once per session if the user opts in. Given the no-network-calls constraint, lean on the static snapshot and document the release cadence.
+4. **IOC list maintenance.** PreFlight should bundle a static JSON snapshot at release, plus optionally a feature flag for "fetch latest IOC list from preflight.midatlantic.ai" once per session if the user opts in. Given the no-network-calls constraint, lean on the static snapshot and document the release cadence.
 
 5. **Out-of-scope explicitly:**
 
@@ -4104,9 +4104,9 @@ Per the cross-tool concern in the task brief, MCP servers are a 2026 attack surf
 
 8. **Severity distribution sanity check.** Across the 14 language sections in this document, the rough probe count is: Python (~55), Rust (~45), Go (~42), Java (~45), Kotlin (~40), Swift (~42), C# (~45), C (~40), C++ (~40), Ruby (~45), PHP (~45), Scala (~40), Elixir (~40), Dart (~42). Total enumerated probe candidates: approximately 600. After deduplication via the cross-cutting sections, the maintainer should expect on the order of 500–550 unique language-specific probes and 50–80 cross-cutting probes once v0.5 ships across all 14 languages. For comparison, v0.4 ships 43 probes for JS/TS alone, so per-language probe density in this research is in line.
 
-This concludes the probe-candidate research for Pre-Flight v0.5+. The maintainer should treat this document as a starting research aggregation; each probe entry above is intended as input to a downstream implementation decision (probe yes/no), not as a finished probe specification. Implementation should proceed language-by-language with framework-specific probe expansion as the secondary research pass, following the framework inventory listed at the top of each language section.
+This concludes the probe-candidate research for PreFlight v0.5+. The maintainer should treat this document as a starting research aggregation; each probe entry above is intended as input to a downstream implementation decision (probe yes/no), not as a finished probe specification. Implementation should proceed language-by-language with framework-specific probe expansion as the secondary research pass, following the framework inventory listed at the top of each language section.
 
-## Research compiled May 14, 2026, for Pre-Flight v0.5+ multi-language expansion. Sections above cover Python, Rust, Go, Java, Kotlin, Swift, C#, C, C++, Ruby, PHP, Scala, Elixir, and Dart; each with framework inventory, six probe categories (AI-tool failure patterns, OWASP Top 10:2025 mappings, OWASP LLM Top 10:2025 mappings, language-specific memory/concurrency/resource patterns, supply-chain patterns with 2025–2026 IOC lists, and build/deploy patterns), and cited primary-source incidents. The closing section consolidates cross-cutting probe families (secret detection, slopsquatting defense, GitHub Actions audit, container/deployment, MCP) along with implementation guidance, false-positive management strategy, severity calibration, out-of-scope items, and an estimated total of ~600 probe candidates across the 14 languages plus 50–80 cross-cutting probes. Speculative probes are explicitly marked SPECULATIVE; ambiguous incident attributions use qualifying language per the task brief. Primary sources span OWASP, NIST, CVE/NVD, GitHub Advisory Database, RustSec, PyPI blog, RubyGems blog, dart.dev / pub.dev, Snyk, Socket, Wiz, Datadog Security Labs, Trend Micro, StepSecurity, GitGuardian, Sonatype (2026 State of the Software Supply Chain Report), ReversingLabs, Aikido, OX Security, Mend.io, Trail of Bits, Oversecured, E.V.A. Information Security, Semgrep, and academic research (USENIX 2025 "We Have a Package for You!", arXiv 2407.18760 Maven-Hijack, arXiv 2310.02059 Copilot security study). The document is structured for direct paste into a research aggregation document, with each probe entry following the requested PROBE NAME / LANGUAGE / CATEGORY / FRAMEWORK / SEVERITY / WHAT IT CATCHES / WHY AI GETS THIS WRONG / DETECTION APPROACH / FALSE POSITIVE RISK / REMEDIATION / KNOWN INCIDENTS format.
+## Research compiled May 14, 2026, for PreFlight v0.5+ multi-language expansion. Sections above cover Python, Rust, Go, Java, Kotlin, Swift, C#, C, C++, Ruby, PHP, Scala, Elixir, and Dart; each with framework inventory, six probe categories (AI-tool failure patterns, OWASP Top 10:2025 mappings, OWASP LLM Top 10:2025 mappings, language-specific memory/concurrency/resource patterns, supply-chain patterns with 2025–2026 IOC lists, and build/deploy patterns), and cited primary-source incidents. The closing section consolidates cross-cutting probe families (secret detection, slopsquatting defense, GitHub Actions audit, container/deployment, MCP) along with implementation guidance, false-positive management strategy, severity calibration, out-of-scope items, and an estimated total of ~600 probe candidates across the 14 languages plus 50–80 cross-cutting probes. Speculative probes are explicitly marked SPECULATIVE; ambiguous incident attributions use qualifying language per the task brief. Primary sources span OWASP, NIST, CVE/NVD, GitHub Advisory Database, RustSec, PyPI blog, RubyGems blog, dart.dev / pub.dev, Snyk, Socket, Wiz, Datadog Security Labs, Trend Micro, StepSecurity, GitGuardian, Sonatype (2026 State of the Software Supply Chain Report), ReversingLabs, Aikido, OX Security, Mend.io, Trail of Bits, Oversecured, E.V.A. Information Security, Semgrep, and academic research (USENIX 2025 "We Have a Package for You!", arXiv 2407.18760 Maven-Hijack, arXiv 2310.02059 Copilot security study). The document is structured for direct paste into a research aggregation document, with each probe entry following the requested PROBE NAME / LANGUAGE / CATEGORY / FRAMEWORK / SEVERITY / WHAT IT CATCHES / WHY AI GETS THIS WRONG / DETECTION APPROACH / FALSE POSITIVE RISK / REMEDIATION / KNOWN INCIDENTS format.
 
 ## v0.5 Changelog
 

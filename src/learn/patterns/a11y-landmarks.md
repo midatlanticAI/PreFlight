@@ -57,7 +57,7 @@ Legal exposure is a secondary concern: ADA / Section 508 in the US, EAA in Europ
 
 ## What the failure looks like
 
-Pre-Flight scans rendered HTML for:
+PreFlight scans rendered HTML for:
 
 - Absence of `<header>`, `<nav>`, `<main>`, `<footer>` (or their ARIA-role equivalents) on what appears to be a top-level page.
 - Absence of a skip-to-content link.

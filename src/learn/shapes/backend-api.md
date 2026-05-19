@@ -23,7 +23,7 @@ Backend API.
 
 ## Scanner behavior
 
-Pre-Flight classifies this shape (informational). It does not raise a
+PreFlight classifies this shape (informational). It does not raise a
 shape-specific finding for it, but this is the shape where the
 injection, secret, TLS, and token-verification probes matter most: a
 backend has no UI to hide behind and every request is attacker-shaped.

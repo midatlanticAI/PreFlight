@@ -1,7 +1,7 @@
 // Compliance phase. The locked /goal's final layer: a scan-scope
 // regulatory interpretation mapping (HIPAA / PCI-DSS / GDPR / SOC2)
 // attached at the XL-family level and inherited by adapters, plus
-// education-scope Learn pages for the frameworks Pre-Flight teaches but
+// education-scope Learn pages for the frameworks PreFlight teaches but
 // does NOT scan (FERPA / SOX / FDA / FTC / EU-AI-Act).
 //
 // Load-bearing legal constraints under test:
@@ -11,7 +11,7 @@
 //     indicative) with auditable provenance (ISO last_reviewed), never a
 //     certification
 //   - every framework gets a Learn page that states plainly whether
-//     Pre-Flight scans for it or only teaches it
+//     PreFlight scans for it or only teaches it
 //
 // Reference: docs/v05-research/v05-architecture.md; locked /goal
 //            (scan scope vs education scope).
@@ -126,7 +126,7 @@ describe('compliance: the nine Learn pages exist and are framed correctly', () =
     }
   });
 
-  it('education-only pages state Pre-Flight does NOT scan for them', () => {
+  it('education-only pages state PreFlight does NOT scan for them', () => {
     for (const slug of EDU_PAGES) {
       const body = readFileSync(pagePath(slug), 'utf8');
       expect(body, slug).toMatch(/does not scan for/i);

@@ -7,7 +7,7 @@
 //
 // Voice: reference register, John's first-person in the opener/moat. No
 // marketing prose, no em-dashes, no fear framing. Per the locked
-// positioning rule: Pre-Flight SEARCHES FOR the same things day one and
+// positioning rule: PreFlight SEARCHES FOR the same things day one and
 // day one thousand (coverage is constant; what it FINDS depends on your
 // code). Never imply the tool tiers up. Each tier note names what becomes
 // actionable there and that the rest was already in the report; lower
@@ -68,7 +68,7 @@ function SafetyNote({ children }) {
         borderLeft: `2px solid ${T.accent}`,
       }}
     >
-      <strong style={{ color: T.accent }}>Pre-Flight here:</strong> {children}
+      <strong style={{ color: T.accent }}>PreFlight here:</strong> {children}
     </p>
   );
 }
@@ -144,7 +144,7 @@ const SHARED_L5 = {
     },
   ],
   safety:
-    'You now define what "safe to ship" means for everyone below you. Pre-Flight becomes a gate you wire into other people\'s climb, not a thing you run on yourself.',
+    'You now define what "safe to ship" means for everyone below you. PreFlight becomes a gate you wire into other people\'s climb, not a thing you run on yourself.',
 };
 
 const ROLES = [
@@ -174,7 +174,7 @@ const ROLES = [
         },
       ],
       safety:
-        'Scan your app. You will find more than you expected, and that is the point. You will not be able to hand-fix most of it yet, and you do not need to. Paste the finding back to your AI; it fixes what Pre-Flight caught, even if it takes a few passes, and you verify it is actually gone. Act first on the obvious: secrets, leaked keys, the model API key you pasted into the client. The rest is in the same report, waiting on a better-read version of you.',
+        'Scan your app. You will find more than you expected, and that is the point. You will not be able to hand-fix most of it yet, and you do not need to. Paste the finding back to your AI; it fixes what PreFlight caught, even if it takes a few passes, and you verify it is actually gone. Act first on the obvious: secrets, leaked keys, the model API key you pasted into the client. The rest is in the same report, waiting on a better-read version of you.',
     },
     L2: {
       resources: [
@@ -251,7 +251,7 @@ const ROLES = [
         },
       ],
       safety:
-        'The findings have not changed since your first scan. Your relationship to them has. You now require the gate of others: Pre-Flight in CI/CD as a pre-merge check, block on critical, audit trail public to the team.',
+        'The findings have not changed since your first scan. Your relationship to them has. You now require the gate of others: PreFlight in CI/CD as a pre-merge check, block on critical, audit trail public to the team.',
     },
   },
   {
@@ -359,7 +359,7 @@ const ROLES = [
         },
       ],
       safety:
-        'The coverage has not changed. You now own the front-end security contract (CSP, Subresource Integrity, zero client secrets) and require Pre-Flight as the pre-merge gate for every UI contributor.',
+        'The coverage has not changed. You now own the front-end security contract (CSP, Subresource Integrity, zero client secrets) and require PreFlight as the pre-merge gate for every UI contributor.',
     },
   },
   {
@@ -465,7 +465,7 @@ const ROLES = [
         },
       ],
       safety:
-        'You define the data-handling and authorization invariants for every service. Pre-Flight is the required gate; you own the threshold and the dogfood discipline that keeps it honest.',
+        'You define the data-handling and authorization invariants for every service. PreFlight is the required gate; you own the threshold and the dogfood discipline that keeps it honest.',
     },
   },
   {
@@ -573,13 +573,13 @@ const ROLES = [
         },
       ],
       safety:
-        'Coverage constant. You own the entire threat surface of the slice; Pre-Flight gates it pre-merge and you decide what blocks, because no one else has the whole-slice view.',
+        'Coverage constant. You own the entire threat surface of the slice; PreFlight gates it pre-merge and you decide what blocks, because no one else has the whole-slice view.',
     },
   },
   {
     id: 'security-deploy',
     name: 'Security and Deployment',
-    blurb: 'Pre-Flight is this learner’s professional instrument. No modesty here.',
+    blurb: 'PreFlight is this learner’s professional instrument. No modesty here.',
     L1: {
       resources: [
         {
@@ -602,7 +602,7 @@ const ROLES = [
         },
       ],
       safety:
-        'You are learning to read the finding taxonomy, not to produce clean code yet. Run Pre-Flight on other people’s sample repos and learn what every finding class means. This is your field’s vocabulary; the report is the same one everyone gets.',
+        'You are learning to read the finding taxonomy, not to produce clean code yet. Run PreFlight on other people’s sample repos and learn what every finding class means. This is your field’s vocabulary; the report is the same one everyone gets.',
     },
     L2: {
       resources: [
@@ -626,7 +626,7 @@ const ROLES = [
         },
       ],
       safety:
-        'You should be able to explain every Pre-Flight finding class and reproduce it by hand. The Breakers panel is your practice harness: each adversarial input is a thing you should already know how to type.',
+        'You should be able to explain every PreFlight finding class and reproduce it by hand. The Breakers panel is your practice harness: each adversarial input is a thing you should already know how to type.',
     },
     L3: {
       resources: [
@@ -659,7 +659,7 @@ const ROLES = [
         },
       ],
       safety:
-        'The tool surfaces nothing new at this tier. What changed is that you own the pipeline now. Wiring Pre-Flight into CI as the gate is literally the job: you tune .preflight.yml, set the block threshold, and own the dogfood discipline. It stops being a tool you run and becomes infrastructure you operate.',
+        'The tool surfaces nothing new at this tier. What changed is that you own the pipeline now. Wiring PreFlight into CI as the gate is literally the job: you tune .preflight.yml, set the block threshold, and own the dogfood discipline. It stops being a tool you run and becomes infrastructure you operate.',
     },
     L4: {
       resources: [
@@ -836,11 +836,11 @@ export function FlightSchoolView() {
         link dump.
       </P>
       <P>
-        One thing does not change as you climb: Pre-Flight. It searches for the same things on day
+        One thing does not change as you climb: PreFlight. It searches for the same things on day
         one as on day one thousand. Secrets, auth holes, injection, deserialization, all of it, from
         the first scan. The coverage never narrows or widens by tier. What changes is you, and you
         do not have to be able to fix a finding to act on it. Hand the finding to your AI and it
-        fixes what Pre-Flight caught, sometimes first try, sometimes after a few. Early on your job
+        fixes what PreFlight caught, sometimes first try, sometimes after a few. Early on your job
         is to run the loop and verify the result. Over time you stop needing the loop: you read the
         finding and know the fix, then you apply it yourself, then you write code that does not trip
         it. The map below is not the tool getting deeper. It is you getting deeper, at reading what
@@ -932,7 +932,7 @@ export function FlightSchoolView() {
         }}
       >
         Pair this with The Climb for where each tier sits in the bigger picture, and the Tools page
-        for what to climb with. Everything here is free. Pre-Flight asks for nothing.
+        for what to climb with. Everything here is free. PreFlight asks for nothing.
       </p>
     </section>
   );

@@ -72,7 +72,7 @@ describe('formatJSON', () => {
 describe('formatMarkdown', () => {
   it('contains the headline and risk tier', () => {
     const md = formatMarkdown(sampleResults());
-    expect(md).toMatch(/^# Pre-Flight Security Audit/);
+    expect(md).toMatch(/^# PreFlight Security Audit/);
     // Severity-aware: the fixture has a critical finding, so the tier is
     // CRITICAL regardless of the 65 numeric score (the old code mislabelled
     // this MODERATE, the reverse of the cosmetic-only false alarm).

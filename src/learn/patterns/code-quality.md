@@ -19,7 +19,7 @@ summary: Four signals that correlate with sloppy code paths in production: conso
 
 ## What this is
 
-Four code-quality signals Pre-Flight scans for:
+Four code-quality signals PreFlight scans for:
 
 **`console.log` (and friends) in production code paths.** Console statements left in code:
 
@@ -61,7 +61,7 @@ The console.log finding is slightly different. Leaving `console.log(userToken)` 
 
 ## What the failure looks like
 
-Pre-Flight scans for:
+PreFlight scans for:
 
 - `console.log`, `console.debug`, `console.info`, `console.warn`, `console.error`, `console.trace` in production-source files (not in `src/test/`, not in scripts excluded by the project's preflight-config).
 - Source files over `FILE_SIZE_WARN_LINES` (1500) and `FILE_SIZE_FAIL_LINES` (5000) thresholds.

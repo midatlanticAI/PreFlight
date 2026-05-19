@@ -24,13 +24,13 @@ export function ManifestoView() {
         Manifesto — coming soon.
       </h2>
       <p>
-        The Pre-Flight manifesto explains what "Vibe-Aware" means in practice: why AI-built apps
-        need a different kind of security tooling, how teaching the pattern beats flagging the line,
-        and how the same audit can fit in a browser tab instead of a procurement review.
+        The PreFlight manifesto explains what "Vibe-Aware" means in practice: why AI-built apps need
+        a different kind of security tooling, how teaching the pattern beats flagging the line, and
+        how the same audit can fit in a browser tab instead of a procurement review.
       </p>
       <p style={{ marginTop: 14 }}>
         While that's being written, head over to <strong>Patterns</strong> for the bug shapes
-        Pre-Flight catches, <strong>Field Reports</strong> for the named supply-chain incidents we
+        PreFlight catches, <strong>Field Reports</strong> for the named supply-chain incidents we
         ship threat-intel against, or <strong>Shapes</strong> for the architecture types and the
         hardening checklists that come with each.
       </p>

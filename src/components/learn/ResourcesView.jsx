@@ -51,7 +51,7 @@ const SECTIONS = [
     id: 'security',
     title: 'Application security',
     intro:
-      "The authoritative references behind most of Pre-Flight's probes. Read OWASP first; everything else makes more sense after it.",
+      "The authoritative references behind most of PreFlight's probes. Read OWASP first; everything else makes more sense after it.",
     links: [
       {
         title: 'OWASP Top 10 (2025)',
@@ -76,7 +76,7 @@ const SECTIONS = [
       {
         title: 'MITRE CWE',
         url: 'https://cwe.mitre.org/',
-        note: 'Common Weakness Enumeration. The taxonomy every CVE traces back to. Pre-Flight findings carry CWE IDs that link here.',
+        note: 'Common Weakness Enumeration. The taxonomy every CVE traces back to. PreFlight findings carry CWE IDs that link here.',
       },
       {
         title: 'CISA Cybersecurity Advisories',
@@ -311,7 +311,7 @@ const SECTIONS = [
     id: 'accessibility',
     title: 'Accessibility',
     intro:
-      "15-20% of users need accessibility considerations. The guidelines below are what regulators look at and what assistive tech expects. Pre-Flight's A11y Landmarks probe surfaces a subset.",
+      "15-20% of users need accessibility considerations. The guidelines below are what regulators look at and what assistive tech expects. PreFlight's A11y Landmarks probe surfaces a subset.",
     links: [
       {
         title: 'WCAG 2.2',
@@ -339,7 +339,7 @@ const SECTIONS = [
     id: 'audit',
     title: 'Audit and review',
     intro:
-      'Pre-Flight is one audit surface. The broader practice of code and security review is its own discipline.',
+      'PreFlight is one audit surface. The broader practice of code and security review is its own discipline.',
     links: [
       {
         title: 'OWASP Code Review Guide',
@@ -413,7 +413,7 @@ const SECTIONS = [
     id: 'ai-coding',
     title: 'AI-assisted coding',
     intro:
-      'The audience Pre-Flight is built for. References for using AI coding tools deliberately rather than incidentally.',
+      'The audience PreFlight is built for. References for using AI coding tools deliberately rather than incidentally.',
     links: [
       {
         title: 'Anthropic — Engineering with Claude',
@@ -433,7 +433,7 @@ const SECTIONS = [
       {
         title: 'Model Context Protocol Specification',
         url: 'https://modelcontextprotocol.io/',
-        note: "The MCP spec, the same one Pre-Flight's MCP Security probe references.",
+        note: "The MCP spec, the same one PreFlight's MCP Security probe references.",
       },
     ],
   },

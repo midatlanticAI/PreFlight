@@ -10,7 +10,7 @@ sources:
     url: https://www.ecfr.gov/current/title-45/section-164.312
   - title: HHS — HIPAA Security Rule guidance
     url: https://www.hhs.gov/hipaa/for-professionals/security/index.html
-summary: HIPAA's Security Rule sets technical safeguards for electronic protected health information. Some of those safeguards are visible in source code. Pre-Flight maps a subset of its probes to specific 45 CFR 164.312 clauses as an interpretation layer, never a certification.
+summary: HIPAA's Security Rule sets technical safeguards for electronic protected health information. Some of those safeguards are visible in source code. PreFlight maps a subset of its probes to specific 45 CFR 164.312 clauses as an interpretation layer, never a certification.
 ---
 
 ## What this is
@@ -28,9 +28,9 @@ moment it touches real ePHI. AI scaffolding optimises for "runs locally,"
 not for the encryption and authentication 164.312 expects. The gap is
 usually invisible until an auditor or a breach makes it visible.
 
-## What Pre-Flight does and does not do here
+## What PreFlight does and does not do here
 
-Pre-Flight is in scan scope for HIPAA technical safeguards that are
+PreFlight is in scan scope for HIPAA technical safeguards that are
 code-detectable. The v0.5 probe families carry an interpretation layer
 mapping a finding to a clause:
 
@@ -43,7 +43,7 @@ mapping a finding to a clause:
   references: the pattern is associated with the clause but a human must
   judge whether the data in scope is ePHI.
 
-Pre-Flight does not certify HIPAA compliance. It surfaces a code pattern
+PreFlight does not certify HIPAA compliance. It surfaces a code pattern
 and the clause a reviewer should think about. The administrative and
 physical safeguards, risk analysis, and Business Associate Agreements
 that HIPAA also requires are out of scan scope entirely.
@@ -52,11 +52,11 @@ that HIPAA also requires are out of scan scope entirely.
 
 Encryption of ePHI in transit and at rest, unique user identification,
 authentication that actually verifies identity, audit controls, and an
-integrity mechanism. An `indicative` Pre-Flight finding is a prompt to
+integrity mechanism. An `indicative` PreFlight finding is a prompt to
 check one of these, not a verdict.
 
 ## Not legal advice
 
-This page explains how Pre-Flight relates its findings to HIPAA clause
+This page explains how PreFlight relates its findings to HIPAA clause
 text. It is not legal advice and not a compliance attestation. Confirm
 scope and obligations with qualified counsel.

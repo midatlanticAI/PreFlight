@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Pre-Flight are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [SemVer](https://semver.org/).
+All notable changes to PreFlight are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [SemVer](https://semver.org/).
 
 The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai) tracks the `main` branch — every merged commit ships through Cloudflare Pages auto-deploy within minutes.
 

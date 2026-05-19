@@ -22,7 +22,7 @@ import {
   validateKeyShape,
 } from '../../lib/ai.js';
 
-const COPY = `Pre-Flight can ask an AI model to look at a specific finding and tell you whether it's a real issue or a false positive. This is opt-in and uses your own API key (called BYOK — Bring Your Own Key), which means three things: (1) your key never touches our server because there is no server, (2) you control your own usage and billing directly with the provider, (3) you can revoke access by deleting the key from this panel, no account to cancel.
+const COPY = `PreFlight can ask an AI model to look at a specific finding and tell you whether it's a real issue or a false positive. This is opt-in and uses your own API key (called BYOK — Bring Your Own Key), which means three things: (1) your key never touches our server because there is no server, (2) you control your own usage and billing directly with the provider, (3) you can revoke access by deleting the key from this panel, no account to cancel.
 
 What gets sent to the AI: the finding details (probe, file path, severity), about ten lines of code context, and a request to verify. Your full source code is never sent. The provider you choose has its own data retention policy — review it before pasting your key.`;
 

@@ -47,7 +47,7 @@ OWASP LLM08 covers both as the vector-and-embedding-weakness family. The blast r
 
 ## What the failure looks like
 
-Pre-Flight scans for vector-store similarity queries (`pinecone.query`, `weaviate.search`, `qdrant.search`, `chroma.query`, `milvus.search`, `pgvector` queries, `vectorStore.similaritySearch`, generic `.topK`) where the surrounding code contains neither:
+PreFlight scans for vector-store similarity queries (`pinecone.query`, `weaviate.search`, `qdrant.search`, `chroma.query`, `milvus.search`, `pgvector` queries, `vectorStore.similaritySearch`, generic `.topK`) where the surrounding code contains neither:
 
 - A namespace, filter, where-clause, or tenant/org/user-ID reference in the query.
 - A user-context variable indicating the caller's scope.

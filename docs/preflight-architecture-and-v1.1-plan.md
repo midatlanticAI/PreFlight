@@ -1,6 +1,6 @@
-# Pre-Flight: Complete Architecture, Methods, and v1.1 Plan
+# PreFlight: Complete Architecture, Methods, and v1.1 Plan
 
-> Purpose: a single document that briefs an LLM reviewer (or a new human contributor) on every load-bearing aspect of Pre-Flight in its current shipped form, plus the v1.1 roadmap that brings the four Persona+ agents (Sam, Demi, Drew, Vera) into production surfaces. After reading this, a reviewer should be able to give detailed feedback on the system without needing to scan every file.
+> Purpose: a single document that briefs an LLM reviewer (or a new human contributor) on every load-bearing aspect of PreFlight in its current shipped form, plus the v1.1 roadmap that brings the four Persona+ agents (Sam, Demi, Drew, Vera) into production surfaces. After reading this, a reviewer should be able to give detailed feedback on the system without needing to scan every file.
 >
 > Snapshot: 2026-05-12, post-V1 release. 33 probes. 9 BYOK providers. 4 personas defined; 1 wired surface (Copy Agent Prompt → Sam SNIPPET). 573 tests across 21 files, lint clean, dogfood scan returns 0 findings.
 
@@ -45,9 +45,9 @@
 
 ## 1. Product orientation
 
-Pre-Flight is a free, in-browser static security audit tool for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code, v0, GitHub Copilot, and the general "vibe coding" surface). It accepts source as either (a) files / a folder selected via the browser File API or (b) a public GitHub URL fetched directly to the browser. It runs 33 pure-function probes against the content, emits findings with severity / CWE / file:line / evidence / remediation, aggregates them into a 0-to-100 score with a risk tier, and renders an interactive dashboard.
+PreFlight is a free, in-browser static security audit tool for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code, v0, GitHub Copilot, and the general "vibe coding" surface). It accepts source as either (a) files / a folder selected via the browser File API or (b) a public GitHub URL fetched directly to the browser. It runs 33 pure-function probes against the content, emits findings with severity / CWE / file:line / evidence / remediation, aggregates them into a 0-to-100 score with a risk tier, and renders an interactive dashboard.
 
-Pre-Flight is published by Mid-Atlantic AI. Live at preflight.midatlantic.ai. Code MIT, threat-intel manifest CC-BY-4.0. No signup, no backend, no analytics beacons. The privacy invariant ("nothing leaves your machine") is enforced by architecture, not policy: there is no server in the loop.
+PreFlight is published by Mid-Atlantic AI. Live at preflight.midatlantic.ai. Code MIT, threat-intel manifest CC-BY-4.0. No signup, no backend, no analytics beacons. The privacy invariant ("nothing leaves your machine") is enforced by architecture, not policy: there is no server in the loop.
 
 The audience is the vibe-coding practitioner who is unlikely to be running a SAST suite or paying for a security platform. The tool is designed for them specifically: low friction to first scan, plain-English explanations, defensive framing ("detect missing defenses") rather than attack inventory framing.
 
@@ -206,7 +206,7 @@ Common probe contract:
 - Output: an array of finding objects. Each finding has `{ id, probe, title, severity, category, cwe, file, line, evidence, remediation }` at minimum. Some probes attach a `snippet` reference; most do not (the snippet is computed centrally in the pipeline).
 - Determinism: same files in, same findings out.
 - Idempotency: probes never mutate input.
-- Self-source exclusion: every probe checks `isScannerSelfSource(file.path)` to avoid flagging Pre-Flight's own source as a vulnerability when Pre-Flight scans itself (the dogfood test).
+- Self-source exclusion: every probe checks `isScannerSelfSource(file.path)` to avoid flagging PreFlight's own source as a vulnerability when PreFlight scans itself (the dogfood test).
 - Test-file exclusion: pattern-matching probes (Secret Scanner, Auth Weakness, etc.) check `isTestFile(file.path)` to avoid flagging deliberate test fixtures.
 
 Most probes are regex + structural inspection. Two are different:
@@ -239,7 +239,7 @@ Manifest license: CC-BY-4.0 (see `LICENSE-DATA`). Code license: MIT (`LICENSE`).
 - `FILE_EXCLUDE`: regex array for paths that never go to scanning (node_modules, dist, .git, lock files, binary assets).
 - `shouldScanFile(path)`: gate function used by the pipeline.
 - `isTestFile(path)`: matches paths in `__tests__/`, `test/`, `tests/`, files ending `.test.{js,ts,jsx,tsx,mjs,cjs}` or `.spec.*`. Used inside pattern-matching probes to skip deliberate test fixtures.
-- `isScannerSelfSource(path)`: matches Pre-Flight's own source paths (so dogfooding doesn't surface Pre-Flight's threat-intel manifests as "leaked secrets," etc.).
+- `isScannerSelfSource(path)`: matches PreFlight's own source paths (so dogfooding doesn't surface PreFlight's threat-intel manifests as "leaked secrets," etc.).
 - `isMetaDocFile(path)`: README, CHANGELOG, license, docs/ markdown; loosened probe behavior on these paths because docs legitimately contain example secrets-shaped strings.
 
 Note: probes call these helpers themselves rather than the pipeline pre-filtering files. That design lets each probe decide per-file-type whether to apply. The cost is each probe must remember to call the helpers; the dogfood-scan test catches regressions where a new probe forgets to exclude self-source.
@@ -404,7 +404,7 @@ Privacy: the user's key is read from localStorage and sent only to the provider 
 
 User clicks "Explain & Verify" on a finding card. The flow:
 
-1. Pre-Flight checks `hasAIConfig()`. If none, surface a CTA to Settings → Explain & Verify.
+1. PreFlight checks `hasAIConfig()`. If none, surface a CTA to Settings → Explain & Verify.
 2. `buildExplainVerifyMessages(finding)` constructs `{ system, user }`. The system prompt is a senior application-security-reviewer persona (inline-written today; v1.1 may swap in a dedicated verifier persona). The user message contains the finding metadata + the ±5-line code snippet (NEVER the full file).
 3. `explainAndVerify(finding, onChunk, signal)` calls `callAI` and streams. The streamed text renders progressively in the FindingCard's AI panel.
 4. Output contract: "Explain" (2-4 sentences plain English) + "Verify" (LIKELY TRUE POSITIVE | LIKELY FALSE POSITIVE | INSUFFICIENT CONTEXT) + 1-2 sentence justification. Under 200 words total.
@@ -414,10 +414,10 @@ Privacy invariant: only the snippet leaves; never the rest of the codebase. This
 
 ## 18. Learn content system
 
-Pre-Flight ships a Learn surface that hosts educational content under `/learn`. Three content types plus a manifesto:
+PreFlight ships a Learn surface that hosts educational content under `/learn`. Three content types plus a manifesto:
 
 - **Manifesto** (`src/learn/manifesto.md`): the "Vibe-Aware" positioning document.
-- **Pattern** (`src/learn/patterns/*.md`): one per Pre-Flight probe. Six-section skeleton: What this is / Why it matters / What the failure looks like / What the fix looks like / Related / Sources. Currently published: `package-json-supply-chain`. Drafts: `auth-weakness`, `next-public-misuse`, `secret-scanner`, `supabase-rls`.
+- **Pattern** (`src/learn/patterns/*.md`): one per PreFlight probe. Six-section skeleton: What this is / Why it matters / What the failure looks like / What the fix looks like / Related / Sources. Currently published: `package-json-supply-chain`. Drafts: `auth-weakness`, `next-public-misuse`, `secret-scanner`, `supabase-rls`.
 - **Field Report** (`src/learn/incidents/*.md`): incident write-ups with CVE / CVSS / campaign / threat-actor / attack-date metadata. Currently published: `mini-shai-hulud-tanstack-2026-05`. Drafts: `mini-shai-hulud-sap-npm-2026-04`, `intercom-client-bitwarden-cli-2026-04`, `sapphire-sleet-axios-2026-03`.
 - **Shape** (`src/learn/shapes/*.md`): architectural pattern explainers, one per detected project type. Files exist for `monolithic-spa`, `monorepo`, `static-html-build`.
 
@@ -500,7 +500,7 @@ Wired surfaces today: Sam SNIPPET → `formatAgentPrompt`. The remaining surface
 Layout:
 
 - Single-column responsive layout, max-width capped around 1100px for readability.
-- Header: italic-orange "Pre-Flight" wordmark, "BY MID-ATLANTIC AI" eyebrow tag, Nav links to Home / Learn / Settings.
+- Header: italic-orange "PreFlight" wordmark, "BY MID-ATLANTIC AI" eyebrow tag, Nav links to Home / Learn / Settings.
 - Hero (home only): "An educational audit tool for vibers building vibeware." + a lede + the privacy promise.
 - Audit input: tabbed between GitHub URL and Files modes. URL input has autocomplete from history with full ARIA combobox semantics. Files mode supports folder selection on browsers that allow it.
 - Results: score gauge, severity distribution chart, category breakdown, finding list with per-card actions (expand, suppress, copy, Explain & Verify).
@@ -524,7 +524,7 @@ Design language:
 - ARIA combobox / listbox semantics on the URL autocomplete dropdown.
 - ARIA dialog with focus trap on the Diagnostics drawer.
 - Screen-reader tested with NVDA.
-- A11y Landmarks probe (#30) means Pre-Flight checks itself for landmark coverage at scan time.
+- A11y Landmarks probe (#30) means PreFlight checks itself for landmark coverage at scan time.
 
 ## 22. Theme and typography
 
@@ -576,32 +576,32 @@ The privacy invariant: nothing leaves the browser. The Diagnostics panel surface
 
 Test files (21 total, 573 tests):
 
-| File                                                          | Tests    | Coverage                                                              |
-| ------------------------------------------------------------- | -------- | --------------------------------------------------------------------- |
-| `probes.test.js`                                              | 144      | Functional coverage per probe                                         |
-| `adversarial-coverage.test.js`                                | 111      | Bypass / FP / gap fixtures across all 33 probes                       |
-| `formatters.test.js`                                          | 16       | JSON / Markdown / PR-comment / Agent prompt + history diff            |
-| `personas.test.js`                                            | 51       | Persona+ invariants + Sam-into-formatAgentPrompt cross-surface        |
-| `scoring.test.js`                                             | 32       | Severity weighting and risk tiers                                     |
-| `code-correctness.test.js`                                    | 24       | AST probe — every node-type case                                      |
-| `settings.test.js`                                            | (varies) | Settings page + tabs                                                  |
-| `learn-content.test.js`                                       | (varies) | Frontmatter parsing + draft handling                                  |
-| `preflight-config.test.js`                                    | (varies) | Config schema + suppression rules                                     |
-| `history.test.js`, `suppression.test.js`, `stable-id.test.js` | (varies) | localStorage state + IDs                                              |
-| `snippet.test.js`, `file-filter.test.js`                      | (varies) | Pure helpers                                                          |
-| `logger.test.js`, `analytics.test.js`                         | (varies) | Logger circular + counter privacy                                     |
-| `ai.test.js`                                                  | (varies) | Provider config + dispatcher (mocked fetch)                           |
-| `github.test.js`                                              | (varies) | Repo URL parsing + fetch flow                                         |
-| `threat-intel.test.js`                                        | (varies) | Manifest shape + regex correctness                                    |
-| `no-floating-buttons.test.js`                                 | (varies) | Regression guard — no orphaned diagnostic UI                          |
-| `dogfood-scan.test.js`, `self-audit.test.js`                  | (varies) | Pre-Flight scans itself; required to produce 0 critical/high findings |
+| File                                                          | Tests    | Coverage                                                             |
+| ------------------------------------------------------------- | -------- | -------------------------------------------------------------------- |
+| `probes.test.js`                                              | 144      | Functional coverage per probe                                        |
+| `adversarial-coverage.test.js`                                | 111      | Bypass / FP / gap fixtures across all 33 probes                      |
+| `formatters.test.js`                                          | 16       | JSON / Markdown / PR-comment / Agent prompt + history diff           |
+| `personas.test.js`                                            | 51       | Persona+ invariants + Sam-into-formatAgentPrompt cross-surface       |
+| `scoring.test.js`                                             | 32       | Severity weighting and risk tiers                                    |
+| `code-correctness.test.js`                                    | 24       | AST probe — every node-type case                                     |
+| `settings.test.js`                                            | (varies) | Settings page + tabs                                                 |
+| `learn-content.test.js`                                       | (varies) | Frontmatter parsing + draft handling                                 |
+| `preflight-config.test.js`                                    | (varies) | Config schema + suppression rules                                    |
+| `history.test.js`, `suppression.test.js`, `stable-id.test.js` | (varies) | localStorage state + IDs                                             |
+| `snippet.test.js`, `file-filter.test.js`                      | (varies) | Pure helpers                                                         |
+| `logger.test.js`, `analytics.test.js`                         | (varies) | Logger circular + counter privacy                                    |
+| `ai.test.js`                                                  | (varies) | Provider config + dispatcher (mocked fetch)                          |
+| `github.test.js`                                              | (varies) | Repo URL parsing + fetch flow                                        |
+| `threat-intel.test.js`                                        | (varies) | Manifest shape + regex correctness                                   |
+| `no-floating-buttons.test.js`                                 | (varies) | Regression guard — no orphaned diagnostic UI                         |
+| `dogfood-scan.test.js`, `self-audit.test.js`                  | (varies) | PreFlight scans itself; required to produce 0 critical/high findings |
 
 Testing philosophy:
 
 - **Pure-function bias.** Probes, formatters, scoring, snippets, stable-id, suppression, preflight-config, history, learn-content, file-filter, scoring, snippet, theme — all pure modules with no React dependencies. Tests are fast (~3s for the full 573-test suite).
 - **Functional vs adversarial.** `probes.test.js` tests "does the probe fire on a clear hit?" `adversarial-coverage.test.js` tests "does the probe survive bypass attempts and avoid false positives?" The two suites are complementary, not redundant.
 - **Adversarial gaps via `it.fails()`.** Known coverage holes ship as `it.fails()` blocks: the test passes silently while the probe misses the input, fails loudly the moment a probe improvement catches it. Self-cleaning todo list.
-- **Dogfood as CI gate.** `npm run test:self-audit` scans Pre-Flight's own dist/. CI fails if Pre-Flight doesn't pass its own audit.
+- **Dogfood as CI gate.** `npm run test:self-audit` scans PreFlight's own dist/. CI fails if PreFlight doesn't pass its own audit.
 - **No mocks where the real thing fits.** localStorage uses jsdom's real implementation; the probes scan real fixture content; only network calls (`fetch`) are mocked.
 
 ## 27. Build, lint, format
@@ -625,7 +625,7 @@ Prettier: prose-wrap preserve, single-quotes, no trailing commas in JS (handled 
 
 ## 28. Privacy contract
 
-The privacy invariant that Pre-Flight commits to in user-facing copy:
+The privacy invariant that PreFlight commits to in user-facing copy:
 
 > All scanning runs locally in browser and is only saved in your browser. It never goes anywhere else, ever.
 
@@ -647,7 +647,7 @@ Tracked on the task list:
 - **#47 / #48**: original adversarial test suite (subsumed by the V1-full task #58 internal adversarial harness; tasks marked complete in spirit).
 - **#61** v0.5: defensive coverage extension (33 → 43 probes), OWASP-framed. Most are probe-tightening of the gaps the adversarial harness flagged.
 - **#62** v0.5: OWASP-alignment positioning copy.
-- **#63** Breakers v1: Proof of Reachability + Adversarial Input Display, on the `feature/breakers-v1` branch. User-facing adversarial testing (different from the internal adversarial test suite that validates Pre-Flight's own probes).
+- **#63** Breakers v1: Proof of Reachability + Adversarial Input Display, on the `feature/breakers-v1` branch. User-facing adversarial testing (different from the internal adversarial test suite that validates PreFlight's own probes).
 
 Other known issues:
 
@@ -671,7 +671,7 @@ The defining property of v1.1 is that every persona has at least one live invoca
 | Channel    | BYOK (any of the nine providers)                                             |
 | New code   | `src/lib/ai.js#applyFix`, `src/components/ApplyFixButton.jsx`, diff renderer |
 
-User clicks "Apply Fix" on a finding. Pre-Flight reads the full file content from the scan state and constructs a `SAM_COMMAND_FULL` task. Output: unified diff (rendered in a viewer; user copies or downloads as `.patch`) OR `FIX_NOT_TRIVIAL` plus rationale (renders with a suggestion to use Copy Agent Prompt instead, which the user pastes into a tool with full filesystem access).
+User clicks "Apply Fix" on a finding. PreFlight reads the full file content from the scan state and constructs a `SAM_COMMAND_FULL` task. Output: unified diff (rendered in a viewer; user copies or downloads as `.patch`) OR `FIX_NOT_TRIVIAL` plus rationale (renders with a suggestion to use Copy Agent Prompt instead, which the user pastes into a tool with full filesystem access).
 
 ### 30.2 Copy Agent Prompt (Sam SNIPPET) — already shipped
 
@@ -727,7 +727,7 @@ components:
   banned_imports: ['react-icons']
 ```
 
-Drew gets invoked per scanned HTML / JSX / TSX / CSS file. Output (violation reports or NO_VIOLATIONS / NO_APPLICABLE_RULES / INSUFFICIENT_CONTEXT) is normalized into Pre-Flight findings with `probe: 'Design Rules'`.
+Drew gets invoked per scanned HTML / JSX / TSX / CSS file. Output (violation reports or NO_VIOLATIONS / NO_APPLICABLE_RULES / INSUFFICIENT_CONTEXT) is normalized into PreFlight findings with `probe: 'Design Rules'`.
 
 ### 30.6 Vera engineering-rules probe
 
@@ -989,7 +989,7 @@ If a reviewer wants to spot-check claims in this doc, the load-bearing files are
 | Logger                 | `src/lib/logger.js`                                            |
 | Analytics              | `src/lib/analytics.js`                                         |
 | Suppression            | `src/lib/suppression.js`                                       |
-| Pre-Flight config      | `src/lib/preflight-config.js`                                  |
+| PreFlight config       | `src/lib/preflight-config.js`                                  |
 | Formatters             | `src/lib/formatters.js`                                        |
 | Error boundary         | `src/ErrorBoundary.jsx`                                        |
 | Dogfood                | `src/test/dogfood-scan.test.js`, `src/test/self-audit.test.js` |

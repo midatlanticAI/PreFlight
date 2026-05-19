@@ -10,7 +10,7 @@ sources:
     url: https://www.ftc.gov/legal-library/browse/statutes/federal-trade-commission-act
   - title: FTC Safeguards Rule (16 CFR Part 314)
     url: https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-314
-summary: The FTC enforces against deceptive data practices and, for financial institutions, the Safeguards Rule. Liability turns on representations and an overall security program, not a code line. Pre-Flight teaches this area but does not scan for it.
+summary: The FTC enforces against deceptive data practices and, for financial institutions, the Safeguards Rule. Liability turns on representations and an overall security program, not a code line. PreFlight teaches this area but does not scan for it.
 ---
 
 ## What this is
@@ -27,14 +27,14 @@ security promise in marketing copy that the implementation does not
 keep. "Bank-grade encryption" on a site that disables TLS verification
 is the textbook example.
 
-## Why Pre-Flight does not scan for FTC obligations
+## Why PreFlight does not scan for FTC obligations
 
 FTC exposure depends on what a company claims, its overall written
 security program, and reasonableness in context. Those are not code
-properties. Pre-Flight maps no probe to the FTC Act or the Safeguards
+properties. PreFlight maps no probe to the FTC Act or the Safeguards
 Rule.
 
-What Pre-Flight can do is show whether the security reality matches the
+What PreFlight can do is show whether the security reality matches the
 claim: a disabled TLS check or a hardcoded key is a security finding
 that may make a public security promise untrue. The finding is labelled
 as security, and the gap to the marketing claim is a judgement for the

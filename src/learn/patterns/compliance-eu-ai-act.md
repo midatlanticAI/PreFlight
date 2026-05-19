@@ -10,7 +10,7 @@ sources:
     url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R1689
   - title: European Commission — AI Act overview
     url: https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai
-summary: The EU AI Act regulates AI systems by risk tier, with obligations around data governance, transparency, human oversight, and risk management. Conformance is a system-level and documentation question, not a code pattern. Pre-Flight teaches the AI Act but does not scan for it.
+summary: The EU AI Act regulates AI systems by risk tier, with obligations around data governance, transparency, human oversight, and risk management. Conformance is a system-level and documentation question, not a code pattern. PreFlight teaches the AI Act but does not scan for it.
 ---
 
 ## What this is
@@ -27,14 +27,14 @@ first. A high-risk classification brings a substantial documentation and
 oversight burden that is mostly organisational, decided long before any
 single source file.
 
-## Why Pre-Flight does not scan for the AI Act
+## Why PreFlight does not scan for the AI Act
 
 AI Act conformance depends on intended purpose, risk classification,
 data governance practices, and a conformity assessment. A static code
 scan cannot determine a system's risk tier or evaluate a risk-management
-process, so Pre-Flight maps no probe to the AI Act.
+process, so PreFlight maps no probe to the AI Act.
 
-The general security and prompt-handling probes Pre-Flight does run are
+The general security and prompt-handling probes PreFlight does run are
 relevant engineering hygiene for any AI system, but they are security
 and quality findings, not AI Act conclusions, and the tool does not
 present them as such.

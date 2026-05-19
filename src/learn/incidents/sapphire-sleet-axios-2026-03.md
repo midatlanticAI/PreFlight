@@ -77,7 +77,7 @@ The teams that came out of the incident cleanly were not the ones with the most 
 
 ## What to do differently
 
-Three concrete settings, all of which Pre-Flight checks for via its [Package Manager Hardening](/learn/patterns/package-json-supply-chain) probe.
+Three concrete settings, all of which PreFlight checks for via its [Package Manager Hardening](/learn/patterns/package-json-supply-chain) probe.
 
 **Set `min-release-age` to seven days in CI.** In `.npmrc`:
 

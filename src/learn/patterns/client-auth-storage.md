@@ -42,7 +42,7 @@ The variant most often seen in vibe-built apps: the login response sets a JWT in
 
 ## What the failure looks like
 
-Pre-Flight scans for:
+PreFlight scans for:
 
 ```ts
 localStorage.setItem('jwt', ...)

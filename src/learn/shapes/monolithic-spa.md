@@ -25,7 +25,7 @@ reports the exact line count it saw.
 
 ## Scanner behavior
 
-Pre-Flight flags this shape: the Architecture probe raises a
+PreFlight flags this shape: the Architecture probe raises a
 low-severity finding with the largest file's exact line count. It is one
 of the four shapes the scanner acts on rather than only classifying,
 because past a certain size the shape actively hides other findings.

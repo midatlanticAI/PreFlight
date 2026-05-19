@@ -65,7 +65,7 @@ The correct sequence:
 5. **Audit recent activity for each revoked token.** Look for npm publishes, GitHub Actions runs, repository writes, cloud API calls. The malware uses stolen tokens to propagate; you may find malicious activity authored by your own credentials.
 6. **Rebuild the machine.** Do not attempt to clean it in place. The malware writes persistence into `.claude/`, `.vscode/`, LaunchAgent or systemd unit files, and modifies shell config files. Full wipe.
 
-Pre-Flight's **Malicious Artifacts** probe scans for the on-disk indicators this malware leaves behind. Run it against your home directory if you suspect infection. The list of indicators is at the bottom of this report.
+PreFlight's **Malicious Artifacts** probe scans for the on-disk indicators this malware leaves behind. Run it against your home directory if you suspect infection. The list of indicators is at the bottom of this report.
 
 ## How the attack worked
 
@@ -166,6 +166,6 @@ Three takeaways that generalize past this specific incident.
 
 - `voicproducoes` (publishes repos named "A Mini Shai-Hulud has Appeared", likely compromised account)
 
-The Pre-Flight **Compromised Packages** probe will flag any installation of affected `@tanstack/*`, `@uipath/*`, `@mistralai/*`, `guardrails-ai`, or other listed package versions. The **Malicious Artifacts** probe will detect the on-disk persistence files. For the network IOCs, block at your DNS provider or corporate proxy. Pre-Flight cannot make network reachability decisions for you.
+The PreFlight **Compromised Packages** probe will flag any installation of affected `@tanstack/*`, `@uipath/*`, `@mistralai/*`, `guardrails-ai`, or other listed package versions. The **Malicious Artifacts** probe will detect the on-disk persistence files. For the network IOCs, block at your DNS provider or corporate proxy. PreFlight cannot make network reachability decisions for you.
 
 If your machine triggered findings in either probe, return to the top of this report and follow the operational sequence.

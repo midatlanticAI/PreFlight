@@ -28,7 +28,7 @@ export function SettingsPage() {
     <div className="ap-fade-in">
       <header style={{ marginBottom: 20 }}>
         <div className="ap-eyebrow" style={{ marginBottom: 8 }}>
-          PRE-FLIGHT SETTINGS
+          PREFLIGHT SETTINGS
         </div>
         <h1
           className="ap-display"
@@ -40,10 +40,10 @@ export function SettingsPage() {
             letterSpacing: '-0.01em',
           }}
         >
-          Configure Pre-Flight.
+          Configure PreFlight.
         </h1>
         <p style={{ fontSize: 14, color: T.textDim, lineHeight: 1.7, margin: 0, maxWidth: 720 }}>
-          Everything Pre-Flight knows about you lives in this browser tab. These panels are the one
+          Everything PreFlight knows about you lives in this browser tab. These panels are the one
           place to wire up optional features (AI Explain &amp; Verify, private GitHub repos),
           inspect the live log buffer, or wipe the slate.
         </p>

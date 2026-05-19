@@ -23,7 +23,7 @@ Storybook, or a `package.json` with `exports`/`main` and no
 
 ## Scanner behavior
 
-Pre-Flight classifies this shape (informational). It does not raise a
+PreFlight classifies this shape (informational). It does not raise a
 shape-specific finding for it; the language and supply-chain probes run
 on the source.
 

@@ -51,7 +51,7 @@ Three reasons. None of them new; all of them amplified.
 
 **SAP CAP packages are enterprise-targeted, which means slow rotation cadence.** A developer working on an SAP CAP application is typically inside an enterprise procurement cycle. Dependency upgrades go through approval, testing, and release windows that measure in weeks or months. Many CAP shops were running on `^1.0` style ranges that auto-bumped to the malicious version the moment it was published, because the next dependency-audit cycle was not scheduled for another sprint.
 
-**The postinstall persistence pattern was new to this campaign.** Prior worms (including the original Shai-Hulud of September 2025) limited persistence to in-memory or session-scoped artifacts. TeamPCP introduced a disk-persistence trick: the worm wrote a JavaScript loader to `.claude/router_runtime.js`, `.claude/setup.mjs`, and `.vscode/setup.mjs`. Those files are sometimes auto-loaded by AI coding assistants and IDE extensions, which means the worm got a second execution chance even after the developer uninstalled the original package. The May 2026 TanStack wave reused this pattern at scale; Pre-Flight's [Malicious Artifacts probe](/learn/patterns/package-json-supply-chain) keys on the same drop-file paths.
+**The postinstall persistence pattern was new to this campaign.** Prior worms (including the original Shai-Hulud of September 2025) limited persistence to in-memory or session-scoped artifacts. TeamPCP introduced a disk-persistence trick: the worm wrote a JavaScript loader to `.claude/router_runtime.js`, `.claude/setup.mjs`, and `.vscode/setup.mjs`. Those files are sometimes auto-loaded by AI coding assistants and IDE extensions, which means the worm got a second execution chance even after the developer uninstalled the original package. The May 2026 TanStack wave reused this pattern at scale; PreFlight's [Malicious Artifacts probe](/learn/patterns/package-json-supply-chain) keys on the same drop-file paths.
 
 **Credential scope was wider than the developer expected.** A "GitHub PAT for CI" with `repo` scope can read every private repository the developer has access to. A `service_role` Supabase key in `.env.local` is the entire database to the holder. A Stripe `sk_live_` is production charge access. The worm did not need to escalate; it just needed to find the credential and walk away with it. The enterprise SAP context meant the credentials it found were often production-grade and broadly-scoped.
 
@@ -60,7 +60,7 @@ Three reasons. None of them new; all of them amplified.
 npm pulled the affected packages within hours of the first credible report. SAP's CAP team posted a security advisory the same day. Affected teams' response playbook, in order:
 
 1. **Lockfile audit.** Search every project for the affected packages and versions. `grep -RE '@cap-js/(sqlite|db-service)' .` plus a check of installed versions against the named-malicious list.
-2. **Forensic check for the persistence drops.** Look for `.claude/router_runtime.js`, `.claude/setup.mjs`, `.vscode/setup.mjs`, `tanstack_runner.js`, and `router_init.js` on every developer machine and CI runner. The presence of any of those files is a compromise indicator. Pre-Flight's [Malicious Artifacts probe](/learn/patterns/package-json-supply-chain) scans for these specifically.
+2. **Forensic check for the persistence drops.** Look for `.claude/router_runtime.js`, `.claude/setup.mjs`, `.vscode/setup.mjs`, `tanstack_runner.js`, and `router_init.js` on every developer machine and CI runner. The presence of any of those files is a compromise indicator. PreFlight's [Malicious Artifacts probe](/learn/patterns/package-json-supply-chain) scans for these specifically.
 3. **Credential rotation across the full footprint.** GitHub PATs (every developer; the worm took the org-wide scope), npm tokens, HANA service-user credentials, every secret in `.env*`, every cloud-provider credential cached on an affected host. The shorter version: anything a process running as the developer's user could read should be treated as exfiltrated.
 4. **Repo audit for unauthorized pushes.** The stolen GitHub tokens were used in some cases to push new commits to the developer's repositories. A spike in pushes from the developer's account during the April 29-30 window was a hard indicator. Affected teams reverted unauthorized commits and force-revoked the tokens before merging legitimate work.
 5. **CI runner reimage.** The persistence drops survived `npm uninstall`. The cleanest remediation for CI runners was to rebuild the runner image from a known-good base and re-secret it.
@@ -71,7 +71,7 @@ The teams that came through with the least disruption had two things in common: 
 
 The remediation list is identical to the [Sapphire Sleet incident](/learn/incidents/sapphire-sleet-axios-2026-03), with one addition specific to this campaign.
 
-**Audit for the persistence drop files on every machine.** The worm writes itself to disk locations that are not under `node_modules`. A normal `rm -rf node_modules && npm install` does not clean it up. Pre-Flight's Malicious Artifacts probe catches:
+**Audit for the persistence drop files on every machine.** The worm writes itself to disk locations that are not under `node_modules`. A normal `rm -rf node_modules && npm install` does not clean it up. PreFlight's Malicious Artifacts probe catches:
 
 ```
 .claude/router_runtime.js
@@ -93,7 +93,7 @@ com.user.gh-token-monitor # the LaunchAgent / systemd unit identifier
 
 A `grep -RE 'filev2\.getsession\.org|__DAEMONIZED|gh-token-monitor' ~` returning any hit means the host was compromised. Treat accordingly.
 
-**The other two motions are the same as Sapphire Sleet.** Cooldown (`min-release-age=604800`) plus script-blocking (`ignore-scripts=true`) on CI. Pre-Flight's [Package Manager Hardening probe](/learn/patterns/package-json-supply-chain) flags missing entries for both.
+**The other two motions are the same as Sapphire Sleet.** Cooldown (`min-release-age=604800`) plus script-blocking (`ignore-scripts=true`) on CI. PreFlight's [Package Manager Hardening probe](/learn/patterns/package-json-supply-chain) flags missing entries for both.
 
 ## Related patterns and shapes
 

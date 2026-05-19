@@ -93,7 +93,7 @@ Unbounded `max_tokens` is a denial-of-wallet attack: the attacker submits a prom
 
 ## What the failure looks like
 
-Pre-Flight scans for:
+PreFlight scans for:
 
 - LLM API calls (`openai.completions.create`, `anthropic.messages.create`, `langchain.invoke`, etc.) with prompts containing user-input template literals.
 - LLM client instantiation in files marked `'use client'` or imported by client components.

@@ -17,7 +17,7 @@ import {
 
 import { loadGitHubPAT, saveGitHubPAT, clearGitHubPAT, testGitHubToken } from '../lib/github.js';
 
-// The full list of Pre-Flight localStorage keys that "Clear all local data" must wipe.
+// The full list of PreFlight localStorage keys that "Clear all local data" must wipe.
 // Keep in sync with the array in src/components/settings/GeneralTab.jsx.
 const PREFLIGHT_KEYS = [
   'audit-app:history:v1',
@@ -187,7 +187,7 @@ describe('testGitHubToken (PAT validation against api.github.com/user)', () => {
 });
 
 describe('Clear-all-local-data key inventory', () => {
-  // The GeneralTab's Clear-All-Data button is only safe if it wipes EVERY key Pre-Flight
+  // The GeneralTab's Clear-All-Data button is only safe if it wipes EVERY key PreFlight
   // uses. This test guards the inventory — adding a new localStorage key without updating
   // PREFLIGHT_KEYS in GeneralTab.jsx leaves stale state after a clear.
   it('AI store key is in the inventory', () => {

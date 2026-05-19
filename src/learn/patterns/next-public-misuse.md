@@ -51,13 +51,13 @@ Once the bundle ships, every visitor has the secret on their disk. Rotation is t
 
 ## What the failure looks like
 
-The two shapes Pre-Flight checks for:
+The two shapes PreFlight checks for:
 
-**Danger-name variables.** Any `NEXT_PUBLIC_*` whose name contains a fragment Pre-Flight recognizes as server-only territory: `SECRET`, `PRIVATE`, `SERVICE_ROLE`, `DATABASE_URL`, `STRIPE_SECRET`, `OPENAI`, `ANTHROPIC`, `JWT_SECRET`, `WEBHOOK_SECRET`, `ADMIN`, and similar. The presence of the prefix on a variable named like a server secret is the finding.
+**Danger-name variables.** Any `NEXT_PUBLIC_*` whose name contains a fragment PreFlight recognizes as server-only territory: `SECRET`, `PRIVATE`, `SERVICE_ROLE`, `DATABASE_URL`, `STRIPE_SECRET`, `OPENAI`, `ANTHROPIC`, `JWT_SECRET`, `WEBHOOK_SECRET`, `ADMIN`, and similar. The presence of the prefix on a variable named like a server secret is the finding.
 
 **Danger-value variables.** Any `NEXT_PUBLIC_*` whose value matches a known secret shape: `sk_live_*`, `sk_test_*`, `sk-ant-*`, `sk-proj-*`, `eyJhbGciOiJIUzI...` (JWT), `postgres://user:pass@`, or a private-key block. Variables named anything (even something benign-sounding) but holding a credential-shaped value are still findings.
 
-Both shapes apply to every common Next.js env file: `.env`, `.env.local`, `.env.production`, `.env.development`. Pre-Flight scans the file content, not just the filename.
+Both shapes apply to every common Next.js env file: `.env`, `.env.local`, `.env.production`, `.env.development`. PreFlight scans the file content, not just the filename.
 
 ## Why AI coding tools produce this
 

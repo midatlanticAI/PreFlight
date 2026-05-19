@@ -24,7 +24,7 @@ can only reach the host through commands you expose.
 
 ## Scanner behavior
 
-Pre-Flight classifies this shape (informational). It does not raise a
+PreFlight classifies this shape (informational). It does not raise a
 shape-specific finding for it; the Rust adapters run on the `src-tauri`
 core and the web probes run on the UI.
 

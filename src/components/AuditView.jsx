@@ -88,7 +88,7 @@ export function AuditView({
         <header style={{ marginBottom: 36 }} className="ap-hero">
           <div className="ap-eyebrow" style={{ marginBottom: 12, fontSize: 13 }}>
             <span style={{ color: T.accent }}>MID-ATLANTIC AI</span>
-            <span style={{ color: T.textMuted }}> · PRE-FLIGHT AUDIT TOOL</span>
+            <span style={{ color: T.textMuted }}> · PREFLIGHT AUDIT TOOL</span>
           </div>
           <h1
             className="ap-display"
@@ -104,7 +104,7 @@ export function AuditView({
               color: T.text,
             }}
           >
-            <span style={{ fontStyle: 'italic', color: T.accent }}>Pre-Flight</span>
+            <span style={{ fontStyle: 'italic', color: T.accent }}>PreFlight</span>
             <br />
             <span
               style={{
@@ -122,8 +122,23 @@ export function AuditView({
           </h1>
           <p
             style={{
+              maxWidth: 640,
+              marginTop: 22,
+              fontSize: 'clamp(17px, 2.4vw, 21px)',
+              color: T.text,
+              lineHeight: 1.5,
+              fontFamily: fontUI,
+              fontWeight: 700,
+              overflowWrap: 'break-word',
+            }}
+          >
+            Flying blind is bad. PreFlight handles the safety checks, so we can all fly with
+            confidence.
+          </p>
+          <p
+            style={{
               maxWidth: 620,
-              marginTop: 20,
+              marginTop: 16,
               fontSize: 17,
               color: T.text,
               lineHeight: 1.6,
@@ -131,7 +146,7 @@ export function AuditView({
               fontWeight: 600,
             }}
           >
-            Pre-Flight catches what your AI probably missed:
+            PreFlight catches what your AI probably missed:
           </p>
           <p
             style={{
@@ -178,7 +193,7 @@ export function AuditView({
             <button
               className={`ap-tab ${mode === 'github' ? 'ap-tab-active' : ''}`}
               onClick={() => setMode('github')}
-              title="Scan a public repo by URL. The browser fetches the source directly from GitHub; nothing is sent to a Pre-Flight server."
+              title="Scan a public repo by URL. The browser fetches the source directly from GitHub; nothing is sent to a PreFlight server."
             >
               <Github
                 size={12}
@@ -456,7 +471,7 @@ export function AuditView({
                 <div
                   className="ap-mono"
                   style={{ fontSize: 11, color: T.textMuted, marginBottom: 8 }}
-                  title="Optional. Select a regime ONLY if your app processes that regulated data. This is your declaration; Pre-Flight maps technical clauses to it, it does not decide a regime applies to you. Most apps need none of these."
+                  title="Optional. Select a regime ONLY if your app processes that regulated data. This is your declaration; PreFlight maps technical clauses to it, it does not decide a regime applies to you. Most apps need none of these."
                 >
                   REGULATORY SCAN (optional) — declare regimes your app is actually subject to
                 </div>
@@ -631,7 +646,7 @@ export function AuditView({
         }}
       >
         <div>
-          <strong style={{ color: T.textDim }}>Mid-Atlantic AI · Pre-Flight Audit Tool</strong>
+          <strong style={{ color: T.textDim }}>Mid-Atlantic AI · PreFlight Audit Tool</strong>
           <br />
           Static security review for vibe-coded apps. All scanning runs in your browser — no upload,
           no signup.

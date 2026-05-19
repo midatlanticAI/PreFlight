@@ -23,7 +23,7 @@ adapters at the source while skipping JS-specific probes.
 
 ## Scanner behavior
 
-Pre-Flight classifies this shape (informational). It does not raise a
+PreFlight classifies this shape (informational). It does not raise a
 shape-specific finding for it, but the Python XL adapters
 (deserialization, raw SQL, TLS verification, secrets) run on the code,
 and on a Python web app the highest-value findings are framework

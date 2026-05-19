@@ -24,7 +24,7 @@ no browser; the React is for the terminal.
 
 ## Scanner behavior
 
-Pre-Flight classifies this shape (informational). It does not raise a
+PreFlight classifies this shape (informational). It does not raise a
 shape-specific finding for it; the language and injection probes run on
 the source the same as for a plain CLI.
 

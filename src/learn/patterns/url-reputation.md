@@ -18,7 +18,7 @@ summary: External URLs flagged ONLY when they trip an objective signal — raw-I
 
 ## What this is
 
-Pre-Flight extracts every external HTTP/HTTPS URL from the project's source and emits a finding only when the URL trips one of four objective signals. A generic HTTPS URL on a host the probe doesn't recognize is **not** a finding. (The pre-v0.6 behavior emitted an `info` finding for every unrecognized host, which produced a wall of noise on real projects that legitimately reference dozens of third-party domains.)
+PreFlight extracts every external HTTP/HTTPS URL from the project's source and emits a finding only when the URL trips one of four objective signals. A generic HTTPS URL on a host the probe doesn't recognize is **not** a finding. (The pre-v0.6 behavior emitted an `info` finding for every unrecognized host, which produced a wall of noise on real projects that legitimately reference dozens of third-party domains.)
 
 The signals:
 
@@ -59,7 +59,7 @@ For each flagged URL, ask:
 - Does the URL still resolve to what the developer intended?
 - Does the domain's WHOIS history match the developer's expectation?
 
-If the URL is fine, suppress the finding (Pre-Flight supports per-finding suppression with notes).
+If the URL is fine, suppress the finding (PreFlight supports per-finding suppression with notes).
 
 If the URL is suspicious, replace it with a known-good alternative or remove the code path entirely.
 

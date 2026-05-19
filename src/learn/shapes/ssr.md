@@ -27,7 +27,7 @@ one discipline this shape lives or dies on.
 
 ## Scanner behavior
 
-Pre-Flight flags this shape: the Architecture probe raises an
+PreFlight flags this shape: the Architecture probe raises an
 informational finding on the server/client boundary, and the
 `NEXT_PUBLIC_` / Secret Scanner / Client Auth Storage probes catch the
 concrete leaks. It is one of the four shapes the scanner acts on, not

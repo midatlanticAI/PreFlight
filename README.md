@@ -1,6 +1,6 @@
-# Pre-Flight Audit Tool
+# PreFlight Audit Tool
 
-> Pre-Flight catches what your AI probably missed.
+> PreFlight catches what your AI probably missed.
 
 Free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code, v0, GitHub Copilot) and any other web application.
 
@@ -96,7 +96,7 @@ Per-finding action that sends the full file content via your BYOK channel and as
 
 ## Personas (Persona+ framework)
 
-Pre-Flight ships four named agents under `src/lib/personas/`. Each is a Persona+ spec (activation gate + per-task structured command). Multi-mode personas declare their input contracts under `STRUCTURED_COMMANDS`.
+PreFlight ships four named agents under `src/lib/personas/`. Each is a Persona+ spec (activation gate + per-task structured command). Multi-mode personas declare their input contracts under `STRUCTURED_COMMANDS`.
 
 | Persona  | Acronym                                 | Role                                                                                  | Modes                                     | Status                                                                        |
 | -------- | --------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------- |
@@ -153,7 +153,7 @@ Any feature that would weaken this requires deliberately breaking the manifesto,
 npm ci
 npm run dev               # vite dev server on :5173
 npm test                  # vitest run (921 tests across 52 files)
-npm run test:self-audit   # dogfood: Pre-Flight scans its own dist/
+npm run test:self-audit   # dogfood: PreFlight scans its own dist/
 npm run build             # production build → dist/
 npm run preview           # preview the built dist
 npm run lint              # eslint
@@ -170,9 +170,9 @@ GitHub Actions workflow at `.github/workflows/ci.yml`:
 1. `npm ci`
 2. `npm test`
 3. `npm run build`
-4. `npm run test:self-audit` — Pre-Flight audits its own built `dist/`
+4. `npm run test:self-audit` — PreFlight audits its own built `dist/`
 
-If Pre-Flight doesn't pass its own audit, CI fails. Dogfooding is non-negotiable.
+If PreFlight doesn't pass its own audit, CI fails. Dogfooding is non-negotiable.
 
 ---
 
@@ -195,7 +195,7 @@ If Pre-Flight doesn't pass its own audit, CI fails. Dogfooding is non-negotiable
 | Threat-intel manifest        | dedicated test file                                                                                                             |
 | AI providers + dispatcher    | mocked-fetch tests for the provider request shape                                                                               |
 | Logger + analytics + history | privacy-invariant + circular-ref + ring-buffer tests                                                                            |
-| Dogfood                      | `dogfood-scan.test.js` + `self-audit.test.js` require 0 critical/high findings on Pre-Flight's own dist/                        |
+| Dogfood                      | `dogfood-scan.test.js` + `self-audit.test.js` require 0 critical/high findings on PreFlight's own dist/                         |
 
 Adversarial testing philosophy: known gaps ship as `it.fails()` blocks so the test passes silently while the probe misses the input, and fails loudly the moment a probe improvement starts catching it. Self-cleaning todo list.
 
@@ -278,13 +278,13 @@ docs/
 Code is **MIT** (see [`LICENSE`](./LICENSE)). Threat-intel data manifest is **CC-BY-4.0** (see [`LICENSE-DATA`](./LICENSE-DATA)). The split is intentional:
 
 - **Code** (everything under `src/`, `public/`, `.github/`, config files, `package.json`) → MIT. Use, fork, ship — no attribution required for the source code itself.
-- **Threat-intel data** (`src/data/compromised-packages.js` and any future `src/data/*-data.{js,json}` manifests) → CC-BY-4.0. Take the data, integrate it into your own scanner, but credit the source as "Mid-Atlantic AI / Pre-Flight Audit Tool" with a link to [preflight.midatlantic.ai](https://preflight.midatlantic.ai/) or [github.com/midatlanticAI/PreFlight](https://github.com/midatlanticAI/PreFlight).
+- **Threat-intel data** (`src/data/compromised-packages.js` and any future `src/data/*-data.{js,json}` manifests) → CC-BY-4.0. Take the data, integrate it into your own scanner, but credit the source as "Mid-Atlantic AI / PreFlight Audit Tool" with a link to [preflight.midatlantic.ai](https://preflight.midatlantic.ai/) or [github.com/midatlanticAI/PreFlight](https://github.com/midatlanticAI/PreFlight).
 
 ---
 
 ## Contributing
 
-Pre-Flight is built deliberately small and deliberately opinionated. PRs welcome for:
+PreFlight is built deliberately small and deliberately opinionated. PRs welcome for:
 
 - New compromised-package entries from named, sourced incidents.
 - Probe-tightening fixes flagged by the adversarial suite (`it.fails()` blocks turning into passing tests).

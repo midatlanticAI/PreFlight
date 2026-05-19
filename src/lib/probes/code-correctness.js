@@ -1,9 +1,9 @@
 // src/lib/probes/code-correctness.js
 // AST-based correctness probe. Closes the gap that let an undefined-ref bug ship past
-// Pre-Flight during the v0.4 routing refactor: regex probes can't model scope, so a
+// PreFlight during the v0.4 routing refactor: regex probes can't model scope, so a
 // reference to `urlHighlight` (a name never declared anywhere) parsed as "just a word."
 //
-// Defensive framing per Pre-Flight policy: this probe detects ABSENCE of a defensive
+// Defensive framing per PreFlight policy: this probe detects ABSENCE of a defensive
 // pattern (an identifier with a binding). We are not building an exploit inventory;
 // we are building a scope-validity check. The output is "no binding found for X,"
 // not "here's how to confuse the parser."
@@ -515,7 +515,7 @@ export function probeCodeCorrectness(files) {
         file: file.path,
         line: loc.line,
         evidence: `${name} is used but no binding (import, declaration, or known global) was found in this file`,
-        remediation: `The identifier "${name}" is referenced on line ${loc.line} but never declared, imported, or destructured in this file. Three common causes: (1) you renamed the variable but missed this reference, (2) you forgot the import, (3) it's a typo for a name that does exist (e.g. concole.log → console.log). Pre-Flight uses a parser-based scope check rather than runtime, so a build / test run will fail the same way the moment this code path executes.`,
+        remediation: `The identifier "${name}" is referenced on line ${loc.line} but never declared, imported, or destructured in this file. Three common causes: (1) you renamed the variable but missed this reference, (2) you forgot the import, (3) it's a typo for a name that does exist (e.g. concole.log → console.log). PreFlight uses a parser-based scope check rather than runtime, so a build / test run will fail the same way the moment this code path executes.`,
       });
     });
   });

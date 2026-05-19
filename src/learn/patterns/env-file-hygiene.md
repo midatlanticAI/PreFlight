@@ -39,7 +39,7 @@ The blast radius equals the union of every credential in the file at the worst c
 
 ## What the failure looks like
 
-Pre-Flight flags any tracked `.env` file:
+PreFlight flags any tracked `.env` file:
 
 ```
 .env

@@ -20,7 +20,7 @@ summary: Drop files and content IOCs left behind by the 2026 Mini Shai-Hulud npm
 
 ## What this is
 
-Once an npm postinstall worm has executed on a developer's machine, it writes itself to disk in locations that survive `npm uninstall`. Pre-Flight scans for the specific paths and content signatures the Mini Shai-Hulud campaign (May 2026 TanStack wave, April 2026 SAP wave) uses.
+Once an npm postinstall worm has executed on a developer's machine, it writes itself to disk in locations that survive `npm uninstall`. PreFlight scans for the specific paths and content signatures the Mini Shai-Hulud campaign (May 2026 TanStack wave, April 2026 SAP wave) uses.
 
 **Drop files** (critical-severity if found):
 
@@ -50,13 +50,13 @@ A `grep` finding any of these in any tracked file in the repo is the indicator. 
 
 ## Why it matters
 
-If Pre-Flight finds any of these in a scanned repo, the assumption is that the developer who committed those files was compromised by one of the 2026 worm waves. The blast radius is everything that machine has touched since the compromise: GitHub repos the developer can push to, npm packages the developer maintains, cloud-provider credentials cached on the machine, and any secret the developer's user account had access to.
+If PreFlight finds any of these in a scanned repo, the assumption is that the developer who committed those files was compromised by one of the 2026 worm waves. The blast radius is everything that machine has touched since the compromise: GitHub repos the developer can push to, npm packages the developer maintains, cloud-provider credentials cached on the machine, and any secret the developer's user account had access to.
 
 The dead-man-switch (`gh-token-monitor` / `com.user.gh-token-monitor`) is particularly nasty: it's a LaunchAgent (on macOS) or a systemd user service (on Linux) that runs periodically and checks whether the stolen GitHub token is still valid. If the token returns 40x (the user revoked it), the script runs `rm -rf ~/` as a punishment for getting caught. Anyone removing one of these compromises needs to disable the LaunchAgent / systemd unit first.
 
 ## What the failure looks like
 
-Pre-Flight flags any file matching the drop-file paths as a critical finding. It also scans every other file for the content IOC strings. Both are exact matches, so the false-positive rate is essentially zero.
+PreFlight flags any file matching the drop-file paths as a critical finding. It also scans every other file for the content IOC strings. Both are exact matches, so the false-positive rate is essentially zero.
 
 The probe is named "Malicious Artifacts" specifically because the findings represent already-completed compromises, not vulnerabilities. A finding here is a forensic discovery, not a remediation task in the usual sense.
 

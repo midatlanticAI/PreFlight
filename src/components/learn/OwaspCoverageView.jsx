@@ -1,6 +1,6 @@
 // src/components/learn/OwaspCoverageView.jsx
 //
-// The "OWASP" sub-tab under /learn. Maps every Pre-Flight probe to the OWASP
+// The "OWASP" sub-tab under /learn. Maps every PreFlight probe to the OWASP
 // Top 10 2025 and OWASP LLM Top 10 2025 categories it covers. The mapping
 // data lives in src/lib/stable-id.js (PROBE_OWASP_MAP + OWASP_LABELS); this
 // component just renders it.
@@ -202,7 +202,7 @@ export function OwaspCoverageView() {
           lineHeight: 1.6,
         }}
       >
-        Pre-Flight's {PROBES.length} probes map to {totalCategories} OWASP categories. {totalProbes}{' '}
+        PreFlight's {PROBES.length} probes map to {totalCategories} OWASP categories. {totalProbes}{' '}
         probes carry at least one OWASP code; the rest cover discoverability, accessibility, or
         supply-chain hygiene outside the OWASP scope.
       </p>

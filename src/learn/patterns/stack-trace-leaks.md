@@ -57,7 +57,7 @@ The pattern also degrades observability: when the same error response that the c
 
 ## What the failure looks like
 
-Pre-Flight scans for response writes (`res.send`, `res.json`, `res.body =`, `Response.json`, `new Response`, `ctx.json`, `reply.send`) where the body contains `err.stack`, `error.stack`, `e.stack`, or `JSON.stringify(err)` (which serializes the stack along with the message).
+PreFlight scans for response writes (`res.send`, `res.json`, `res.body =`, `Response.json`, `new Response`, `ctx.json`, `reply.send`) where the body contains `err.stack`, `error.stack`, `e.stack`, or `JSON.stringify(err)` (which serializes the stack along with the message).
 
 Cases inside `if (process.env.NODE_ENV !== 'production')` guards or `__DEV__` / `isDev` checks are explicitly skipped. Those are intentional dev surfaces.
 
@@ -110,7 +110,7 @@ app.use((err, req, res, next) => {
 });
 ```
 
-The `process.env.NODE_ENV !== 'production'` gate is the load-bearing check. Pre-Flight skips findings inside this guard.
+The `process.env.NODE_ENV !== 'production'` gate is the load-bearing check. PreFlight skips findings inside this guard.
 
 ## A related anti-pattern: 4xx errors that leak
 

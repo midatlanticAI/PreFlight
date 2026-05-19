@@ -22,7 +22,7 @@ Notebook / Data Science when two or more `.ipynb` files are present.
 
 ## Scanner behavior
 
-Pre-Flight classifies this shape (informational). It does not raise a
+PreFlight classifies this shape (informational). It does not raise a
 shape-specific finding for it; the secret and deserialization probes
 still run, and notebooks are exactly where their patterns show up.
 

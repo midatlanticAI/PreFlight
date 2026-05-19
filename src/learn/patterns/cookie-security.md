@@ -38,7 +38,7 @@ Without `SameSite`: a malicious site can make the user's browser send a request 
 
 ## What the failure looks like
 
-Pre-Flight scans server-side cookie-setting code for cookies whose name matches an auth signal (`session`, `auth`, `token`, `jwt`, `csrf`) and which are set without all three flags:
+PreFlight scans server-side cookie-setting code for cookies whose name matches an auth signal (`session`, `auth`, `token`, `jwt`, `csrf`) and which are set without all three flags:
 
 ```ts
 res.cookie('session', token); // all three missing — critical

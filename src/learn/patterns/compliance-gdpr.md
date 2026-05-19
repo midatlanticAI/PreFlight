@@ -10,7 +10,7 @@ sources:
     url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679
   - title: GDPR Article 32 — Security of processing
     url: https://eur-lex.europa.eu/eli/reg/2016/679/oj
-summary: GDPR Article 32 requires security appropriate to risk, and Article 25 requires data protection by design. The technical half of those duties is partly code-visible. Pre-Flight maps a subset of its probes to Article 32 as an interpretation layer, never a certification.
+summary: GDPR Article 32 requires security appropriate to risk, and Article 25 requires data protection by design. The technical half of those duties is partly code-visible. PreFlight maps a subset of its probes to Article 32 as an interpretation layer, never a certification.
 ---
 
 ## What this is
@@ -28,15 +28,15 @@ that interpolates user input into SQL, ships a disabled TLS check, or
 hard-codes a key is below that bar for any non-trivial personal-data
 processing, regardless of intent.
 
-## What Pre-Flight does and does not do here
+## What PreFlight does and does not do here
 
-Pre-Flight is in scan scope for the code-detectable, technical slice of
+PreFlight is in scan scope for the code-detectable, technical slice of
 Article 32 / 25. The probe families map to Article 32 as `indicative`
 references: the pattern is associated with the security-of-processing
 duty, but whether it is a violation depends on the data processed and
 the risk assessment, which only a human can perform.
 
-Pre-Flight does not certify GDPR compliance. Lawful basis, data subject
+PreFlight does not certify GDPR compliance. Lawful basis, data subject
 rights, DPIAs, records of processing, and international transfer
 mechanisms are out of scan scope. They are a much larger duty than the
 code.
@@ -45,11 +45,11 @@ code.
 
 Evidence that security measures match the risk: encryption in transit
 and at rest, sound authentication, minimised and validated input, and a
-documented assessment. A Pre-Flight `indicative` finding is a pointer
+documented assessment. A PreFlight `indicative` finding is a pointer
 into that assessment.
 
 ## Not legal advice
 
-This page explains how Pre-Flight relates findings to GDPR article text.
+This page explains how PreFlight relates findings to GDPR article text.
 It is not legal advice and not a compliance attestation. Confirm
 obligations with a data protection professional.

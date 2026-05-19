@@ -1,4 +1,4 @@
-# Pre-Flight v0.5 Architecture
+# PreFlight v0.5 Architecture
 
 **Status:** Approved for Phase 0 implementation. All gating questions resolved.
 **Date:** 2026-05-14
@@ -251,7 +251,7 @@ time, not at test time:
 - If either check fails, manifest construction throws and the build fails.
 
 This is a hard failure, not a CI warning. Otherwise probes ship without
-fixtures and the dogfood story breaks silently — Pre-Flight scanning its
+fixtures and the dogfood story breaks silently — PreFlight scanning its
 own fixture tree is the strongest CI signal we have, and it only works if
 every adapter is reachable.
 

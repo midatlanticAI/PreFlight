@@ -50,7 +50,7 @@ ORMs (Prisma, Drizzle, Knex) make the correct pattern just as short, but the pat
 
 ## What the failure looks like
 
-Pre-Flight scans `.js` / `.jsx` / `.ts` / `.tsx` / `.py` / `.go` source for two shapes:
+PreFlight scans `.js` / `.jsx` / `.ts` / `.tsx` / `.py` / `.go` source for two shapes:
 
 - **High-confidence**: `db.query(\`...${...}...\`)`, `client.execute(...)`, `connection.raw(...)`, and similar with template-literal arguments containing interpolations.
 - **Heuristic**: bare `query(\`...\`)`or`execute(\`...\`)` calls where the template contains SQL keywords (`SELECT`, `INSERT`, `UPDATE`, `DELETE`).
@@ -98,7 +98,7 @@ const sql = postgres();
 const rows = await sql`SELECT * FROM users WHERE name = ${userName}`;
 ```
 
-This looks like the unsafe pattern but is not. The `sql` tag preprocesses the template to extract the interpolations as parameters before sending to the database. Pre-Flight allowlists the `sql`, `pg`, `postgres`, `slonik`, and `drizzle` tags by name; if you build your own tagged-template wrapper, ensure it parameterizes and consider naming it consistently so the probe recognizes it.
+This looks like the unsafe pattern but is not. The `sql` tag preprocesses the template to extract the interpolations as parameters before sending to the database. PreFlight allowlists the `sql`, `pg`, `postgres`, `slonik`, and `drizzle` tags by name; if you build your own tagged-template wrapper, ensure it parameterizes and consider naming it consistently so the probe recognizes it.
 
 ## When raw SQL is genuinely needed
 

@@ -13,9 +13,9 @@ import { getBySlug } from './learn-content.js';
 
 const BASE = 'https://preflight.midatlantic.ai';
 
-// Brand-voice rule (CLAUDE.md): no em-dash. Sub-pages use " | Pre-Flight".
+// Brand-voice rule (CLAUDE.md): no em-dash. Sub-pages use " | PreFlight".
 // The homepage keeps its existing canonical title verbatim.
-const HOME_TITLE = 'Pre-Flight — Educational Audit for Vibers Building Vibeware';
+const HOME_TITLE = 'PreFlight — Educational Audit for Vibers Building Vibeware';
 const HOME_DESC =
   'Free in-browser static security audit for apps built with AI coding tools. ' +
   'Runs in your browser, your code never leaves your machine. No signup.';
@@ -25,79 +25,79 @@ const HOME_DESC =
 const STATIC = {
   '/': { title: HOME_TITLE, description: HOME_DESC },
   '/learn': {
-    title: 'Learn | Pre-Flight',
+    title: 'Learn | PreFlight',
     description:
-      'A library for vibers building vibeware: the security patterns Pre-Flight checks, the incidents behind them, and the architecture shapes that shape your posture.',
+      'A library for vibers building vibeware: the security patterns PreFlight checks, the incidents behind them, and the architecture shapes that shape your posture.',
   },
   '/learn/patterns': {
-    title: 'Security Patterns | Pre-Flight',
+    title: 'Security Patterns | PreFlight',
     description:
-      'Every security pattern Pre-Flight detects, explained in plain language with the attack input and the specific fix.',
+      'Every security pattern PreFlight detects, explained in plain language with the attack input and the specific fix.',
   },
   '/learn/incidents': {
-    title: 'Field Reports | Pre-Flight',
+    title: 'Field Reports | PreFlight',
     description:
       'Real supply-chain and AI-tooling incidents from 2025 to 2026, written up so you can see how the attack actually ran.',
   },
   '/learn/shapes': {
-    title: 'Architecture Shapes | Pre-Flight',
+    title: 'Architecture Shapes | PreFlight',
     description:
-      'The architecture shapes Pre-Flight recognizes and what each one means for your security posture.',
+      'The architecture shapes PreFlight recognizes and what each one means for your security posture.',
   },
   '/learn/resources': {
-    title: 'Resources | Pre-Flight',
+    title: 'Resources | PreFlight',
     description:
-      'Primary sources Pre-Flight cites: OWASP, MITRE CWE, CISA, W3C, and vendor security documentation.',
+      'Primary sources PreFlight cites: OWASP, MITRE CWE, CISA, W3C, and vendor security documentation.',
   },
   '/learn/owasp': {
-    title: 'OWASP Coverage | Pre-Flight',
+    title: 'OWASP Coverage | PreFlight',
     description:
-      'Which OWASP Top 10 2025 and OWASP LLM Top 10 categories Pre-Flight covers, mapped probe by probe.',
+      'Which OWASP Top 10 2025 and OWASP LLM Top 10 categories PreFlight covers, mapped probe by probe.',
   },
   '/learn/how-it-works': {
-    title: 'How It Works | Pre-Flight',
+    title: 'How It Works | PreFlight',
     description:
-      'How Pre-Flight scans in your browser tab: pure-function probes over text, findings built locally, nothing uploaded.',
+      'How PreFlight scans in your browser tab: pure-function probes over text, findings built locally, nothing uploaded.',
   },
   '/learn/the-climb': {
-    title: 'The Climb | Pre-Flight',
+    title: 'The Climb | PreFlight',
     description:
       'A roadmap from the floor of vibe coding to the ceiling of agentic engineering. Six tiers of judgment, what each can ship, and how to climb.',
   },
   '/learn/flight-school': {
-    title: 'FlightSchool | Pre-Flight',
+    title: 'FlightSchool | PreFlight',
     description:
       'A curated role-by-tier index of the best free resources for shipping software safely. Six roles, mapped to The Climb, with a safety note at every step.',
   },
   '/learn/tools': {
-    title: 'Tools | Pre-Flight',
+    title: 'Tools | PreFlight',
     description:
       'A neutral catalog of the AI coding and build tools, strengths and weaknesses both, sourced and dated. No affiliate, no sponsored placement.',
   },
   '/learn/glossary': {
-    title: 'Security Glossary | Pre-Flight',
+    title: 'Security Glossary | PreFlight',
     description:
-      'Plain-language definitions for the security terms Pre-Flight uses, each linked to a primary source.',
+      'Plain-language definitions for the security terms PreFlight uses, each linked to a primary source.',
   },
   '/learn/breakers': {
-    title: 'Breakers | Pre-Flight',
+    title: 'Breakers | PreFlight',
     description:
       'For each finding class, the concrete adversarial input an attacker would type, so you can reproduce the failure and confirm the fix.',
   },
   '/learn/social': {
-    title: 'Social | Pre-Flight',
+    title: 'Social | PreFlight',
     description:
       'Social learning for vibe coders, shippers, and builders. The communities where people get better together, including Vibe Coding is Life.',
   },
   '/privacy': {
-    title: 'Privacy | Pre-Flight',
+    title: 'Privacy | PreFlight',
     description:
-      'Privacy by architecture, not by promise. Pre-Flight runs in your browser tab and collects nothing. There is no backend.',
+      'Privacy by architecture, not by promise. PreFlight runs in your browser tab and collects nothing. There is no backend.',
   },
   '/terms': {
-    title: 'Terms | Pre-Flight',
+    title: 'Terms | PreFlight',
     description:
-      'Terms of use for Pre-Flight, the free in-browser static security audit by Mid-Atlantic AI.',
+      'Terms of use for PreFlight, the free in-browser static security audit by Mid-Atlantic AI.',
   },
 };
 
@@ -120,7 +120,7 @@ export function getRouteMeta(pathname) {
   if (m) {
     const entry = getBySlug(m[2]);
     if (entry) {
-      title = `${entry.title} | Pre-Flight`;
+      title = `${entry.title} | PreFlight`;
       // Many Learn pages have no `summary` frontmatter (or a short derived
       // one). A bare or missing description is an SEO defect and makes every
       // such page share the homepage blurb. Fall back to a page-unique,

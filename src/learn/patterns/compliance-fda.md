@@ -10,7 +10,7 @@ sources:
     url: https://www.ecfr.gov/current/title-21/chapter-I/subchapter-A/part-11
   - title: FDA — Software as a Medical Device (SaMD)
     url: https://www.fda.gov/medical-devices/digital-health-center-excellence/software-medical-device-samd
-summary: FDA rules for electronic records (21 CFR Part 11) and Software as a Medical Device hinge on validation, intended use, and risk classification. None of that is a code pattern. Pre-Flight teaches this area but does not scan for it.
+summary: FDA rules for electronic records (21 CFR Part 11) and Software as a Medical Device hinge on validation, intended use, and risk classification. None of that is a code pattern. PreFlight teaches this area but does not scan for it.
 ---
 
 ## What this is
@@ -27,16 +27,16 @@ records, its regulatory burden is set by intended use and risk class,
 which drive validation and quality-system obligations far beyond
 application security.
 
-## Why Pre-Flight does not scan for FDA rules
+## Why PreFlight does not scan for FDA rules
 
 Part 11 and SaMD conformance is established through validation
 documentation, a quality management system, risk files, and intended-use
 statements. A static code scan cannot evaluate validation status or
-intended use, so Pre-Flight maps no probe to FDA rules.
+intended use, so PreFlight maps no probe to FDA rules.
 
 Generic security probes still apply to the software as security
 findings, and an audit trail being absent in code may be relevant
-evidence, but Pre-Flight does not present these as Part 11 conclusions.
+evidence, but PreFlight does not present these as Part 11 conclusions.
 
 ## What a reviewer looks for
 

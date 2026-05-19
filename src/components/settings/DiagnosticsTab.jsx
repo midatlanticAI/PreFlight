@@ -16,7 +16,7 @@ import { T, fontMono } from '../../lib/theme.js';
 import { getLogs, clearLogs, subscribe as subscribeLogs, exportLogs } from '../../lib/logger.js';
 import { copyToClipboard, downloadFile, timestampSlug } from '../../lib/clipboard.js';
 
-const COPY = `Pre-Flight keeps a rolling log of what it's doing in this tab. This panel is for debugging issues with the tool itself — most users will never need it. Toggle it on if something's behaving weird and you want to see what's happening, or if you're reporting a bug.`;
+const COPY = `PreFlight keeps a rolling log of what it's doing in this tab. This panel is for debugging issues with the tool itself — most users will never need it. Toggle it on if something's behaving weird and you want to see what's happening, or if you're reporting a bug.`;
 
 const LEVEL_RANK = { debug: 0, info: 1, warn: 2, error: 3 };
 

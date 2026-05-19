@@ -40,7 +40,7 @@ Common consequences: the admin API exposes user-creation endpoints, billing endp
 
 ## What the failure looks like
 
-Pre-Flight scans paths matching admin / dashboard / internal route conventions for:
+PreFlight scans paths matching admin / dashboard / internal route conventions for:
 
 - A component that gates rendering on `useUser`, `useSession`, `useAuth`, or similar client hooks.
 - The absence of a server-side `getServerSideProps` / route-handler / middleware check on the matching API surface.

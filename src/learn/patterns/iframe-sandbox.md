@@ -52,7 +52,7 @@ For first-party iframes, the sandbox attribute is still the right default. It bo
 
 ## What the failure looks like
 
-Pre-Flight scans HTML / JSX / TSX / Astro / Vue / Svelte for `<iframe>` tags without a `sandbox` attribute. Cross-origin iframes (any `src` starting with `http://`, `https://`, or `//`) are flagged at high severity. Same-origin iframes get medium.
+PreFlight scans HTML / JSX / TSX / Astro / Vue / Svelte for `<iframe>` tags without a `sandbox` attribute. Cross-origin iframes (any `src` starting with `http://`, `https://`, or `//`) are flagged at high severity. Same-origin iframes get medium.
 
 ## What the fix looks like
 

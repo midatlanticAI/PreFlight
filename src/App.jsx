@@ -258,7 +258,7 @@ function NotFoundView() {
         Nothing here.
       </h2>
       <p style={{ margin: '0 0 14px', fontSize: 14, color: T.textDim, lineHeight: 1.7 }}>
-        The URL you opened doesn&apos;t match any Pre-Flight route.
+        The URL you opened doesn&apos;t match any PreFlight route.
       </p>
       <Link to="/" style={{ color: T.accent, fontFamily: fontMono, fontSize: 13 }}>
         Back to Audit →
@@ -820,7 +820,7 @@ export default function App() {
         >
           <Link
             to="/"
-            aria-label="Pre-Flight home"
+            aria-label="PreFlight home"
             style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}
           >
             <img
@@ -839,7 +839,7 @@ export default function App() {
                   letterSpacing: '-0.01em',
                 }}
               >
-                Pre-Flight
+                PreFlight
               </span>
               <span
                 className="ap-eyebrow"

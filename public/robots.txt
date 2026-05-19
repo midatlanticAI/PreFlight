@@ -1,4 +1,4 @@
-# Mid-Atlantic AI — Pre-Flight Audit Tool
+# Mid-Atlantic AI — PreFlight Audit Tool
 # https://preflight.midatlantic.ai/
 
 User-agent: *

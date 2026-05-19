@@ -14,9 +14,9 @@ import { T, fontMono } from '../../lib/theme.js';
 import { track } from '../../lib/analytics.js';
 import { loadGitHubPAT, saveGitHubPAT, clearGitHubPAT, testGitHubToken } from '../../lib/github.js';
 
-const COPY = `Pre-Flight scans public GitHub repos using unauthenticated API access (60 requests per hour, plenty for most scans). To scan a private repo, paste a GitHub Personal Access Token below. Same rules as the AI key: stored only in your browser, never sent to our server, deletable at any time.
+const COPY = `PreFlight scans public GitHub repos using unauthenticated API access (60 requests per hour, plenty for most scans). To scan a private repo, paste a GitHub Personal Access Token below. Same rules as the AI key: stored only in your browser, never sent to our server, deletable at any time.
 
-The token only needs \`repo\` scope (read access to your repositories). Use a fine-grained PAT scoped to specific repos for tighter control. Pre-Flight will use this token automatically when you paste a GitHub URL for a private repo.`;
+The token only needs \`repo\` scope (read access to your repositories). Use a fine-grained PAT scoped to specific repos for tighter control. PreFlight will use this token automatically when you paste a GitHub URL for a private repo.`;
 
 const PAT_DOCS_URL =
   'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens';

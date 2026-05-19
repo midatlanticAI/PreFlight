@@ -28,7 +28,7 @@ export function AboutTab() {
 
       <div className="ap-card" style={{ padding: 18, marginBottom: 14 }}>
         <p style={{ margin: '0 0 12px', fontSize: 15, color: T.textDim, lineHeight: 1.75 }}>
-          I built and maintain Pre-Flight at Mid-Atlantic AI. No tracking, no analytics beacons, no
+          I built and maintain PreFlight at Mid-Atlantic AI. No tracking, no analytics beacons, no
           account required. Everything runs in your browser tab. Nothing leaves your machine.
         </p>
         <ul

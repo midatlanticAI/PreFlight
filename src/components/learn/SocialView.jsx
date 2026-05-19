@@ -6,7 +6,7 @@
 // framing.
 //
 // Free, open communities ONLY. There is no paid product referenced here
-// or anywhere else on the site. Pre-Flight asks for nothing. To add more
+// or anywhere else on the site. PreFlight asks for nothing. To add more
 // rooms, append to COMMUNITIES.
 
 import { T, fontMono } from '../../lib/theme.js';
@@ -143,7 +143,7 @@ export function SocialView() {
       <P>
         This section is for that side of the work. It is treated with the same weight as the rest of
         Learn, because for most builders it is where the real progress happens. Everything listed
-        here is free. Pre-Flight asks for nothing, and it never points you at anything that does.
+        here is free. PreFlight asks for nothing, and it never points you at anything that does.
       </P>
 
       <H2>What a good builder community gives you</H2>
@@ -169,7 +169,7 @@ export function SocialView() {
       <H2>Featured</H2>
       <P>
         Hand-picked, on any platform, group, server, forum, or feed. A community earns a spot here
-        when it is free, treats its members well, and embraces what Pre-Flight is about. The list
+        when it is free, treats its members well, and embraces what PreFlight is about. The list
         grows as more are found.
       </P>
 

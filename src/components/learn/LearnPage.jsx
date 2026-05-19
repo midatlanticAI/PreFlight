@@ -37,7 +37,7 @@ export function LearnPage() {
     <div className="ap-fade-in">
       <header style={{ marginBottom: 20 }}>
         <div className="ap-eyebrow" style={{ marginBottom: 8 }}>
-          PRE-FLIGHT LEARN
+          PREFLIGHT LEARN
         </div>
         <h1
           className="ap-display"
@@ -53,7 +53,7 @@ export function LearnPage() {
           A library for vibers building vibeware.
         </h1>
         <p style={{ fontSize: 15, color: T.textDim, lineHeight: 1.7, margin: 0, maxWidth: 720 }}>
-          Pre-Flight catches security issues. This is where we explain them — the patterns we look
+          PreFlight catches security issues. This is where we explain them — the patterns we look
           for, the real-world incidents behind the threat-intel, and the architecture shapes that
           shape (or break) your security posture. Read once, build safer forever.
         </p>

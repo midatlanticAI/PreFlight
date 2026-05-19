@@ -22,7 +22,7 @@ summary: Generative Engine Optimization (GEO). Whether AI search tools can read 
 
 GEO is what SEO becomes when the consumer of the site is an AI search tool (ChatGPT search, Perplexity, Claude with web access, Gemini, etc.) rather than a human looking at a search results page. The signals partly overlap with SEO and partly diverge.
 
-The signals Pre-Flight checks:
+The signals PreFlight checks:
 
 **`robots.txt` AI-bot allowlist.** Generic `Disallow: /` blocks every bot, including the AI crawlers. Sites that want to be answer-cited by AI search need to allow the specific user agents:
 
@@ -57,7 +57,7 @@ For products whose discoverability matters in 2026, this is the new SEO. For pro
 
 ## What the failure looks like
 
-Pre-Flight scans `public/robots.txt` and the site root for `llms.txt`. Findings:
+PreFlight scans `public/robots.txt` and the site root for `llms.txt`. Findings:
 
 - `robots.txt` with no explicit allow for any of GPTBot / ClaudeBot / PerplexityBot / Google-Extended.
 - No `llms.txt` present.

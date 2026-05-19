@@ -26,7 +26,7 @@ summary: A cluster of four auth-related code shapes that AI tools produce often 
 
 ## What this is
 
-Four specific code shapes Pre-Flight scans for, grouped because they share the same defect: each looks like working auth code, each compiles, each ships a critical hole.
+Four specific code shapes PreFlight scans for, grouped because they share the same defect: each looks like working auth code, each compiles, each ships a critical hole.
 
 **JWT with `algorithm: 'none'`.** A JSON Web Token is a three-part string: header, payload, signature. The header names which algorithm signed the token. The string `'none'` is a legal algorithm value in the JWT spec. A token signed with `'none'` has an empty signature. Any verifier that accepts `'none'` will verify any payload as valid. An attacker forges a token claiming to be the admin user, the verifier returns "yes, this is admin," the request goes through.
 
@@ -62,7 +62,7 @@ return <div dangerouslySetInnerHTML={{ __html: comment.body }} />;
 // Anyone who has ever submitted a comment can run code in every other visitor's browser.
 ```
 
-Pre-Flight flags all four shapes with comment-awareness: a literal `// TODO: never use eval()` does not fire the probe. The probe is looking for runtime use, not the word "eval" in a comment.
+PreFlight flags all four shapes with comment-awareness: a literal `// TODO: never use eval()` does not fire the probe. The probe is looking for runtime use, not the word "eval" in a comment.
 
 ## Why it matters
 
@@ -163,7 +163,7 @@ grep -rE '\beval\s*\(' src/
 grep -rE 'dangerouslySetInnerHTML' src/
 ```
 
-Pre-Flight runs the equivalents at scan time, with comment-awareness so a docstring mentioning `// never use eval()` does not fire.
+PreFlight runs the equivalents at scan time, with comment-awareness so a docstring mentioning `// never use eval()` does not fire.
 
 ## Related
 

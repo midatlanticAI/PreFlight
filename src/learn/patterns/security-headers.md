@@ -39,7 +39,7 @@ Missing HSTS exposes users to network-level downgrade attacks. Missing X-Frame-O
 
 ## What the failure looks like
 
-Pre-Flight checks the canonical config locations:
+PreFlight checks the canonical config locations:
 
 - Next.js: `headers()` function in `next.config.js` / `next.config.mjs`.
 - Vercel: `headers` array in `vercel.json`.

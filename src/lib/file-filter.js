@@ -33,7 +33,7 @@ export function isScannerSelfSource(path) {
   // Breakers catalogue: by definition full of attack-shaped payload strings
   // (SQL injection literals, traversal paths, eval examples, JWT alg-none
   // tokens, bidi control characters). Excluded from pattern-matching probes
-  // so Pre-Flight scanning its own source doesn't false-positive on the
+  // so PreFlight scanning its own source doesn't false-positive on the
   // adversarial-input catalogue it ships to users.
   if (/(^|\/)src\/lib\/breakers\.[jt]sx?$/i.test(path)) return true;
   if (/(^|\/)src\/lib\/threat-intel\.[jt]sx?$/i.test(path)) return true;
@@ -149,7 +149,7 @@ export const FILE_INCLUDE = [
   /(^|\/)llms\.txt$/i,
   /(^|\/)robots\.txt$/i,
   /(^|\/)sitemap\.xml$/i,
-  // Repo-local Pre-Flight config so the suppression workflow loads on GitHub URL scans
+  // Repo-local PreFlight config so the suppression workflow loads on GitHub URL scans
   /(^|\/)\.preflight\.(ya?ml|json)$/i,
   // 2026 additions: AI tooling configs, MCP servers, CI workflows
   /\.github\/workflows\/.+\.ya?ml$/,

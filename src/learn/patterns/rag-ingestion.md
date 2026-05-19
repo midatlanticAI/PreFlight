@@ -80,7 +80,7 @@ Three failure modes from the same pattern:
 
 ## What the failure looks like
 
-Pre-Flight scans for two ingestion-side patterns:
+PreFlight scans for two ingestion-side patterns:
 
 - **Embedding API calls** (`openai.embeddings.create`, `client.embeddings.create`, generic `embeddings.create`) where the input traces back to user-controlled content (`req.body`, `req.files`, `req.formData`, named `userDoc` / `uploaded*`).
 - **Vector store writes** (`pinecone.upsert`, `weaviate.add`, `qdrant.upsert`, `chroma.add`, `milvus.insert`, `pgvector` operations, `supabase.vectors.upsert`, generic `vectorStore.upsert`) with similar input traceback.

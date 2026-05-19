@@ -93,9 +93,9 @@ export function summarizeCompliance(findings, scope) {
 
 const DISCLAIMER =
   'Interpretation layer, not a compliance determination or legal advice. ' +
-  'You declared the regulatory scope; Pre-Flight maps technical clauses, ' +
+  'You declared the regulatory scope; PreFlight maps technical clauses, ' +
   'it does not decide a regime applies to you. "indicative" mappings need ' +
-  'human judgement in context. Pre-Flight scans only code-detectable ' +
+  'human judgement in context. PreFlight scans only code-detectable ' +
   'technical safeguards (HIPAA 164.312, PCI-DSS, GDPR Art.32/25, SOC2 ' +
   'readiness). It does not scan FERPA, SOX, FDA 21 CFR 11, FTC, or the EU ' +
   'AI Act; those are taught in the compliance Learn pages, not detected.';
@@ -111,7 +111,7 @@ export { DISCLAIMER as COMPLIANCE_DISCLAIMER };
  */
 export function formatComplianceExport(summary, scannedAt) {
   const lines = [];
-  lines.push('# Pre-Flight regulatory mapping (scan-scope)');
+  lines.push('# PreFlight regulatory mapping (scan-scope)');
   lines.push('');
   lines.push(`Declared regulatory scope: ${summary.declaredScope.join(', ') || '(none)'}`);
   if (scannedAt) lines.push(`Scan: ${scannedAt}`);

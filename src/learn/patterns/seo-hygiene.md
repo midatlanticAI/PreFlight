@@ -42,7 +42,7 @@ For products that depend on search and shareable links, these are revenue findin
 
 ## What the failure looks like
 
-Pre-Flight scans HTML for the canonical signals on what looks like a primary landing page. Missing any of:
+PreFlight scans HTML for the canonical signals on what looks like a primary landing page. Missing any of:
 
 - `<link rel="canonical" href="...">`
 - `<meta name="description" content="...">`
