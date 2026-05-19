@@ -228,6 +228,40 @@ describe('probeEnvFiles', () => {
       expect(probeEnvFiles([file(path, 'SECRET=abc')])).toHaveLength(1);
     }
   );
+
+  // .gitignore preventive audit — fires regardless of whether a .env is
+  // currently committed, so AI-generated .env files cannot land later.
+  describe('.gitignore audit', () => {
+    it('flags .gitignore that has no .env pattern', () => {
+      const f = probeEnvFiles([file('.gitignore', 'node_modules\ndist\n*.log')]);
+      const hit = f.find((x) => x.title.includes('.gitignore missing'));
+      expect(hit).toBeDefined();
+      expect(hit.severity).toBe('low');
+    });
+    it.each([
+      '.env',
+      '.env.*',
+      '.env.local',
+      '.env*',
+      '*.local',
+      '*.env',
+      '# leading comment\nnode_modules\n.env',
+    ])('does not flag when .gitignore has pattern: %s', (ignoreLine) => {
+      const f = probeEnvFiles([file('.gitignore', `node_modules\n${ignoreLine}`)]);
+      expect(f.find((x) => x.title.includes('.gitignore missing'))).toBeUndefined();
+    });
+    it('does not fire when there is no .gitignore in the corpus', () => {
+      // Projects with no .gitignore at all are a different finding class
+      // (also rare in real repos). Silence avoids cross-firing.
+      expect(probeEnvFiles([file('package.json', '{}')])).toEqual([]);
+    });
+    it('emits the gitignore finding in addition to a committed-.env finding when both apply', () => {
+      const f = probeEnvFiles([file('.env', 'X=1'), file('.gitignore', 'node_modules')]);
+      expect(f).toHaveLength(2);
+      expect(f.find((x) => x.title.includes('.env file present'))).toBeDefined();
+      expect(f.find((x) => x.title.includes('.gitignore missing'))).toBeDefined();
+    });
+  });
 });
 
 describe('probeAuthWeakness', () => {
@@ -286,6 +320,162 @@ describe('probeMissingHeaders', () => {
       file('next.config.js', 'export default { async headers() { return [] } }'),
     ]);
     expect(f).toEqual([]);
+  });
+
+  // Framework/host-aware extension. Per-header coverage when a statically
+  // parseable host config exists (Cloudflare/Netlify _headers, vercel.json,
+  // netlify.toml, firebase.json).
+  describe('per-host config parsing', () => {
+    const fullHeaders = `/*
+  Content-Security-Policy: default-src 'self'; frame-ancestors 'none'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=()`;
+
+    it('Cloudflare Pages _headers with the full canonical set: clean', () => {
+      const f = probeMissingHeaders([file('public/_headers', fullHeaders)]);
+      expect(f).toEqual([]);
+    });
+
+    it('Cloudflare Pages _headers missing HSTS: one HSTS finding', () => {
+      const partial = fullHeaders
+        .split('\n')
+        .filter((l) => !/Strict-Transport-Security/.test(l))
+        .join('\n');
+      const f = probeMissingHeaders([file('public/_headers', partial)]);
+      expect(f).toHaveLength(1);
+      expect(f[0].title).toContain('Strict-Transport-Security');
+      expect(f[0].severity).toBe('medium');
+    });
+
+    it('Empty _headers fires per-canonical-header findings, not a single blanket finding', () => {
+      const f = probeMissingHeaders([file('public/_headers', '/*\n  Cache-Control: no-store')]);
+      // 5 canonical + 1 frame-ancestors
+      expect(f.length).toBeGreaterThanOrEqual(5);
+      expect(f.find((x) => x.title.includes('frame-ancestors'))).toBeDefined();
+    });
+
+    it('CSP frame-ancestors satisfies the clickjacking check (no X-Frame-Options needed)', () => {
+      const csp = `/*
+  Content-Security-Policy: frame-ancestors 'none'
+  Strict-Transport-Security: max-age=31536000
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin
+  Permissions-Policy: geolocation=()`;
+      const f = probeMissingHeaders([file('public/_headers', csp)]);
+      expect(f.find((x) => x.title.includes('frame-ancestors'))).toBeUndefined();
+    });
+
+    it('X-Frame-Options alone satisfies clickjacking (no CSP frame-ancestors needed)', () => {
+      const xfo = `/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'self'
+  Strict-Transport-Security: max-age=31536000
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin
+  Permissions-Policy: geolocation=()`;
+      const f = probeMissingHeaders([file('public/_headers', xfo)]);
+      expect(f.find((x) => x.title.includes('frame-ancestors'))).toBeUndefined();
+    });
+
+    it('vercel.json with headers array is parsed for per-header coverage', () => {
+      const vercel = JSON.stringify({
+        headers: [
+          {
+            source: '/(.*)',
+            headers: [
+              { key: 'X-Frame-Options', value: 'DENY' },
+              { key: 'Content-Security-Policy', value: "default-src 'self'" },
+              { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
+              { key: 'X-Content-Type-Options', value: 'nosniff' },
+              { key: 'Referrer-Policy', value: 'strict-origin' },
+              { key: 'Permissions-Policy', value: 'geolocation=()' },
+            ],
+          },
+        ],
+      });
+      const f = probeMissingHeaders([file('vercel.json', vercel)]);
+      expect(f).toEqual([]);
+    });
+
+    it('netlify.toml [headers.values] block is parsed', () => {
+      const toml = `[[headers]]
+for = "/*"
+[headers.values]
+  X-Frame-Options = "DENY"
+  Content-Security-Policy = "default-src 'self'"
+  Strict-Transport-Security = "max-age=31536000"
+  X-Content-Type-Options = "nosniff"
+  Referrer-Policy = "strict-origin"
+  Permissions-Policy = "geolocation=()"
+`;
+      const f = probeMissingHeaders([file('netlify.toml', toml)]);
+      expect(f).toEqual([]);
+    });
+
+    it('firebase.json hosting.headers is parsed', () => {
+      const fb = JSON.stringify({
+        hosting: {
+          public: 'public',
+          headers: [
+            {
+              source: '**',
+              headers: [
+                { key: 'X-Frame-Options', value: 'DENY' },
+                { key: 'Content-Security-Policy', value: "default-src 'self'" },
+                { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
+                { key: 'X-Content-Type-Options', value: 'nosniff' },
+                { key: 'Referrer-Policy', value: 'strict-origin' },
+                { key: 'Permissions-Policy', value: 'geolocation=()' },
+              ],
+            },
+          ],
+        },
+      });
+      const f = probeMissingHeaders([file('firebase.json', fb)]);
+      expect(f).toEqual([]);
+    });
+  });
+
+  describe('false-positive suppressions', () => {
+    it('FP-8 GitHub Pages target with no other host: suppress', () => {
+      const f = probeMissingHeaders([
+        file('.github/workflows/deploy.yml', 'jobs:\n  deploy:\n    uses: actions/deploy-pages@v4'),
+      ]);
+      expect(f).toEqual([]);
+    });
+
+    it('FP-9 Next static export with only next.config.js headers(): flag as ineffective', () => {
+      const next = `module.exports = { output: 'export', async headers() { return [] } }`;
+      const f = probeMissingHeaders([file('next.config.js', next)]);
+      expect(f).toHaveLength(1);
+      expect(f[0].title).toContain('ignored on static export');
+    });
+
+    it('FP-3 IaC present (Terraform): downgrade severity to info', () => {
+      const f = probeMissingHeaders([
+        file('public/_headers', '/*\n  Cache-Control: no-store'),
+        file('infra/main.tf', 'resource "aws_cloudfront_distribution" "x" {}'),
+      ]);
+      expect(f.length).toBeGreaterThan(0);
+      expect(f.every((x) => x.severity === 'info')).toBe(true);
+    });
+
+    it('FP-10 reverse proxy present (Caddyfile): downgrade severity to info', () => {
+      const f = probeMissingHeaders([
+        file('public/_headers', '/*\n  Cache-Control: no-store'),
+        file('Caddyfile', ':80 { reverse_proxy app:3000 }'),
+      ]);
+      expect(f.length).toBeGreaterThan(0);
+      expect(f.every((x) => x.severity === 'info')).toBe(true);
+    });
+
+    it('Opaque-positive: next.config.js headers() without static export: suppress per-header (legacy)', () => {
+      const next = `module.exports = { async headers() { return [] } }`;
+      const f = probeMissingHeaders([file('next.config.js', next)]);
+      expect(f).toEqual([]);
+    });
   });
 });
 

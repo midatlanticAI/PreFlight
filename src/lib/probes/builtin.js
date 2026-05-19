@@ -250,6 +250,30 @@ export function probePackageJson(files) {
   return findings;
 }
 
+// Preventive check: does the project's .gitignore actually have a pattern that
+// would catch .env files BEFORE they get committed? Most leaked-secret incidents
+// from vibe-coded repos are committed `.env` because the `.gitignore` rule was
+// never added — by the time PreFlight's per-file probe catches it, the file is
+// already in git history and the secrets are already compromised. Auditing the
+// ignore rules is the *preventive* upgrade.
+//
+// FP avoidance: only fires when .gitignore EXISTS in the corpus (no false alarm
+// on projects that never started one) AND has no recognizable .env pattern.
+// Accepts any of: `.env`, `.env.*`, `*.env`, `.env*`, `*.local`, `.env.local`
+// (and other forms with trailing slashes, leading whitespace).
+function gitignoreHasEnvPattern(content) {
+  const lines = content
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'));
+  return lines.some(
+    (l) =>
+      /^\.env(\..+|\*|$)/.test(l) || // .env, .env.local, .env.* , .env*
+      /^\*\.local$/.test(l) || // *.local catches .env.local
+      /^\*\.env$/.test(l) // *.env (rare but valid)
+  );
+}
+
 export function probeEnvFiles(files) {
   const findings = [];
   files.forEach((file) => {
@@ -273,6 +297,29 @@ export function probeEnvFiles(files) {
       remediation: `Real .env files should never be committed to git. Add .env, .env.local, .env.production to .gitignore. Use .env.example with placeholder values for documentation. If this file has been committed to a public repo, treat every value in it as compromised and rotate.`,
     });
   });
+
+  // Preventive: audit the project's .gitignore for .env coverage.
+  const gitignore = files.find((f) => /(^|\/)\.gitignore$/.test(f.path));
+  if (gitignore && !gitignoreHasEnvPattern(gitignore.content)) {
+    findings.push({
+      id: `env-gitignore-missing-${gitignore.path}`,
+      probe: 'Env Hygiene',
+      title: '.gitignore missing .env ignore rule',
+      severity: 'low',
+      category: 'Misconfiguration',
+      cwe: 'CWE-538',
+      file: gitignore.path,
+      line: 1,
+      evidence: 'No `.env`, `.env.*`, or `*.local` pattern in .gitignore',
+      remediation: `Add to .gitignore so .env files cannot be committed by accident:
+
+.env
+.env.*
+!.env.example
+
+The !.env.example exception keeps the placeholder template committable. This matches the Next.js, Vite, SvelteKit, Astro, and Nuxt conventions (all use the same .env / .env.local / .env.*.local hierarchy). Without these patterns a future .env that an AI agent generates will silently land in the repo.`,
+    });
+  }
   return findings;
 }
 
@@ -400,44 +447,261 @@ export function probeAdminRoutes(files) {
   return findings;
 }
 
-export function probeMissingHeaders(files) {
-  const findings = [];
-  const next = files.find((f) => /next\.config\.(js|mjs|ts)$/.test(f.path));
-  if (next) {
-    if (!/headers\s*\(/.test(next.content) && !/securityHeaders/.test(next.content)) {
-      findings.push({
-        id: `headers-${next.path}`,
-        probe: 'Security Headers',
-        title: 'No custom security headers configured in next.config',
-        severity: 'medium',
-        category: 'Misconfiguration',
-        cwe: 'CWE-693',
-        file: next.path,
-        line: 1,
-        evidence: 'No headers() function or securityHeaders array found',
-        remediation: `Add a headers() function returning Content-Security-Policy, Strict-Transport-Security, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, and Referrer-Policy: strict-origin-when-cross-origin. These prevent XSS, clickjacking, and MIME sniffing attacks.`,
-      });
+// Parse a Cloudflare Pages / Netlify `_headers` file for the set of header names
+// it configures. Format: indented `Header-Name: value` lines under a path
+// pattern (`/*`, `/admin/*`, etc.). Returns a lowercased Set.
+function parseHeadersFileNames(content) {
+  const headers = new Set();
+  for (const line of content.split(/\r?\n/)) {
+    const m = line.match(/^[ \t]+([A-Za-z][A-Za-z0-9-]*)\s*:/);
+    if (m) headers.add(m[1].toLowerCase());
+  }
+  return headers;
+}
+
+// Parse vercel.json `headers` array for header names across all path blocks.
+function parseVercelHeaderNames(content) {
+  const headers = new Set();
+  try {
+    const cfg = JSON.parse(content);
+    const blocks = Array.isArray(cfg.headers) ? cfg.headers : [];
+    for (const block of blocks) {
+      const list = Array.isArray(block.headers) ? block.headers : [];
+      for (const h of list) {
+        if (h && typeof h.key === 'string') headers.add(h.key.toLowerCase());
+      }
+    }
+  } catch {
+    /* malformed JSON: caller treats as no headers configured */
+  }
+  return headers;
+}
+
+// Parse firebase.json hosting.headers for header names.
+function parseFirebaseHeaderNames(content) {
+  const headers = new Set();
+  try {
+    const cfg = JSON.parse(content);
+    const blocks = Array.isArray(cfg?.hosting?.headers) ? cfg.hosting.headers : [];
+    for (const block of blocks) {
+      const list = Array.isArray(block.headers) ? block.headers : [];
+      for (const h of list) {
+        if (h && typeof h.key === 'string') headers.add(h.key.toLowerCase());
+      }
+    }
+  } catch {
+    /* malformed JSON: caller treats as no headers configured */
+  }
+  return headers;
+}
+
+// Minimal TOML parse for [[headers]] blocks: pulls header key names out of
+// `[headers.values]` tables. Full TOML parser is overkill for this scope.
+function parseNetlifyTomlHeaderNames(content) {
+  const headers = new Set();
+  // Match each [[headers]] block and the [headers.values] sub-table inside it.
+  const re = /\[headers\.values\]([\s\S]*?)(?=\n\s*\[|$)/g;
+  let m;
+  while ((m = re.exec(content))) {
+    for (const line of m[1].split(/\r?\n/)) {
+      const km = line.match(/^\s*([A-Za-z][A-Za-z0-9-]*)\s*=/);
+      if (km) headers.add(km[1].toLowerCase());
     }
   }
-  const vercel = files.find((f) => /vercel\.json$/.test(f.path));
-  if (vercel) {
-    try {
-      const cfg = JSON.parse(vercel.content);
-      if (!cfg.headers) {
+  return headers;
+}
+
+// FP-3 disambiguation: presence of any IaC template suggests headers may be
+// configured at the host edge layer (CloudFront Response Headers Policy, etc.)
+// where PreFlight can't statically see them. Downgrade severity rather than
+// suppress entirely so the user still sees a reminder.
+function hasInfraAsCode(files) {
+  return files.some((f) =>
+    /(\.tf|(^|\/)cdk\.json|(^|\/)template\.ya?ml|(^|\/)serverless\.ya?ml)$/.test(f.path)
+  );
+}
+
+// FP-10 disambiguation: a reverse proxy in front of the app may inject headers
+// outside PreFlight's static view.
+function hasReverseProxy(files) {
+  return files.some((f) =>
+    /((^|\/)Caddyfile|(^|\/)nginx\.conf|(^|\/)traefik\.ya?ml)$/.test(f.path)
+  );
+}
+
+// FP-8 disambiguation: a GitHub Pages target has no first-class header config
+// mechanism; flagging "missing _headers" is misleading because the user can't
+// fix it at the framework layer.
+function isGitHubPagesOnly(files, hostsDetected) {
+  if (hostsDetected.size > 1) return false;
+  return files.some(
+    (f) =>
+      /\.github\/workflows\/.+\.ya?ml$/.test(f.path) &&
+      /(actions\/deploy-pages|actions\/upload-pages-artifact|gh-pages)/.test(f.content)
+  );
+}
+
+// FP-9 disambiguation: Next.js `output: 'export'` silently disables
+// next.config.js `headers()`. The probe's positive signal becomes meaningless.
+function isNextStaticExport(nextFile) {
+  return /output\s*:\s*['"`]export['"`]/.test(nextFile.content);
+}
+
+// Cheap host classifier. Used only for the GitHub-Pages-only suppression today
+// (FP-8); host-config-file detection drives the rest of the probe directly.
+function classifyHosts(files) {
+  const hosts = new Set();
+  if (files.some((f) => /(^|\/)wrangler\.(toml|jsonc?)$/.test(f.path))) hosts.add('cloudflare');
+  if (files.some((f) => /(^|\/)netlify\.toml$/.test(f.path))) hosts.add('netlify');
+  if (files.some((f) => /(^|\/)vercel\.(json|ts)$/.test(f.path))) hosts.add('vercel');
+  if (files.some((f) => /(^|\/)fly\.toml$/.test(f.path))) hosts.add('fly');
+  if (files.some((f) => /(^|\/)render\.yaml$/.test(f.path))) hosts.add('render');
+  if (files.some((f) => /(^|\/)railway\.(json|toml)$/.test(f.path))) hosts.add('railway');
+  if (files.some((f) => /(^|\/)firebase\.json$/.test(f.path))) hosts.add('firebase');
+  if (files.some((f) => /(^|\/)_headers$/.test(f.path))) hosts.add('static-headers');
+  return hosts;
+}
+
+// Canonical security-header set for SAST-visible checking. Sourced from MDN's
+// HTTP security headers reference. Per-header severity is calibrated to the
+// real-world impact of each individual header missing in 2026:
+//   CSP / HSTS    medium  (foundational defenses)
+//   X-CTO         low     (older defense, still recommended)
+//   Referrer      low     (privacy + small auth-token-in-URL leak risk)
+//   Permissions   low     (least urgent on apps that don't use camera/mic/etc)
+// Frame-ancestors is checked separately because either X-Frame-Options or a
+// CSP with frame-ancestors directive satisfies it.
+const CANONICAL_SECURITY_HEADERS = [
+  { key: 'content-security-policy', label: 'Content-Security-Policy', baseSev: 'medium' },
+  { key: 'strict-transport-security', label: 'Strict-Transport-Security', baseSev: 'medium' },
+  { key: 'x-content-type-options', label: 'X-Content-Type-Options', baseSev: 'low' },
+  { key: 'referrer-policy', label: 'Referrer-Policy', baseSev: 'low' },
+  { key: 'permissions-policy', label: 'Permissions-Policy', baseSev: 'low' },
+];
+
+export function probeMissingHeaders(files) {
+  const findings = [];
+
+  // Stage 0: FP-8 — GitHub Pages target with no other host signal: suppress.
+  const hostsDetected = classifyHosts(files);
+  if (isGitHubPagesOnly(files, hostsDetected)) return findings;
+
+  // Stage 1: collect statically-parseable host config sources and the union of
+  // header names they configure. next.config.js is excluded from this set
+  // because its `headers()` function is opaque to static analysis (returns at
+  // runtime), so we treat it as an ambiguous-positive in Stage 3.
+  const configured = new Set();
+  const staticSources = [];
+  const collect = (file, names) => {
+    staticSources.push(file.path);
+    for (const n of names) configured.add(n);
+  };
+
+  const headersFile = files.find((f) => /(^|\/)_headers$/.test(f.path));
+  if (headersFile) collect(headersFile, parseHeadersFileNames(headersFile.content));
+
+  const netlifyToml = files.find((f) => /(^|\/)netlify\.toml$/.test(f.path));
+  if (netlifyToml) collect(netlifyToml, parseNetlifyTomlHeaderNames(netlifyToml.content));
+
+  const vercelJson = files.find((f) => /(^|\/)vercel\.json$/.test(f.path));
+  if (vercelJson) collect(vercelJson, parseVercelHeaderNames(vercelJson.content));
+
+  const firebaseJson = files.find((f) => /(^|\/)firebase\.json$/.test(f.path));
+  if (firebaseJson) collect(firebaseJson, parseFirebaseHeaderNames(firebaseJson.content));
+
+  const next = files.find((f) => /(^|\/)next\.config\.(js|mjs|ts)$/.test(f.path));
+  const nextConfigured =
+    next && (/headers\s*\(/.test(next.content) || /securityHeaders/.test(next.content));
+  const nextStaticExport = next ? isNextStaticExport(next) : false;
+
+  // Stage 2: FP-9 — Next static-export with only next.config.js headers() is
+  // effectively missing because Next silently drops headers() on static export.
+  if (nextConfigured && nextStaticExport && staticSources.length === 0) {
+    findings.push({
+      id: `headers-next-static-export-${next.path}`,
+      probe: 'Security Headers',
+      title: 'next.config.js headers() ignored on static export',
+      severity: 'medium',
+      category: 'Misconfiguration',
+      cwe: 'CWE-693',
+      file: next.path,
+      line: 1,
+      evidence:
+        'next.config has output: "export" and headers(), but Next.js does not apply headers() on static exports.',
+      remediation: `Static-exported Next.js apps must configure headers at the host layer. Add the headers to public/_headers (Cloudflare Pages / Netlify), vercel.json's headers array, or firebase.json's hosting.headers. The headers() function in next.config will not run on a static export. Reference: https://nextjs.org/docs/app/api-reference/config/next-config-js/headers`,
+    });
+    return findings;
+  }
+
+  // Stage 3: Per-header coverage on statically-parseable host config.
+  if (staticSources.length > 0) {
+    const downgrade = hasInfraAsCode(files) || hasReverseProxy(files);
+    const primarySource = staticSources[0];
+    const allSources = staticSources.join(', ');
+
+    for (const c of CANONICAL_SECURITY_HEADERS) {
+      if (!configured.has(c.key)) {
         findings.push({
-          id: `headers-vercel-${vercel.path}`,
+          id: `headers-missing-${c.key}-${primarySource}`,
           probe: 'Security Headers',
-          title: 'No security headers in vercel.json',
-          severity: 'low',
+          title: `Missing ${c.label} header`,
+          severity: downgrade ? 'info' : c.baseSev,
           category: 'Misconfiguration',
           cwe: 'CWE-693',
-          file: vercel.path,
+          file: primarySource,
           line: 1,
-          evidence: 'No "headers" array in vercel.json',
-          remediation: `If you are not setting headers in next.config, add them in vercel.json. See vercel.com/docs/headers for the schema.`,
+          evidence: `${c.label} is not set in ${allSources}.${downgrade ? ' Severity downgraded to info because IaC or a reverse proxy was detected, which may set headers outside this repo.' : ''}`,
+          remediation: `Add ${c.label} to ${primarySource}. See MDN's reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/${c.label}. The security-headers Learn page has recommended values for each.`,
         });
       }
-    } catch {}
+    }
+
+    // Frame-ancestors: satisfied by X-Frame-Options OR a CSP that includes
+    // `frame-ancestors`. Check the raw config contents for the directive.
+    const hasXFO = configured.has('x-frame-options');
+    const hasCspFrameAncestors =
+      configured.has('content-security-policy') &&
+      [headersFile, netlifyToml, vercelJson, firebaseJson]
+        .filter(Boolean)
+        .some((f) => /frame-ancestors/i.test(f.content));
+    if (!hasXFO && !hasCspFrameAncestors) {
+      findings.push({
+        id: `headers-missing-frame-ancestors-${primarySource}`,
+        probe: 'Security Headers',
+        title: 'No clickjacking protection (X-Frame-Options or CSP frame-ancestors)',
+        severity: downgrade ? 'info' : 'medium',
+        category: 'Misconfiguration',
+        cwe: 'CWE-1021',
+        file: primarySource,
+        line: 1,
+        evidence: `Neither X-Frame-Options nor a Content-Security-Policy with a frame-ancestors directive is set in ${allSources}.`,
+        remediation: `Add either X-Frame-Options: DENY (or SAMEORIGIN) to ${primarySource}, or include frame-ancestors 'none' (or 'self') in your Content-Security-Policy. CSP frame-ancestors supersedes X-Frame-Options in modern browsers; either is acceptable.`,
+      });
+    }
+    return findings;
+  }
+
+  // Stage 4: No statically-parseable host config. If next.config.js declared a
+  // headers() function, treat as opaque-positive and suppress (we cannot
+  // inspect what it returns; legacy behavior preserved for compatibility).
+  if (next && nextConfigured) return findings;
+
+  // Stage 5: next.config.js exists but has no headers() — legacy single
+  // finding preserved. Any other framework with no host config is silent here
+  // to avoid false positives on architectures the probe doesn't yet model.
+  if (next && !nextConfigured) {
+    findings.push({
+      id: `headers-${next.path}`,
+      probe: 'Security Headers',
+      title: 'No custom security headers configured in next.config',
+      severity: 'medium',
+      category: 'Misconfiguration',
+      cwe: 'CWE-693',
+      file: next.path,
+      line: 1,
+      evidence: 'No headers() function or securityHeaders array found',
+      remediation: `Add a headers() function returning Content-Security-Policy, Strict-Transport-Security, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, and Referrer-Policy: strict-origin-when-cross-origin. These prevent XSS, clickjacking, and MIME sniffing attacks. If this is a static export (output: 'export'), configure headers at the host layer (public/_headers or vercel.json) instead.`,
+    });
   }
   return findings;
 }
