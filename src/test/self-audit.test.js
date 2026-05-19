@@ -49,6 +49,31 @@ describe('self-audit: our own dist/ should pass our own probes', () => {
     expect(files.some((f) => /dist\/index\.html$/.test(f.path))).toBe(true);
   });
 
+  // Dogfood blind-spot guard: the crawlable entry point (/) must ship real,
+  // machine-readable body content, not an empty #root. The SEO/GEO probes only
+  // check head/metadata hygiene, so an empty homepage passed the gate while
+  // failing the actual discoverability proposition. This asserts the prerender
+  // populated #root for "/" with substantive content.
+  it('homepage dist/index.html has non-empty prerendered body content', () => {
+    const home = files.find((f) => /(^|\/)dist\/index\.html$/.test(f.path));
+    expect(home, 'dist/index.html must exist (run `npm run build`)').toBeTruthy();
+    const m = home.content.match(
+      /<div id="root"[^>]*>([\s\S]*?)<\/div>\s*(?:<script|<noscript|<\/body)/i
+    );
+    expect(m, '#root container not found in dist/index.html').toBeTruthy();
+    const inner = m[1]
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    // An empty shell yields ~0 chars here; a real prerender yields hundreds.
+    expect(
+      inner.length,
+      `crawlable entry point has near-empty #root (${inner.length} chars of text) — prerender for "/" is not producing content`
+    ).toBeGreaterThan(200);
+    // Stable brand line that must survive into the static HTML.
+    expect(home.content).toContain('An educational audit tool for vibers building vibeware.');
+  });
+
   it('probeSEOHygiene finds nothing in our own dist/', () => {
     const findings = probeSEOHygiene(files);
     if (findings.length > 0) {

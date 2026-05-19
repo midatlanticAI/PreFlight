@@ -7,10 +7,12 @@
 // (prerender-for-bots, CSR-for-users), so there is no hydration contract to
 // keep and no client behavior change.
 //
-// Deliberately NOT rendered here: "/" (AuditView) and "/settings/*". They
-// read browser globals during render and carry no indexable content; they
-// still get a correct per-route <head> from src/lib/seo.js. Unmatched paths
-// render empty.
+// "/" renders a static, browser-global-free HomeOverview (not the live
+// AuditView, which reads browser globals and cannot be SSR'd). This gives the
+// crawlable entry point real, machine-readable content; the client still boots
+// the full AuditView and mounts fresh over this markup. "/settings/*" stays
+// excluded (browser-global-dependent, no indexable content); it still gets a
+// correct per-route <head> from src/lib/seo.js. Unmatched paths render empty.
 //
 // Content views are imported directly (not via App.jsx's lazyNamed) because
 // renderToString is synchronous and does not resolve React.lazy / Suspense.
@@ -21,6 +23,7 @@ import { renderToString } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server';
 import { Routes, Route } from 'react-router-dom';
 
+import { HomeOverview } from './components/HomeOverview.jsx';
 import { LearnPage } from './components/learn/LearnPage.jsx';
 import { ManifestoView } from './components/learn/ManifestoView.jsx';
 import { IndexView } from './components/learn/IndexView.jsx';
@@ -42,6 +45,7 @@ export function render(url) {
     <StaticRouter location={url}>
       <div className="ap-prerender">
         <Routes>
+          <Route path="/" element={<HomeOverview />} />
           <Route path="/learn" element={<LearnPage />}>
             <Route index element={<ManifestoView />} />
             <Route path="how-it-works" element={<HowToView />} />
