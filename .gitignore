@@ -18,6 +18,12 @@ dist-ssr
 .env.*
 !.env.example
 
+# Local design-doc scratch. LLM-exported language-agnostic research and
+# similar working artifacts that live in docs/ for reference but don't need
+# to be tracked. Architecture writeups and v05-research/ stay committed.
+docs/*.docx
+docs/claudelanguageagnostic.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
