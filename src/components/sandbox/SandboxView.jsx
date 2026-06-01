@@ -1,28 +1,30 @@
 // src/components/sandbox/SandboxView.jsx
 //
 // Top-level sandbox surface. Lives at /sandbox; one of the load-bearing
-// surfaces in the v2 overhaul (see docs/preflight-v2-spec.md). The route
-// becomes the application's new entry point once the worker-driven probe
-// pipeline and the persona cards land; this first cut establishes the editor
-// surface, the right-side findings panel, and the route wire so subsequent
-// commits can layer functionality without churning the shell.
+// surfaces in the v2 overhaul (see docs/preflight-v2-spec.md). Designed to
+// become the application's new entry point once the worker-driven probe
+// pipeline and the persona cards land; this first iteration establishes the
+// editor surface, the right-side findings panel, the route wire, and a
+// debounced live scan against an opening set of v0.4 probes so subsequent
+// commits extend rather than rebuild the contract.
 //
 // SSR caveat: CodeMirror touches DOM during construction. SandboxView is
 // client-only (the prerender skips /sandbox the same way it skips / and
 // /settings); App.jsx wraps the route in React.Suspense so the first paint
 // is the loading state and the editor mounts after.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Editor } from './Editor.jsx';
 import { FindingsPanel } from './FindingsPanel.jsx';
+import { runSandboxScan } from '../../lib/sandbox/runner.js';
 import { T, fontUI, fontMono } from '../../lib/theme.js';
 
 // Starter buffer. Intentionally vibe-coded so the surface demonstrates the
-// patterns the sandbox will eventually catch: a fetch in useEffect with no
-// AbortController and no r.ok check, an addEventListener with no cleanup,
-// a console.log left behind, an index-as-key in a dynamic list. None of
-// these fire today (probes plug in next); the file is here so the editor
-// has real-shaped code from the first paint.
+// patterns the sandbox catches: a fetch in useEffect with no AbortController
+// and no r.ok check, an addEventListener with no cleanup, a console.log left
+// behind, an index-as-key in a dynamic list. The console.log alone is enough
+// for the runner's current probe set to fire on first paint, so a user
+// landing on /sandbox immediately sees the panel populated.
 const STARTER_BUFFER = `import { useState, useEffect } from 'react';
 
 function UserSearch({ onSelect }) {
@@ -54,8 +56,22 @@ function UserSearch({ onSelect }) {
 }
 `;
 
+// Debounce window in ms before re-running the scan after the user stops
+// typing. 300ms is the budget from preflight-v2-spec.md §1.12.
+const SCAN_DEBOUNCE_MS = 300;
+
 export function SandboxView() {
   const [code, setCode] = useState(STARTER_BUFFER);
+  // Initial findings computed synchronously so the first paint already shows
+  // what fires on the starter buffer rather than an empty panel.
+  const [findings, setFindings] = useState(() => runSandboxScan(STARTER_BUFFER));
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setFindings(runSandboxScan(code));
+    }, SCAN_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [code]);
 
   return (
     <section aria-labelledby="sandbox-heading" className="ap-fade-in">
@@ -101,7 +117,7 @@ export function SandboxView() {
         }}
       >
         <Editor initialValue={STARTER_BUFFER} onChange={setCode} />
-        <FindingsPanel findings={[]} />
+        <FindingsPanel findings={findings} />
       </div>
 
       <style>{`
@@ -121,7 +137,7 @@ export function SandboxView() {
           fontFamily: fontMono,
         }}
       >
-        Editor characters: {code.length}
+        Editor characters: {code.length} · Findings: {findings.length}
       </p>
     </section>
   );

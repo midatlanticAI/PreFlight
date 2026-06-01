@@ -73,3 +73,49 @@ describe('sandbox dependencies are committed', () => {
     expect(pkg.dependencies?.['@codemirror/lang-javascript']).toBeTruthy();
   });
 });
+
+// Runtime scan contract for the sandbox. The runner is the seam between the
+// editor surface and the probe pipeline. These tests pin the contract so
+// future Worker / SWC moves preserve the same string-in, findings-out shape.
+describe('runSandboxScan contract', () => {
+  it('returns an empty array for an empty buffer', async () => {
+    const { runSandboxScan } = await import('../lib/sandbox/runner.js');
+    expect(runSandboxScan('')).toEqual([]);
+  });
+
+  it('returns an empty array for non-string input', async () => {
+    const { runSandboxScan } = await import('../lib/sandbox/runner.js');
+    expect(runSandboxScan(undefined)).toEqual([]);
+    expect(runSandboxScan(null)).toEqual([]);
+    expect(runSandboxScan(42)).toEqual([]);
+  });
+
+  it('returns an array of findings for valid code input', async () => {
+    const { runSandboxScan } = await import('../lib/sandbox/runner.js');
+    const findings = runSandboxScan('const x = 1;');
+    expect(Array.isArray(findings)).toBe(true);
+  });
+
+  it('fires the auth-weakness probe on eval()', async () => {
+    const { runSandboxScan } = await import('../lib/sandbox/runner.js');
+    const findings = runSandboxScan('const r = eval("1 + 1");');
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings.some((f) => /eval/i.test(f.title))).toBe(true);
+  });
+
+  it('fires on dangerouslySetInnerHTML', async () => {
+    const { runSandboxScan } = await import('../lib/sandbox/runner.js');
+    const code = `function X() { return <div dangerouslySetInnerHTML={{ __html: input }} />; }`;
+    const findings = runSandboxScan(code);
+    expect(findings.some((f) => /dangerouslysetinnerhtml/i.test(f.title))).toBe(true);
+  });
+
+  it('every emitted finding has a stable id', async () => {
+    const { runSandboxScan } = await import('../lib/sandbox/runner.js');
+    const findings = runSandboxScan('const x = eval("1"); const y = eval("2");');
+    expect(findings.length).toBeGreaterThan(0);
+    const ids = findings.map((f) => f.id).filter(Boolean);
+    expect(ids.length).toBe(findings.length);
+    expect(new Set(ids).size).toBe(ids.length); // all unique
+  });
+});
