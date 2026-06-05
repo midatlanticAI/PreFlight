@@ -55,12 +55,27 @@ describe('PROBES registry', () => {
 // Fixtures use runtime string concatenation so the SOURCE doesn't contain literal
 // secret-shaped patterns (GitHub secret scanning would block the push). The probes
 // match the concatenated runtime value, so behavior is identical.
-const FAKE_AWS = 'AKIA' + 'IOSFODNN7' + 'EXAMPLE';
+// Synthetic AKIA shape. Does NOT match probeSecrets' placeholder filter
+// (no "EXAMPLE" / "REPLACE" / "DEMO" / "x{4,}" / angle-bracket substrings).
+// The string is split to satisfy GitHub push protection while still
+// producing a contiguous AKIA pattern at runtime.
+const FAKE_AWS = 'AKIA' + '1234567890ABCDEF';
 const FAKE_STRIPE_LIVE = 'sk_li' + 've_' + 'abcdefghijklmnopqrstuvwx';
 const FAKE_STRIPE_LIVE_LONG = 'sk_li' + 've_' + 'a'.repeat(24);
 const FAKE_OPENAI = 'sk-pr' + 'oj-' + 'a'.repeat(50);
 const FAKE_ANTHROPIC = 'sk-' + 'ant-' + 'a'.repeat(50);
-const FAKE_PEM_HEADER = '-----' + 'BEGIN RSA PRIVATE KEY' + '-----';
+// Full PEM block (BEGIN + body + END). The BEGIN line alone is now
+// correctly suppressed by probeSecrets as a framing-only reference (real
+// PEM constants stored as `const BEGIN = '-----BEGIN ... -----'` are not
+// leaked keys). The test asserts detection on the realistic real-key shape.
+const FAKE_PEM_HEADER =
+  '-----' +
+  'BEGIN RSA PRIVATE KEY' +
+  '-----\n' +
+  'MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDH/test/key/body/material\n' +
+  '-----' +
+  'END RSA PRIVATE KEY' +
+  '-----';
 
 describe('probeSecrets', () => {
   it('detects an AWS access key', () => {

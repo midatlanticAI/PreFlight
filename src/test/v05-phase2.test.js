@@ -154,7 +154,11 @@ const CORPUS = [
     content: [
       'export const cfg = {',
       "  region: 'us-east-1',",
-      "  accessKeyId: 'AKIAIOSFODNN7EXAMPLE',",
+      // Synthetic AKIA shape. probeSecrets now correctly suppresses the
+      // AWS-published documentation value `AKIAIOSFODNN7EXAMPLE` via its
+      // placeholder filter; use a plain alphanumeric AKIA so both the v0.4
+      // probe and the v0.5 JS-SECRET-001 adapter still fire on this row.
+      "  accessKeyId: 'AKIA1234567890ABCDEF',",
       '  fromEnv: process.env.AWS_ACCESS_KEY_ID,',
       '};',
     ].join('\n'),

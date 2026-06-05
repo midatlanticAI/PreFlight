@@ -247,7 +247,128 @@ const GLOBALS = new Set([
   'arguments',
   'this',
   'super',
+  // Service Worker scope globals (file detection is unnecessary; these names
+  // are unlikely to collide with user identifiers in non-SW code).
+  // canonical real-world FP source: probeCodeCorrectness firing on `caches`
+  // in `sw.js` even though `caches` is the CacheStorage interface globally
+  // available in service workers.
+  'caches',
+  'clients',
+  'registration',
+  'skipWaiting',
+  'importScripts',
+  'onmessage',
+  'onerror',
+  'onfetch',
+  'oninstall',
+  'onactivate',
+  'onpush',
+  'onsync',
+  'addEventListener',
+  'removeEventListener',
+  'postMessage',
+  'CacheStorage',
+  'Cache',
+  'Client',
+  'Clients',
+  'WindowClient',
+  'ExtendableEvent',
+  'ExtendableMessageEvent',
+  'FetchEvent',
+  'InstallEvent',
+  'ActivateEvent',
+  'PushEvent',
+  'SyncEvent',
+  'NotificationEvent',
+  'ServiceWorkerRegistration',
+  'ServiceWorkerGlobalScope',
+  'WorkerGlobalScope',
+  'DedicatedWorkerGlobalScope',
+  'SharedWorkerGlobalScope',
+  // Deno runtime
+  'Deno',
+  // Modern browser APIs the original allowlist didn't cover
+  'Intl',
+  'WebAssembly',
+  'customElements',
+  'OffscreenCanvas',
+  'ClipboardItem',
+  'Clipboard',
+  'MediaRecorder',
+  'MediaStream',
+  'MediaStreamTrack',
+  'MediaDevices',
+  'RTCPeerConnection',
+  'RTCSessionDescription',
+  'RTCIceCandidate',
+  'createImageBitmap',
+  'ImageBitmap',
+  'PushManager',
+  'PushSubscription',
+  'BackgroundSync',
+  'PeriodicSyncManager',
+  'PermissionStatus',
+  'Animation',
+  'AnimationEffect',
+  'KeyframeEffect',
+  'WebTransport',
+  'Bluetooth',
+  'BluetoothDevice',
+  'USB',
+  'HID',
+  'Serial',
+  'CSS',
+  'CSSRule',
+  'CSSKeyframesRule',
+  'CSSKeyframeRule',
+  'CSSMediaRule',
+  'CSSSupportsRule',
+  'getSelection',
+  'scrollTo',
+  'scrollBy',
+  'scrollX',
+  'scrollY',
+  'innerWidth',
+  'innerHeight',
+  'outerWidth',
+  'outerHeight',
+  'print',
+  'open',
+  'close',
+  'postMessage',
+  // Node globals the original allowlist missed
+  'setImmediate',
+  'clearImmediate',
+  // Vite/build-tool conventional injected globals (frequently emitted by
+  // vite.config define options or webpack DefinePlugin). They're TypeScript-
+  // typed via `vite-env.d.ts` or `webpack.d.ts` but are runtime-injected.
+  '__APP_VERSION__',
+  '__BUILD_TIME__',
+  '__BUILD_HASH__',
+  '__DEV__',
+  '__PROD__',
 ]);
+
+// Parse `/* global X, Y, Z */` and `/* global X:readonly */` directive comments
+// to extract additional file-local globals. This is the standard ESLint
+// mechanism for declaring runtime-provided globals (script-tag libraries,
+// build-time DefinePlugin injections, Cloudflare Worker env bindings, etc.).
+// Returns a Set of identifier names.
+function parseGlobalDirectives(content) {
+  const result = new Set();
+  if (!content || typeof content !== 'string') return result;
+  // Match block-comment global directives anywhere in the file.
+  const re = /\/\*\s*globals?\s+([^*]+)\*\//g;
+  let m;
+  while ((m = re.exec(content)) !== null) {
+    const list = m[1];
+    for (const entry of list.split(',')) {
+      const cleaned = entry.trim().split(':')[0].trim();
+      if (/^[A-Za-z_$][\w$]*$/.test(cleaned)) result.add(cleaned);
+    }
+  }
+  return result;
+}
 
 // Recursively walk an AST node, calling `visitor` for each node and recursing into all
 // child nodes. We could pull in acorn-walk but adding a dep for a 30-line walker isn't
@@ -466,6 +587,7 @@ export function probeCodeCorrectness(files) {
     }
 
     const bindings = collectBindings(ast);
+    const localGlobals = parseGlobalDirectives(content);
 
     // Second pass: collect references.
     const undeclaredFirstSeen = new Map(); // name -> first (line, col)
@@ -476,6 +598,7 @@ export function probeCodeCorrectness(files) {
         const name = node.name;
         if (!name) return;
         if (GLOBALS.has(name)) return;
+        if (localGlobals.has(name)) return;
         if (bindings.has(name)) return;
         if (!undeclaredFirstSeen.has(name)) {
           undeclaredFirstSeen.set(name, {
@@ -494,6 +617,7 @@ export function probeCodeCorrectness(files) {
         const name = node.name;
         if (isJSXIntrinsic(name)) return; // <div>, <span>, etc.
         if (GLOBALS.has(name)) return;
+        if (localGlobals.has(name)) return;
         if (bindings.has(name)) return;
         if (!undeclaredFirstSeen.has(name)) {
           undeclaredFirstSeen.set(name, {

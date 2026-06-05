@@ -13,8 +13,19 @@
 export function isTestFile(path) {
   if (!path) return false;
   if (/\.(test|spec)\.[jt]sx?$/i.test(path)) return true;
-  if (/(^|\/)(test|tests|__tests__)\//i.test(path)) return true;
+  if (/(^|\/)(test|tests|__tests__|fixtures)\//i.test(path)) return true;
   return false;
+}
+
+// True for project markdown documentation files. The secret scanner pattern
+// page explicitly promises: "PreFlight skips ... markdown documentation files
+// where the key is part of an example." A user's README.md, docs/*.md, or
+// guidance markdown that demonstrates the shape of an AWS/Stripe/OpenAI key is
+// not a leak; it's documentation. Real secrets pasted into markdown files are
+// vanishingly rare relative to documentation references to the shapes. Skip.
+export function isDocumentationMarkdownFile(path) {
+  if (!path) return false;
+  return /\.md$/i.test(path);
 }
 
 // --- Self-source exclusion: pattern-matching probes should skip scanner internals ---

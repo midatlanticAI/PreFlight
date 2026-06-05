@@ -38,7 +38,14 @@ const FIXTURES = {
     positive: [
       {
         desc: 'AWS access key in production source',
-        files: [file('src/aws.js', 'const k = "AKIAIOSFODNN7EXAMPLE";')],
+        // Use a synthetic AKIA shape that does NOT match probeSecrets'
+        // placeholder filter (no "EXAMPLE" / "REPLACE" / "DEMO" / "x{4,}" /
+        // angle-bracket substrings). The previous fixture used the AWS-
+        // published documentation value `AKIAIOSFODNN7EXAMPLE`, which the
+        // placeholder filter now correctly suppresses — exactly the spec
+        // intent. A plain alphanumeric AKIA shape stands in as the
+        // "shape-only real key" assertion.
+        files: [file('src/aws.js', 'const k = "AKIA1234567890ABCDEF";')],
       },
       {
         // Split literal so GitHub's push-protection scanner doesn't see a
@@ -70,6 +77,13 @@ const FIXTURES = {
         desc: 'database connection string with embedded password',
         files: [file('src/db.js', 'const url = "postgres://admin:hunter2@db.internal:5432/prod";')],
       },
+      {
+        // Previously documented as a gap ("probe still expects classic sk- only").
+        // Closed in the spec-honoring regex relaxation `{40,}` → `{20,}` that
+        // brought OpenAI detection in line with the Pattern page.
+        desc: 'sk-proj- modern OpenAI key',
+        files: [file('src/ai.js', 'const k = "sk-proj-abc123def456ghi789jkl012mno345pq";')],
+      },
     ],
     negative: [
       {
@@ -88,10 +102,6 @@ const FIXTURES = {
       },
     ],
     gap: [
-      {
-        desc: 'sk-proj- (modern OpenAI format) — probe still expects classic sk- only',
-        files: [file('src/ai.js', 'const k = "sk-proj-abc123def456ghi789jkl012mno345pq";')],
-      },
       {
         desc: 'base64-encoded credential block',
         files: [

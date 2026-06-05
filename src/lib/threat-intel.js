@@ -35,8 +35,11 @@ export const SECRET_PATTERNS = [
     cwe: 'CWE-798',
   },
   {
+    // Pattern page (secret-scanner.md) specifies `sk-[A-Za-z0-9]{20,}` or
+    // `sk-proj-...`. The previous 40-char floor was more conservative than
+    // the spec and missed shorter modern OpenAI keys. Spec-honoring 20.
     name: 'OpenAI API Key',
-    regex: /\bsk-(?:proj-)?[A-Za-z0-9_\-]{40,}\b/g,
+    regex: /\bsk-(?:proj-)?[A-Za-z0-9_\-]{20,}\b/g,
     severity: 'critical',
     category: 'Data Breach',
     cwe: 'CWE-798',
@@ -58,6 +61,16 @@ export const SECRET_PATTERNS = [
   {
     name: 'GitHub Personal Access Token',
     regex: /\bgh[pousr]_[A-Za-z0-9]{36,}\b/g,
+    severity: 'critical',
+    category: 'Data Breach',
+    cwe: 'CWE-798',
+  },
+  // GitHub fine-grained PAT (introduced 2022, common in 2026 projects). Format:
+  // `github_pat_` + 22 alphanumeric/underscore + `_` + 59 alphanumeric. We
+  // accept a relaxed length so future format tweaks still match.
+  {
+    name: 'GitHub Fine-Grained PAT',
+    regex: /\bgithub_pat_[A-Za-z0-9_]{20,}_[A-Za-z0-9]{50,}\b/g,
     severity: 'critical',
     category: 'Data Breach',
     cwe: 'CWE-798',
@@ -121,8 +134,12 @@ export const SECRET_PATTERNS = [
     cwe: 'CWE-798',
   },
   {
+    // Accepts the optional " BLOCK" suffix that PGP exports use:
+    //   -----BEGIN PGP PRIVATE KEY BLOCK-----
+    // Other formats (RSA, EC, DSA, OPENSSH, unqualified) keep their original
+    // shape with no trailing BLOCK token.
     name: 'Private Key Block',
-    regex: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----/g,
+    regex: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----/g,
     severity: 'critical',
     category: 'Data Breach',
     cwe: 'CWE-798',

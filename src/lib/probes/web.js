@@ -21,6 +21,42 @@ import {
   AI_CRAWLER_BOTS,
 } from '../threat-intel.js';
 
+// Architecture-aware gating for SEO / GEO probes. A project is treated as a
+// "private installable PWA / internal tool" when it ships BOTH:
+//   - a Web App Manifest (`manifest.json` or `manifest.webmanifest`) with an
+//     installable display mode (`standalone`, `fullscreen`, `minimal-ui`).
+//   - a service worker (`sw.js`, `service-worker.js`, or any `.js` whose body
+//     begins a service-worker lifecycle binding `self.addEventListener('install'`).
+// These two together are a strong signal the project is an installable app
+// for a known audience (field tech, ops console, kiosk) rather than a public
+// content site indexed by search engines. SEO / GEO hygiene findings are
+// noise on these projects and erode user trust in the rest of the report.
+//
+// The detection is intentionally conservative: a single signal (just a
+// manifest, just a service worker) is not enough — many public-web apps
+// add either independently. Both together is the right precision/recall
+// trade for the "private PWA" verdict.
+export function isPrivatePWAContext(files) {
+  const manifest = files.find(
+    (f) => /(^|\/)manifest\.(json|webmanifest)$/i.test(f.path) && typeof f.content === 'string'
+  );
+  if (!manifest) return false;
+  let parsed;
+  try {
+    parsed = JSON.parse(manifest.content);
+  } catch {
+    return false;
+  }
+  const display = typeof parsed?.display === 'string' ? parsed.display.toLowerCase() : '';
+  if (!/^(standalone|fullscreen|minimal-ui)$/.test(display)) return false;
+  const hasServiceWorker = files.some((f) => {
+    if (/(^|\/)(sw|service-worker)\.js$/i.test(f.path)) return true;
+    if (!/\.[jt]sx?$/.test(f.path)) return false;
+    return /self\.addEventListener\(\s*['"]install['"]/i.test(f.content || '');
+  });
+  return hasServiceWorker;
+}
+
 export function probeExternalURLs(files) {
   const findings = [];
   // Char class includes `:` `[` `]` `@` so we capture IPv6 (`https://[::1]/`) and
@@ -321,6 +357,12 @@ export function probeHTML(files) {
 // --- SEO Hygiene: index.html meta tags, robots.txt, sitemap.xml ---
 export function probeSEOHygiene(files) {
   const findings = [];
+  // Architecture gate: private installable PWAs aren't public content sites.
+  // Search-engine and social-share hygiene findings are noise for them; the
+  // report becomes louder without becoming more useful. Suppress the entire
+  // probe when the project shows BOTH an installable manifest AND a service
+  // worker — that's a strong enough signal we won't FP on real public sites.
+  if (isPrivatePWAContext(files)) return findings;
   files.forEach((file) => {
     // index.html (or any *.html that looks like a SPA entry — has <head>)
     if (/\.html?$/i.test(file.path)) {
@@ -503,6 +545,9 @@ export function probeSEOHygiene(files) {
 
 export function probeGEOHygiene(files) {
   const findings = [];
+  // Same architecture gate as probeSEOHygiene — see comment there. Private
+  // installable PWAs don't need AI-search optimization.
+  if (isPrivatePWAContext(files)) return findings;
   const hasLlms = files.some((f) => /(^|\/)llms\.txt$/i.test(f.path));
   const robotsFile = files.find((f) => /(^|\/)robots\.txt$/i.test(f.path));
   const htmlFile = files.find(
