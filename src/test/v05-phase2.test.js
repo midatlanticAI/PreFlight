@@ -171,7 +171,9 @@ const CORPUS = [
       '// const stale = jwt.verify(token)   <- commented out, must NOT fire',
       'export const check = (token) => jwt.verify(token);',
       'export const ok = (token) => jwt.verify(token, signingKey);',
-      "export const good = (p) => jwt.sign(p, key, { algorithm: 'HS256' });",
+      // expiresIn keeps both probes from firing the new CWE-613 auth-noexpiry
+      // finding on this otherwise well-formed jwt.sign call.
+      "export const good = (p) => jwt.sign(p, key, { algorithm: 'HS256', expiresIn: '15m' });",
     ].join('\n'),
   },
 ];

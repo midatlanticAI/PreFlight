@@ -1092,10 +1092,29 @@ export function probeAuthWeakness(files) {
           });
         }
       }
-      // JWT no-expiresIn: gap left open for now. The check is real
-      // (CWE-613) but requires coordinated update to the v0.5 shadow probe
-      // (JS-AUTH-001) to maintain the production/shadow parity. Tracked
-      // in CHANGELOG as a follow-up Thread 6.5 / v0.5 sync.
+      // JWT no-expiresIn (CWE-613): the token is valid forever. Both this
+      // production probe AND the JS-AUTH-001 shadow probe emit identical
+      // findings (same id, title, severity) so the v05-phase2 parity test
+      // stays green. Sync the emission shape if one is changed.
+      if (/jwt\.sign\s*\(/.test(line)) {
+        const startIdx = file.content.indexOf(realLine);
+        const around = startIdx >= 0 ? file.content.slice(startIdx, startIdx + 400) : line;
+        if (!/expiresIn\s*:|\bexp\s*:/.test(around)) {
+          findings.push({
+            id: `auth-noexpiry-${file.path}-${i}`,
+            probe: 'Auth Weakness',
+            title: 'JWT minted without expiresIn',
+            severity: 'medium',
+            category: 'Auth & Access',
+            cwe: 'CWE-613',
+            file: file.path,
+            line: i + 1,
+            evidence: realLine.trim(),
+            remediation:
+              'A JWT without expiresIn is valid forever. Stolen tokens remain valid until the secret is rotated. Pass { expiresIn: "15m" } (access) or short windows appropriate to the use case, and issue refresh tokens separately.',
+          });
+        }
+      }
       // JWT verify accepting algorithms allowlist containing 'none'. Even if
       // the developer remembered to allowlist, including 'none' defeats the
       // entire point — an attacker just sends an unsigned token.

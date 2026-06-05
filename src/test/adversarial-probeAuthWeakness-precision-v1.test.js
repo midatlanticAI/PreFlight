@@ -122,9 +122,9 @@ describe('precision: comments naming the shape', () => {
   it('single-line comment marking removed alg:none bug', () => {
     const src = `
 // REMOVED: const t = jwt.sign(p, null, { algorithm: 'none' }); // OLD BUG
-// We now use HS256 with an allowlist.
+// We now use HS256 with an allowlist and a 15-minute expiry.
 import jwt from 'jsonwebtoken';
-const t = jwt.sign(payload, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+const t = jwt.sign(payload, process.env.JWT_SECRET, { algorithms: ['HS256'], expiresIn: '15m' });
 `;
     expect(run('src/auth/sign.js', src)).toEqual([]);
   });
