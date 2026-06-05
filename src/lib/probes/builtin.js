@@ -472,6 +472,50 @@ export function probePackageJson(files) {
     } catch {
       return;
     }
+    // Scan-coverage gap. The May 2026 emailassist field-tech PWA gap was
+    // exactly this: package.json had "scripts.start": "node server.js" but
+    // server.js was not in the scan set. The probe team-fixed the req.url
+    // taint detector (commit 92b0c13), and this surfaces the OTHER half
+    // of the gap: tell the user when their entry-point file is missing.
+    const entryRefs = new Set();
+    if (typeof pkg.main === 'string') entryRefs.add(pkg.main);
+    const scriptCmds = pkg.scripts || {};
+    for (const key of ['start', 'dev', 'serve', 'server']) {
+      const cmd = scriptCmds[key];
+      if (typeof cmd !== 'string') continue;
+      // Extract a referenced file path from the command (e.g. "node server.js",
+      // "ts-node src/server.ts", "nodemon --watch src api/index.js").
+      const m =
+        cmd.match(/\b(?:node|ts-node|nodemon|tsx|deno|bun)\s+[^&|;]*?(\S+\.[mc]?[jt]s)\b/) ||
+        cmd.match(/(\S+\.[mc]?[jt]s)\b/);
+      if (m && m[1] && !m[1].startsWith('-')) entryRefs.add(m[1]);
+    }
+    const baseDir = file.path.replace(/[^/]+$/, ''); // dir of this package.json
+    const filePaths = new Set(files.map((x) => x.path));
+    for (const ref of entryRefs) {
+      const stripped = ref.replace(/^\.\//, '');
+      const candidates = [
+        stripped,
+        baseDir + stripped,
+        baseDir + stripped.replace(/^\.\//, ''),
+        stripped.replace(/^\.?\.\//, ''),
+      ];
+      const found = candidates.some((c) => filePaths.has(c));
+      if (!found && /\.[mc]?[jt]s$/.test(stripped)) {
+        findings.push({
+          id: `pkg-entry-not-scanned-${file.path}-${ref.replace(/\W/g, '_')}`,
+          probe: 'Architecture',
+          title: `Entry point referenced in package.json is not in the scan set: ${ref}`,
+          severity: 'high',
+          category: 'Misconfiguration',
+          cwe: 'CWE-1059',
+          file: file.path,
+          line: 1,
+          evidence: `package.json references "${ref}" via main / scripts.start / dev / serve / server, but this file was not loaded for scanning.`,
+          remediation: `The backend entry point is the most security-sensitive file in a Node project (auth, routing, file serving, request parsing all live here). Re-run the scan with this file included: in GitHub mode the entry-point file is auto-prioritized; in Files / Folder mode, drag the file in or upload the parent directory. The May 2026 emailassist gap shipped because PreFlight scanned 5 frontend files and missed server.js, which had a public arbitrary-file-read. Do not ship without seeing the result for this file.`,
+        });
+      }
+    }
     const scripts = pkg.scripts || {};
     if (scripts.postinstall || scripts.preinstall || scripts.install) {
       const script = scripts.postinstall || scripts.preinstall || scripts.install;
