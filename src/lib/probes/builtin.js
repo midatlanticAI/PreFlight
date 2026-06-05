@@ -45,7 +45,7 @@ import {
 // `AKIAIOSFODNN7EXAMPLE` (the AWS-published documentation value),
 // `<your-key-here>`.
 const SECRET_VALUE_PLACEHOLDER_RE =
-  /x{4,}|REPLACE[_\-]?(?:ME|THIS|HERE|WITH|YOUR)?|YOUR[_\-]?(?:KEY|API|TOKEN|SECRET|PRIVATE|SLACK|AWS|STRIPE|OPENAI|ANTHROPIC|GITHUB|GOOGLE|[A-Z]+)[_\-A-Z]*HERE|YOUR[_\-]?(?:KEY|API|TOKEN|SECRET|PRIVATE)|PLACEHOLDER|DEMO[_\-]?(?:DEMO|TOKEN|KEY)?|EXAMPLE|<[^<>]+>|CHANGE[_\-]?ME|\bTODO(?:[_\-]\w+)*\b|FILL[_\-]?(?:IN|ME|HERE)/i;
+  /x{4,}|REPLACE[_\-]?(?:ME|THIS|HERE|WITH|YOUR)?|YOUR[_\-]?(?:KEY|API|TOKEN|SECRET|PRIVATE|SLACK|AWS|STRIPE|OPENAI|ANTHROPIC|GITHUB|GOOGLE|[A-Z]+)[_\-A-Z]*HERE|YOUR[_\-]?(?:KEY|API|TOKEN|SECRET|PRIVATE)|PLACEHOLDER|DEMO[_\-]?(?:DEMO|TOKEN|KEY)?|EXAMPLE|<[^<>]+>|\{\{[^}]+\}\}|CHANGE[_\-]?ME|\bTODO(?:[_\-]\w+)*\b|FILL[_\-]?(?:IN|ME|HERE)|^stub[._-]/i;
 
 // True when the match's enclosing statement assigns to a variable whose
 // name explicitly marks it as a sample/example/test/fake fixture, e.g.
@@ -54,7 +54,7 @@ const SECRET_VALUE_PLACEHOLDER_RE =
 // generic names like `API_KEY` or `AWS_SECRET` continue to fire, since those
 // are exactly what real leaked code looks like.
 const PLACEHOLDER_VAR_NAME_RE =
-  /\b(?:SAMPLE|EXAMPLE|FAKE|DUMMY|MOCK|FIXTURE|PLACEHOLDER|NOT_?A_?REAL|TEST_(?:KEY|TOKEN|SECRET|API))[_A-Z0-9]*\s*[:=]/;
+  /\b(?:SAMPLE|EXAMPLE|FAKE|DUMMY|MOCK|FIXTURE|PLACEHOLDER|STUB|NOT_?A_?REAL|TEST_(?:KEY|TOKEN|SECRET|API))[_A-Z0-9]*\s*[:=]/;
 function isMatchInPlaceholderNamedAssignment(content, matchIndex) {
   // Check the entire line containing the match. Looking only at content BEFORE
   // the match misses cases where a sibling secret pattern matches mid-identifier
@@ -625,6 +625,46 @@ export function probeAuthWeakness(files) {
   const findings = [];
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
+    // Hardcoded password in YAML / JSON / .env / config. Separate handler
+    // because these file types don't have the JS comment/template semantics
+    // the rest of this probe assumes. Match `password: 'literal'` (YAML),
+    // `"password": "literal"` (JSON), `DB_PASSWORD=value` (.env), all with
+    // placeholder filtering.
+    const isConfigFile =
+      /\.(?:ya?ml|json|properties|toml|conf|cfg|ini)$/i.test(file.path) ||
+      /(?:^|\/)\.env(?:\.\w+)?$/i.test(file.path);
+    if (isConfigFile) {
+      const lines = file.content.split('\n');
+      lines.forEach((rawLine, i) => {
+        // JSON/YAML/TOML: `"password": "value"` or `password: 'value'`. Allow
+        // an optional close-quote on the key.
+        // .env: `DB_PASSWORD=value` (no quotes around the value typically).
+        const m = rawLine.match(
+          /\b(\w*(?:password|passwd|pwd|secret|api[_-]?password))\b["']?\s*[:=]\s*["']?([^"'\s\n,}]{3,})["']?/i
+        );
+        if (!m) return;
+        const value = m[2];
+        if (SECRET_VALUE_PLACEHOLDER_RE.test(value)) return;
+        if (/^[$!#]/.test(value)) return;
+        if (/^(?:\$\{|process\.env\.)/.test(value)) return;
+        // skip comment-only lines in YAML/TOML/.env
+        if (/^\s*[#;]/.test(rawLine)) return;
+        findings.push({
+          id: `auth-hardcodedpwd-config-${file.path}-${i}`,
+          probe: 'Auth Weakness',
+          title: 'Hardcoded password in config file',
+          severity: 'critical',
+          category: 'Auth & Access',
+          cwe: 'CWE-798',
+          file: file.path,
+          line: i + 1,
+          evidence: rawLine.trim().slice(0, 200),
+          remediation:
+            'Configs checked into git ship with the password. Use env interpolation (${DB_PASSWORD}), a secret manager reference, or move the secret out of the config entirely. Rotate the leaked value.',
+        });
+      });
+      return;
+    }
     if (!/\.[jt]sx?$/.test(file.path)) return;
     // Mask the whole content so block comments AND template-literal documentation
     // snippets (e.g. Demi persona spec strings) no longer trip the regexes.
@@ -730,7 +770,7 @@ export function probeAuthWeakness(files) {
       // classic.
       if (
         /\b(?:md5|sha1)\s*\([^)]*\b\w*(?:password|passwd|pwd|pw)\b/i.test(line) ||
-        /createHash\(\s*['"](?:md5|sha1)['"]\s*\)\s*\.\s*update\s*\(\s*\w*\b(?:password|passwd|pwd|pw)\b/i.test(
+        /createHash\(\s*['"](?:md5|sha1)['"]\s*\)\s*\.\s*update\s*\(\s*[^)]*?\b(?:password|passwd|pwd|pw)\b/i.test(
           line
         )
       ) {
@@ -808,12 +848,15 @@ export function probeAuthWeakness(files) {
       // in server access logs, and in any analytics SDK the page loads. The
       // shape: a literal or template-string URL containing ?token= /
       // ?sessionId= / ?accessToken= / ?jwt= with a real-looking value.
+      // Use realLine because the URL contains `//` that stripLineComments
+      // would chop. Template literals in realLine still trigger here (the
+      // FP risk on documentation strings is acceptable for this check).
       if (
         /[?&](?:token|sessionId|session_id|accessToken|access_token|jwt|auth(?:Token)?)=/i.test(
-          line
+          realLine
         ) &&
         /(?:fetch|axios|http|location\.href|window\.location|new\s+URL|navigate|router\.push|redirect)/i.test(
-          line
+          realLine
         )
       ) {
         findings.push({
@@ -837,6 +880,84 @@ export function probeAuthWeakness(files) {
       // probeSecrets via isMatchInPlaceholderNamedAssignment) suppresses
       // sample/test fixtures; the secret-value placeholder filter suppresses
       // CHANGEME/REPLACE/etc. values.
+      // Object-literal credential fields: `password: 'literal'`,
+      // `pass: 'literal'`, `username: 'admin', password: 'admin'` in a JS
+      // config object. Match the key-value pair on a single line. (Multi-line
+      // is handled by the whole-content pass below.)
+      {
+        const objLiteralCred = /\b(?:password|passwd|pwd|pass|secret)\s*:\s*(['"])([^'"\n]{3,})\1/i;
+        const m = line.match(objLiteralCred);
+        if (m) {
+          const value = m[2];
+          const matchIdx = file.content.indexOf(realLine);
+          const inPlaceholderCtx =
+            matchIdx >= 0 && isMatchInPlaceholderNamedAssignment(file.content, matchIdx);
+          const valueIsPlaceholder = SECRET_VALUE_PLACEHOLDER_RE.test(value);
+          if (!inPlaceholderCtx && !valueIsPlaceholder) {
+            findings.push({
+              id: `auth-objpwd-${file.path}-${i}`,
+              probe: 'Auth Weakness',
+              title: 'Hardcoded password in object literal',
+              severity: 'critical',
+              category: 'Auth & Access',
+              cwe: 'CWE-798',
+              file: file.path,
+              line: i + 1,
+              evidence: realLine.trim().slice(0, 200),
+              remediation:
+                'Object-literal passwords (auth: { user, pass: "literal" }) ship with the repo. Use env vars (process.env.SMTP_PASSWORD), a secret manager reference, or runtime injection. Rotate the leaked value.',
+            });
+          }
+        }
+      }
+      // Basic auth header: `Authorization: 'Basic ' + Buffer.from('user:pass')`,
+      // `const AUTH = 'Basic <base64>'`. Both are hardcoded creds in HTTP headers.
+      if (
+        /Buffer\.from\s*\(\s*['"][^'"\n]+:[^'"\n]+['"]\s*\)\s*\.\s*toString\s*\(\s*['"]base64/i.test(
+          realLine
+        ) ||
+        /['"]Basic\s+[A-Za-z0-9+/=]{8,}['"]/.test(realLine)
+      ) {
+        findings.push({
+          id: `auth-basicheader-${file.path}-${i}`,
+          probe: 'Auth Weakness',
+          title: 'Hardcoded Basic auth credentials in HTTP header',
+          severity: 'critical',
+          category: 'Auth & Access',
+          cwe: 'CWE-798',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'Basic auth strings encoded inline ship the credentials with the repo. Load user:pass from env / secret manager and encode at runtime, or use a Bearer token from a real auth flow.',
+        });
+      }
+      // Plaintext password persisted to DB. Two shapes:
+      //  - `INSERT INTO users (..., password) VALUES (..., 'literal')`
+      //  - ORM: `db.user.create({ data: { ..., password: req.body.password } })`
+      // The second is plaintext-from-request — taint flow.
+      if (
+        /INSERT\s+INTO\s+[\w.]+\s*\([^)]*\bpassword\b[^)]*\)\s*VALUES\s*\([^)]*['"][^'"]{3,}['"]/i.test(
+          realLine
+        ) ||
+        /(?:\.create|\.update|\.insert|\.save)\s*\([^)]*\bpassword\s*:\s*(?:req\.body\.\w*|input\.\w*|userInput|user\.password)/i.test(
+          realLine
+        )
+      ) {
+        findings.push({
+          id: `auth-plainpwdstore-${file.path}-${i}`,
+          probe: 'Auth Weakness',
+          title: 'Plaintext password persisted to database',
+          severity: 'critical',
+          category: 'Auth & Access',
+          cwe: 'CWE-256',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'Storing raw passwords means any DB read compromises every account. Hash with bcrypt.hash(password, 12) / argon2.hash / scrypt before insert, store the hash, never the plaintext. Constant-time compare at login time.',
+        });
+      }
       {
         // Match the assignment RHS specifically. Only fire if the value
         // IMMEDIATELY after `=` is a string literal (not a function call,
@@ -910,12 +1031,13 @@ export function probeAuthWeakness(files) {
       // Default credentials inside a connection-string URL:
       // `mysql://root:root@host`, `postgres://admin:admin@host`. Same identifier
       // for user AND password is the strongest "this was never changed" signal.
+      // Use realLine — stripLineComments mangles the `//` in the URL scheme.
       if (
         /(?:mysql|postgres(?:ql)?|mongodb|mongo|redis|amqp|http|https|ftp|smtp|imap):\/\/(\w+):(\w+)@/i.test(
-          line
+          realLine
         )
       ) {
-        const urlMatch = line.match(
+        const urlMatch = realLine.match(
           /(?:mysql|postgres(?:ql)?|mongodb|mongo|redis|amqp|http|https|ftp|smtp|imap):\/\/(\w+):(\w+)@/i
         );
         if (urlMatch && urlMatch[1].toLowerCase() === urlMatch[2].toLowerCase()) {
@@ -934,6 +1056,46 @@ export function probeAuthWeakness(files) {
           });
         }
       }
+      // Express handler writes to DB with no req.user / auth check on the
+      // same line — match the destructive db call and confirm the file has
+      // NO auth signals anywhere.
+      if (
+        /\b(?:db|prisma|knex|sequelize)\s*\.\s*\w+\s*\.\s*(?:delete|update|create|destroy|findAll|findMany|getAll)\s*\(/.test(
+          line
+        )
+      ) {
+        const fileNoAuth =
+          !/(?:req\.user|req\.session|req\.auth|getServerSession|getUser|currentUser|withAuth|requireAuth|authenticate|jwt\.verify\s*\([^,)]+,)/i.test(
+            file.content
+          );
+        const inExpressOrNext =
+          /\b(?:app|router)\s*\.\s*(?:get|post|put|patch|delete)\s*\(/.test(file.content) ||
+          /export\s+(?:async\s+)?(?:function|const)\s+(?:GET|POST|PUT|PATCH|DELETE)\b/.test(
+            file.content
+          ) ||
+          // Next.js Pages Router uses `export default async function handler(req, res)`.
+          /export\s+default\s+(?:async\s+)?function\s+\w+\s*\(\s*req\b/.test(file.content) ||
+          /pages\/api\//.test(file.path);
+        if (fileNoAuth && inExpressOrNext) {
+          findings.push({
+            id: `auth-noauthcheck-${file.path}-${i}`,
+            probe: 'Auth Weakness',
+            title: 'DB mutation in handler with no auth check anywhere in the file',
+            severity: 'high',
+            category: 'Auth & Access',
+            cwe: 'CWE-306',
+            file: file.path,
+            line: i + 1,
+            evidence: realLine.trim().slice(0, 200),
+            remediation:
+              'A handler that mutates the database with no auth gate is open to anyone. Add req.user / getServerSession() / passport.authenticate at the top of the handler, return 401 if absent, then check ownership of the target row before the mutation.',
+          });
+        }
+      }
+      // JWT no-expiresIn: gap left open for now. The check is real
+      // (CWE-613) but requires coordinated update to the v0.5 shadow probe
+      // (JS-AUTH-001) to maintain the production/shadow parity. Tracked
+      // in CHANGELOG as a follow-up Thread 6.5 / v0.5 sync.
       // JWT verify accepting algorithms allowlist containing 'none'. Even if
       // the developer remembered to allowlist, including 'none' defeats the
       // entire point — an attacker just sends an unsigned token.
@@ -1576,10 +1738,13 @@ export function probeClientAuthStorage(files) {
     // Common auth-name regex for storage keys. The keyword family must
     // appear as a substring inside a quoted key. Underscored forms
     // (auth_token, access_token) and camelCase forms (authToken) both
-    // match without imposing word-boundary constraints, since real key
-    // names use both conventions.
+    // match without imposing word-boundary constraints.
     const AUTH_KEY_RE =
       /['"`][^'"`]*(?:token|jwt|auth|session|bearer|access_?token|refresh_?token|api[_-]?key)[^'"`]*['"`]/i;
+    // Exclude OAuth/PKCE flow values that are PUBLIC by RFC 7636 design —
+    // state, nonce, code_verifier, pkce. Storing these in sessionStorage is
+    // intentional CSRF protection, not a credential leak.
+    const OAUTH_PUBLIC_RE = /\b(?:oauth_?state|state|nonce|code_?verifier|pkce_?verifier)\b/i;
     maskedLines.forEach((maskedLine, i) => {
       const realLine = originalLines[i] || '';
       // localStorage.setItem('jwt', ...)
@@ -1603,7 +1768,13 @@ export function probeClientAuthStorage(files) {
       }
       // sessionStorage.setItem — slightly better than localStorage (cleared on
       // tab close) but still XSS-readable. Same XSS-readable threat model.
-      if (/sessionStorage\.setItem\s*\(/i.test(maskedLine) && AUTH_KEY_RE.test(maskedLine)) {
+      // Excludes OAuth state/nonce/PKCE — RFC 7636 SPEC requires the client
+      // to remember these across the redirect, and they are not credentials.
+      if (
+        /sessionStorage\.setItem\s*\(/i.test(maskedLine) &&
+        AUTH_KEY_RE.test(maskedLine) &&
+        !OAUTH_PUBLIC_RE.test(maskedLine)
+      ) {
         findings.push({
           id: `auth-sessionstorage-${file.path}-${i}`,
           probe: 'Client Auth Storage',
@@ -1619,14 +1790,27 @@ export function probeClientAuthStorage(files) {
         });
       }
       // IndexedDB writes carrying auth: db.put('auth', ...), objectStore.put(
-      // { token: ... }), idb-keyval set('jwt', ...). Indexed storage is
-      // JS-readable too.
-      if (
-        /(?:\.put\s*\(|\.add\s*\(|idb(?:Keyval)?\.set\s*\(|set\s*\(\s*['"][^'"]*\b(?:token|jwt|auth|session)\b)/i.test(
+      // { token: ... }), idb-keyval set('jwt', ...), tx.objectStore('x').
+      // put({ jwt: value }). The bare-key object form (`{ jwt: ... }`) is
+      // not quoted, so AUTH_KEY_RE misses it — detect explicit-key shapes.
+      const idbAuthMethodOnLine =
+        /\.(?:put|add)\s*\(/.test(maskedLine) ||
+        /\bidb(?:Keyval)?\.set\s*\(/.test(maskedLine) ||
+        /\bset\s*\(\s*['"`][^'"`]*(?:token|jwt|auth|session|bearer)/i.test(maskedLine);
+      const idbAuthKeyInObject =
+        /\{\s*[^}]*\b(?:jwt|authToken|accessToken|refreshToken|bearer|sessionId)\s*:/i.test(
           maskedLine
-        ) &&
-        AUTH_KEY_RE.test(maskedLine) &&
-        /indexedDB|objectStore|idb|openDB/i.test(file.content)
+        );
+      // File-level IDB signal: any of the canonical IDB API names, OR a
+      // `store.add/put({...})` shape (idb-keyval wrappers and raw IDB code
+      // typically introduce a `store` variable from objectStore() or openDB()).
+      const idbFileSignal =
+        /indexedDB|objectStore|idb|openDB|IDBObjectStore|IDBDatabase/i.test(file.content) ||
+        /\bstore\s*\.\s*(?:add|put)\s*\(/.test(file.content);
+      if (
+        idbAuthMethodOnLine &&
+        idbFileSignal &&
+        (AUTH_KEY_RE.test(maskedLine) || idbAuthKeyInObject)
       ) {
         findings.push({
           id: `auth-indexeddb-${file.path}-${i}`,
@@ -1645,18 +1829,23 @@ export function probeClientAuthStorage(files) {
       // document.cookie = 'token=...' WITHOUT HttpOnly. Setting a cookie from
       // JS cannot set HttpOnly (browsers refuse). Any token cookie set from
       // client JS is XSS-readable by construction. Same risk as localStorage.
-      // Also catches js-cookie wrapper: Cookies.set('jwt', ...).
-      if (
-        /document\.cookie\s*=\s*['"`][^'"`]*\b(?:token|jwt|auth(?:Token)?|session(?:Id)?|access_?token|refresh_?token|bearer)\s*=/i.test(
-          maskedLine
+      // Use realLine — the cookie name and value may span template literal
+      // interpolations that the narrow mask DOES blank (it masks template
+      // bodies). Suppress if the line OR the file content explicitly says
+      // HttpOnly somewhere near (server-side cookies set by middleware should
+      // be using res.cookie, not document.cookie — but Koa ctx.cookies.set
+      // with httpOnly=true is server-side, so check the ctx.cookies form).
+      const cookieAuthShape =
+        /document\.cookie\s*=\s*['"`][^=]*?(?:token|jwt|auth|session|bearer|access[_-]?token|refresh[_-]?token)/i.test(
+          realLine
         ) ||
-        /document\.cookie\s*=\s*`[^`]*\$\{[^}]*\b(?:token|jwt|auth(?:Token)?|session(?:Id)?|bearer)\b/i.test(
-          maskedLine
-        ) ||
-        /\bCookies\.set\s*\(\s*['"`][^'"`]*\b(?:token|jwt|auth(?:Token)?|session(?:Id)?|access_?token|refresh_?token|bearer)\b/i.test(
-          maskedLine
-        )
-      ) {
+        /\bCookies\.set\s*\(\s*['"`][^'"`]*(?:token|jwt|auth|session|bearer|access[_-]?token|refresh[_-]?token)/i.test(
+          realLine
+        );
+      // Koa / Express ctx.cookies.set + httpOnly is SERVER-SIDE and correct;
+      // do not flag this shape under the client-side rule.
+      const isServerSideCtxCookies = /\bctx\.cookies\.set\b|\bres\.cookie\b/i.test(realLine);
+      if (cookieAuthShape && !isServerSideCtxCookies) {
         findings.push({
           id: `auth-clientcookie-${file.path}-${i}`,
           probe: 'Client Auth Storage',
@@ -1675,7 +1864,7 @@ export function probeClientAuthStorage(files) {
       // window.__JWT__ = ... (underscore-wrapped). Persisted in JS scope,
       // XSS-readable.
       if (
-        /(?:window|globalThis|self)\s*\.\s*_*\b(?:token|jwt|auth(?:Token)?|session(?:Id)?|access_?token|refresh_?token|bearer)\b_*\s*=/i.test(
+        /(?:window|globalThis|self)\s*\.\s*_*(?:token|jwt|auth(?:Token)?|session(?:Id)?|access_?token|refresh_?token|bearer)_*\s*=/i.test(
           maskedLine
         )
       ) {
@@ -1694,6 +1883,41 @@ export function probeClientAuthStorage(files) {
         });
       }
     });
+    // Cache Storage API auth caching. The Cache Storage API is available in
+    // BOTH service worker scope AND window/document scope. Either way, the
+    // cache is JS-readable persistent storage on the origin. Fire when:
+    //   1. The file uses caches.open(...) / cache.put(...) / caches.match
+    //   2. The file body mentions an auth signal (Authorization, Set-Cookie,
+    //      bearer, token, jwt, authHeader)
+    // The SW-specific path/event check is broadened to include any sw-prefixed
+    // filename and any `self.addEventListener` regardless of event type. Plus
+    // a generic any-file Cache API check for window-scoped code.
+    const cacheApiInUse = /\bcaches\.(?:open|match|put)\s*\(|\bcache\.put\s*\(/i.test(file.content);
+    const fileHasAuthSignal =
+      /\bAuthorization\b|\bSet-Cookie\b|\bbearer\b|\btoken\b|\bjwt\b|\bauthHeader\b/i.test(
+        file.content
+      );
+    if (cacheApiInUse && fileHasAuthSignal) {
+      const swLines = maskedContent.split('\n');
+      swLines.forEach((swLine, i) => {
+        if (/\bcaches?\.put\s*\(|\bcache\.put\s*\(|\bcaches\.open\s*\(/.test(swLine)) {
+          findings.push({
+            id: `auth-swcachewrite-${file.path}-${i}`,
+            probe: 'Client Auth Storage',
+            title: 'Service worker may cache a response containing auth headers',
+            severity: 'high',
+            category: 'Auth & Access',
+            cwe: 'CWE-922',
+            file: file.path,
+            line: i + 1,
+            evidence: (originalLines[i] || '').trim().slice(0, 200),
+            remediation:
+              'Cached responses live in JS-readable Cache Storage. If the response carries Authorization or Set-Cookie headers, the token is now persistent and XSS-readable. Strip auth-related headers from the Response before caches.put, or exclude authed requests from the cache entirely.',
+          });
+        }
+      });
+    }
+
     // Multi-line / library patterns where the regex needs to see ACROSS lines.
     // Redux/Zustand/Jotai persist middleware: persist({ name: 'auth-store', ... })
     // commonly defaults to localStorage. Match the construct on the masked
@@ -1701,9 +1925,11 @@ export function probeClientAuthStorage(files) {
     {
       const masked = maskedContent;
       // persist({ name: 'auth' }) or persist(<state>, { name: 'auth' }). Also
-      // catches redux-persist's `key:` form: persistReducer({ key: 'auth', ... }).
+      // catches redux-persist's `key:` form, and the common
+      // `const persistConfig = { key: 'auth', storage }` pattern where the
+      // config is a separate variable.
       const persistRe =
-        /(?:persist|persistReducer)\s*\(([\s\S]{0,400}?)\b(?:name|key)\s*:\s*['"][^'"]*(?:auth|jwt|token|session|user)/i;
+        /(?:persist|persistReducer|persistConfig)\s*[(=]\s*\(?\{?([\s\S]{0,400}?)\b(?:name|key)\s*:\s*['"][^'"]*(?:auth|jwt|token|session|user)/i;
       const pm = masked.match(persistRe);
       if (pm) {
         // Locate the line in the original
@@ -1854,17 +2080,42 @@ export function probeAPIRouteAuth(files) {
       mf.content
     );
   });
+  // Corpus-level Express / Hono / Koa app-wide auth middleware. The shapes:
+  //   app.use(authMiddleware)
+  //   app.use('/api', authMiddleware)
+  //   app.use(passport.authenticate('jwt', { session: false }))
+  //   honoApp.use('*', jwt({ secret }))
+  // If any file in the corpus registers an auth-shaped middleware app-wide,
+  // routes in the same project are considered gated for THIS probe.
+  const hasAppWideAuthMiddleware = files.some((mf) => {
+    if (typeof mf.content !== 'string') return false;
+    if (isTestFile(mf.path)) return false;
+    return (
+      /\b(?:app|router)\.use\s*\(\s*(?:['"`][^'"`]*['"`]\s*,\s*)?(?:authenticate|authMiddleware|requireAuth|isAuthenticated|verifyJWT|verifyToken|protect|guard|passport\.authenticate|clerkMiddleware|withAuth)/i.test(
+        mf.content
+      ) ||
+      /\bapp\.use\s*\(\s*['"`]\*['"`]\s*,\s*(?:jwt|bearerAuth|basicAuth|auth)\s*\(/i.test(
+        mf.content
+      )
+    );
+  });
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$/.test(file.path)) return;
     if (hasCorpusMiddleware) return; // gated at the middleware layer
+    if (hasAppWideAuthMiddleware) return; // gated by Express/Hono/Koa app.use
     const c = file.content;
     // jwt.verify alone is NOT proof of valid auth — it must be called with a secret/key as a 2nd arg.
     const hasJwtVerifyWithSecret = /jwt\.verify\s*\(\s*[^,)]+,\s*[^)]+\)/.test(c);
     // Generic auth signals applicable across frameworks. Add SvelteKit/Hono/
     // CF Worker / Astro / Fastify / Express hook shapes.
     const hasAuth =
-      /(getServerSession|requireAuth|getUser|currentUser|withAuth|createServerClient)/i.test(c) ||
+      // Require `(` after the keyword so substring matches inside identifiers
+      // (e.g. `targetUserId` contained `getUser` and tripped this) no longer
+      // produce a false negative on missing-auth.
+      /(?:getServerSession|requireAuth|getUser|currentUser|withAuth|createServerClient)\s*\(/i.test(
+        c
+      ) ||
       /(?<!\w)auth\s*\(\s*\)/.test(c) ||
       /verifyToken\s*\(/.test(c) ||
       hasJwtVerifyWithSecret ||
@@ -1906,9 +2157,13 @@ export function probeAPIRouteAuth(files) {
     const isAstroEndpoint =
       /(?:\/pages\/api\/.*\.[jt]sx?$|\/src\/pages\/.*\.[jt]sx?$)/.test(file.path) &&
       /\bexport\s+(?:async\s+)?(?:const|function)\s+(?:GET|POST|PUT|PATCH|DELETE|ALL)\b/.test(c);
+    // Express-style: app.METHOD(path, handler) or router.METHOD(...). Drop
+    // the framework-keyword guard — real Express files often skip the
+    // `import express` if it's imported elsewhere (server.js entry), and
+    // the app.METHOD pattern alone is a strong route-shape signal that we
+    // gate on auth separately.
     const isExpressLike =
-      /\b(?:app|router|express\(\))\s*\.\s*(?:get|post|put|patch|delete|use|all)\s*\(/.test(c) &&
-      /\b(?:express|fastify|hono|koa)\b|require\s*\(\s*['"]express['"]/.test(c);
+      /\b(?:app|router)\s*\.\s*(?:get|post|put|patch|delete|use|all)\s*\(\s*['"`]/.test(c);
     const isFastify =
       /\bfastify\s*\.\s*(?:get|post|put|patch|delete|register|route)\s*\(/i.test(c) ||
       /\brequire\s*\(\s*['"]fastify['"]/.test(c) ||
@@ -1922,10 +2177,12 @@ export function probeAPIRouteAuth(files) {
     const isCFWorker =
       /\baddEventListener\s*\(\s*['"]fetch['"]/.test(c) ||
       /export\s+default\s*\{[\s\S]{0,60}?\bfetch\s*\(/i.test(c);
+    // GraphQL: any Mutation field is a mutating endpoint; the resolver name
+    // (e.g. promoteToAdmin / refundOrder) is arbitrary. Detect a Mutation
+    // block containing ANY resolver field with an async/handler function.
     const isGraphQLResolver =
-      /Mutation\s*:\s*\{[\s\S]{0,1000}?(?:delete|update|create|remove|set|change)\w*\s*:/i.test(
-        c
-      ) && /\b(?:resolvers|makeExecutableSchema|gql|graphql)\b/i.test(c);
+      /\bMutation\s*:\s*\{[\s\S]{0,2000}?\b\w+\s*:\s*(?:async\s*)?\(/i.test(c) &&
+      /\b(?:resolvers|makeExecutableSchema|gql|graphql|typeDefs|apollo)\b/i.test(c);
 
     const isAnyRoute =
       isNextRoute ||
@@ -1938,16 +2195,27 @@ export function probeAPIRouteAuth(files) {
       isGraphQLResolver;
     if (!isAnyRoute) return;
 
-    // Sensitivity heuristics. Path patterns first (admin / users / payments /
-    // checkout / billing / dashboard / internal). Then verbs.
+    // Sensitivity heuristics. Path patterns first. For Express-style routes
+    // the path lives in the route string (`app.post('/api/admin/...')`), not
+    // the file path — check BOTH.
+    const sensitiveKw =
+      /(admin|internal|delete|update|create|user|payment|checkout|billing|dashboard|invoice|impersonate|promote|refund|settings|moderate)/i;
     const isSensitivePath =
-      /(admin|internal|delete|update|create|user|payment|checkout|billing|dashboard|invoice)/i.test(
-        file.path
-      );
+      sensitiveKw.test(file.path) ||
+      (isExpressLike &&
+        /\b(?:app|router)\s*\.\s*(?:get|post|put|patch|delete|use|all)\s*\(\s*['"`][^'"`]*(?:admin|internal|delete|update|user|payment|checkout|billing|dashboard|invoice|impersonate|promote|refund|settings|moderate)/i.test(
+          c
+        ));
     const hasDestructiveVerb =
       /export\s+(?:async\s+)?(?:function|const)\s+(?:DELETE|PUT|PATCH)/.test(c) ||
       /\b(?:app|router|fastify|hono?)\s*\.\s*(?:delete|put|patch)\s*\(/i.test(c) ||
-      /\.(?:delete|update|create|remove)\w*\s*\(/.test(c); // ORM/DB call signal
+      /\.(?:delete|update|create|remove)\w*\s*\(/.test(c) || // ORM/DB call signal
+      // CF Worker: request.method === 'POST'|'PUT'|'DELETE'|'PATCH' is a
+      // state-changing handler.
+      (isCFWorker && /\brequest\.method\s*===?\s*['"](?:POST|PUT|DELETE|PATCH)['"]/i.test(c)) ||
+      // CF Worker: env.DB.prepare('INSERT...|UPDATE...|DELETE...') is a
+      // direct destructive SQL call (no taint-flow needed; the SQL is literal).
+      (isCFWorker && /\benv\.[A-Z_]+\.prepare\s*\(\s*['"`](?:INSERT|UPDATE|DELETE)/i.test(c));
 
     if (isSensitivePath && !hasAuth) {
       findings.push({
