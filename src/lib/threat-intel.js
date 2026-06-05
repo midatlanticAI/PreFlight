@@ -161,9 +161,24 @@ export const SECRET_PATTERNS = [
 // NEXT_PUBLIC_* env-var name and value patterns used by probeNextPublic. Name match catches
 // any variable whose identifier hints at secret material; value match catches secret-shaped
 // values placed under a NEXT_PUBLIC_ prefix (always wrong — these get shipped to the browser).
+// Depth round 3: expanded danger-name and danger-value lists per the
+// next-public-misuse Learn pattern that already documented these but the
+// regex missed: DATABASE_URL, JWT_SECRET, WEBHOOK_SECRET, ADMIN, signing/
+// encryption keys, AWS_SECRET, GITHUB_TOKEN, plus a value-side widening
+// for Postgres/MySQL/MongoDB/Redis connection strings, JWT shapes, AKIA
+// AWS key shape, GitHub PATs (ghp_/gho_/ghu_/ghs_/ghr_/github_pat_),
+// Google AIza, xAI / Groq / OpenRouter prefixes, and PEM private-key
+// headers.
 export const NEXT_PUBLIC_DANGER_NAMES =
-  /SECRET|PRIVATE|SERVICE_ROLE|TOKEN|PASSWORD|STRIPE_SECRET|OPENAI_API_KEY|ANTHROPIC_API_KEY/i;
-export const NEXT_PUBLIC_DANGER_VALUES = /^sk_live_|^sk_test_|^sk-ant-|^sk-proj-|service_role/;
+  /SECRET|PRIVATE|SERVICE_ROLE|TOKEN|PASSWORD|STRIPE_SECRET|OPENAI_API_KEY|ANTHROPIC_API_KEY|DATABASE_URL|DB_URL|REDIS_URL|MONGO_URI|MONGODB_URI|JWT_SECRET|WEBHOOK_SECRET|SIGNING_KEY|ENCRYPTION_KEY|AWS_SECRET|GITHUB_TOKEN/i;
+export const NEXT_PUBLIC_DANGER_VALUES =
+  /^sk_live_|^sk_test_|^sk-ant-|^sk-proj-|service_role|^eyJ[A-Za-z0-9_-]+\.eyJ|^postgres(?:ql)?:\/\/[^@\s]+:[^@\s]+@|^mysql:\/\/[^@\s]+:[^@\s]+@|^mongodb(?:\+srv)?:\/\/[^@\s]+:[^@\s]+@|^redis:\/\/[^@\s]*:[^@\s]+@|^AKIA[0-9A-Z]{16}|^ghp_[A-Za-z0-9]{20,}|^gho_[A-Za-z0-9]{20,}|^ghu_[A-Za-z0-9]{20,}|^ghs_[A-Za-z0-9]{20,}|^ghr_[A-Za-z0-9]{20,}|^github_pat_|^xai-[A-Za-z0-9]{20,}|^gsk_[A-Za-z0-9_-]{20,}|^sk-or-[A-Za-z0-9-]{20,}|-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/;
+// Public-bundle prefix family — `NEXT_PUBLIC_` is Next.js; the same shape
+// of bundle-inlining ships under different prefixes across the JS ecosystem.
+// probeNextPublic gates on names matching this list AND a danger-name or
+// danger-value match.
+export const PUBLIC_ENV_PREFIXES =
+  /^(?:NEXT_PUBLIC_|VITE_|PUBLIC_|REACT_APP_|EXPO_PUBLIC_|GATSBY_|NUXT_PUBLIC_|PARCEL_PUBLIC_)/;
 
 // Compromised npm/PyPI packages — sourced from src/data/compromised-packages.js.
 // The data file is the single source of truth; this re-export strips meta-keys

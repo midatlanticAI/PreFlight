@@ -105,12 +105,19 @@ export function probeSourceMapExposure(files) {
         const m = SOURCEMAP_URL_RE.exec(line);
         if (!m) return;
         const url = m[1];
-        // Same-origin / relative .map path is the production-leak case.
+        // Skip http(s) URLs that DON'T point at .map (analytics beacons, etc.).
+        // A relative .map path AND a public https://... .map URL are both
+        // production-leak shapes; both should fire. The previous gate
+        // skipped public https://...map URLs (latent bug — fixed depth round 3).
         if (/^https?:\/\//.test(url) && !url.endsWith('.map')) return;
+        // Data-URI source maps are a separate leak shape (the map IS the bundle).
+        const isDataUri = /^data:/i.test(url);
         findings.push({
           id: `sourcemap-comment-${file.path}-${i}`,
           probe: 'Source Map Exposure',
-          title: 'sourceMappingURL comment points at a public .map asset',
+          title: isDataUri
+            ? 'Inline data: URI source map shipped with bundle'
+            : 'sourceMappingURL comment points at a public .map asset',
           severity: 'low',
           category: 'Information Disclosure',
           cwe: 'CWE-540',

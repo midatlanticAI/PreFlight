@@ -139,13 +139,12 @@ const FIXTURES = {
         desc: 'NEXT_PUBLIC_OPENAI_KEY — caught by danger-name regex',
         files: [file('.env.local', 'NEXT_PUBLIC_OPENAI_KEY=sk-proj-abc')],
       },
-    ],
-    gap: [
       {
-        desc: 'NEXT_PUBLIC_DATABASE_URL=postgres://... — probe may need fuller URL value to fire',
-        files: [file('.env', 'NEXT_PUBLIC_DATABASE_URL=postgres://prod...')],
+        desc: 'NEXT_PUBLIC_DATABASE_URL=postgres://... (closed in depth round 3)',
+        files: [file('.env', 'NEXT_PUBLIC_DATABASE_URL=postgres://user:pass@host/db')],
       },
     ],
+    gap: [],
     negative: [
       {
         desc: 'NEXT_PUBLIC_APP_URL — legitimately public',
@@ -511,6 +510,15 @@ const FIXTURES = {
           ),
         ],
       },
+      {
+        desc: 'pull_request_target checking out PR head.sha (closed in depth round 3)',
+        files: [
+          file(
+            '.github/workflows/test.yml',
+            'on: pull_request_target\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}'
+          ),
+        ],
+      },
     ],
     negative: [
       {
@@ -525,11 +533,11 @@ const FIXTURES = {
     ],
     gap: [
       {
-        desc: 'pull_request_target checking out PR head — probe may need different YAML structure to match',
+        desc: '_placeholder gap (head.sha shape closed in depth round 3)',
         files: [
           file(
-            '.github/workflows/test.yml',
-            'on: pull_request_target\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}'
+            '.github/workflows/no-such.yml',
+            '# this fixture is intentionally never going to fire'
           ),
         ],
       },
@@ -1585,10 +1593,7 @@ const FIXTURES = {
       {
         desc: 'API_KEY constant assigned a 40+ char literal',
         files: [
-          file(
-            'config/initializers/openai.rb',
-            'OPENAI_API_KEY = "sk-abcdefghij1234567ABCD"\n'
-          ),
+          file('config/initializers/openai.rb', 'OPENAI_API_KEY = "sk-abcdefghij1234567ABCD"\n'),
         ],
       },
       {
@@ -1602,12 +1607,7 @@ const FIXTURES = {
       },
       {
         desc: 'Google AIza-shaped literal assigned to a constant',
-        files: [
-          file(
-            'lib/maps_client.rb',
-            'GOOGLE_MAPS_KEY = "AIzaSyA1B2C3D4E5F6G7H"\n'
-          ),
-        ],
+        files: [file('lib/maps_client.rb', 'GOOGLE_MAPS_KEY = "AIzaSyA1B2C3D4E5F6G7H"\n')],
       },
     ],
     negative: [
@@ -1929,9 +1929,7 @@ const FIXTURES = {
     positive: [
       {
         desc: 'OpenAI sk- literal bound to a let',
-        files: [
-          file('src/ai.rs', 'let openai_key = "sk-abcdefghij1234567ABCD";'),
-        ],
+        files: [file('src/ai.rs', 'let openai_key = "sk-abcdefghij1234567ABCD";')],
       },
       {
         desc: 'const API_KEY with a 20+ char literal',
@@ -1939,12 +1937,7 @@ const FIXTURES = {
       },
       {
         desc: 'Google AIza-shaped key in a static',
-        files: [
-          file(
-            'src/keys.rs',
-            'static GOOGLE_TOKEN: &str = "AIzaSyA1B2C3D4E5F6G7H";'
-          ),
-        ],
+        files: [file('src/keys.rs', 'static GOOGLE_TOKEN: &str = "AIzaSyA1B2C3D4E5F6G7H";')],
       },
     ],
     negative: [
@@ -2079,12 +2072,7 @@ const FIXTURES = {
     positive: [
       {
         desc: 'OpenAI sk- literal in a := assignment',
-        files: [
-          file(
-            'internal/ai/client.go',
-            'apiKey := "sk-abcdefghij1234567ABCD"'
-          ),
-        ],
+        files: [file('internal/ai/client.go', 'apiKey := "sk-abcdefghij1234567ABCD"')],
       },
     ],
     negative: [
@@ -2618,10 +2606,7 @@ const FIXTURES = {
       {
         desc: 'OpenAI sk- key in val literal',
         files: [
-          file(
-            'app/src/main/kotlin/AiClient.kt',
-            'val openAiKey = "sk-abcdefghij1234567ABCD"'
-          ),
+          file('app/src/main/kotlin/AiClient.kt', 'val openAiKey = "sk-abcdefghij1234567ABCD"'),
         ],
       },
       {
@@ -2730,12 +2715,7 @@ const FIXTURES = {
     positive: [
       {
         desc: 'OpenAI sk- key in let literal',
-        files: [
-          file(
-            'Sources/App/AIClient.swift',
-            'let openAiKey = "sk-abcdefghij1234567ABCD"'
-          ),
-        ],
+        files: [file('Sources/App/AIClient.swift', 'let openAiKey = "sk-abcdefghij1234567ABCD"')],
       },
       {
         desc: 'credential-named static let bound to long literal',
@@ -2943,12 +2923,7 @@ const FIXTURES = {
     positive: [
       {
         desc: 'OpenAI sk- key in const literal',
-        files: [
-          file(
-            'lib/ai_client.dart',
-            "const openAiKey = 'sk-abcdefghij1234567ABCD';"
-          ),
-        ],
+        files: [file('lib/ai_client.dart', "const openAiKey = 'sk-abcdefghij1234567ABCD';")],
       },
       {
         desc: 'credential-named static const bound to long literal',
