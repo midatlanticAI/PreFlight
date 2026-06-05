@@ -169,14 +169,40 @@ export function probeExternalURLs(files) {
   // detector, not an "unknown URL census."
   for (const [host, info] of seen) {
     const isIP = URL_RAW_IP_RE.test(host);
+    // Depth round 3: RFC 1918 private-IP range distinct from generic raw-IP.
+    const isPrivateIP = /^(?:10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(host);
     const sketchyTLD = URL_SUSPICIOUS_TLD_RE.test(host);
     const isShortener = URL_SHORTENERS.has(host);
     const httpOnly = info.allHttp;
+    // Depth round 3: IDN / punycode (homoglyph attack indicator).
+    const isPunycode = /(?:^|\.)xn--/i.test(host);
+    // Credentials baked into URL (user:pass@host).
+    const hasCredsInUrl = info.occurrences.some((o) => /:\/\/[^/:\s@]+:[^/@\s]+@/.test(o.url));
+    // Tor hidden service.
+    const isOnion = /\.onion$/i.test(host);
 
-    if (!isIP && !sketchyTLD && !isShortener && !httpOnly) continue;
+    if (
+      !isIP &&
+      !sketchyTLD &&
+      !isShortener &&
+      !httpOnly &&
+      !isPunycode &&
+      !hasCredsInUrl &&
+      !isOnion
+    )
+      continue;
 
     let severity, reason;
-    if (isIP) {
+    if (hasCredsInUrl) {
+      severity = 'high';
+      reason = 'Credentials embedded in URL (user:pass@host)';
+    } else if (isPunycode) {
+      severity = 'medium';
+      reason = 'Punycode / IDN host (possible homograph attack)';
+    } else if (isPrivateIP) {
+      severity = 'medium';
+      reason = 'Private RFC 1918 IP referenced from source (possible staging endpoint leak)';
+    } else if (isIP) {
       severity = 'medium';
       reason = 'Raw IP address used as endpoint';
     } else if (sketchyTLD) {
@@ -185,6 +211,9 @@ export function probeExternalURLs(files) {
     } else if (isShortener) {
       severity = 'medium';
       reason = 'URL shortener (hides destination)';
+    } else if (isOnion) {
+      severity = 'medium';
+      reason = 'Tor hidden service (.onion)';
     } else {
       severity = 'low';
       reason = 'HTTP only — no TLS';

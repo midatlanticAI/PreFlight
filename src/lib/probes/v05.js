@@ -365,7 +365,19 @@ export function probeWeakRandomness(files) {
 const RESPONSE_CALL_RE =
   /\b(?:res|reply|ctx|response)\.(?:send|json|status\s*\(\s*\d+\s*\)\.(?:send|json))|\breturn\s+Response\.(?:json|redirect)|\breturn\s+new\s+Response\b|\b(?:res|reply|ctx)\.body\s*=/i;
 const STACK_REF_RE = /\b(?:err|error|e|exception)\.stack\b/;
+// Depth round 3: err.message is the lower-severity sibling. Less catastrophic
+// than the full stack but still discloses table names, hostnames, library
+// versions, SQL fragments. CWE-209.
+const MESSAGE_REF_RE = /\b(?:err|error|e|exception)\.message\b/;
+// Cause chain (ES2022): `new Error('x', { cause: dbErr })`. JSON.stringify
+// doesn't pick it up but newer Node toString() does.
+const CAUSE_REF_RE = /\bcause\s*:\s*(?:err|error|e|exception)\b/;
 const JSON_STRINGIFY_ERR_RE = /JSON\.stringify\s*\(\s*(?:err|error|e|exception)\b/;
+// Framework error-page files (Next/Svelte/Nuxt/Remix) — these are pages that
+// RENDER the error to the user. The probe checks them for direct interpolation
+// of error.stack or error.message into the template.
+const FRAMEWORK_ERROR_PAGE_RE =
+  /(?:^|\/)(?:app\/(?:global-)?error\.(?:tsx?|jsx?)|\+error\.svelte|error\.vue|routes\/.*ErrorBoundary)/;
 
 // "Catches" but inside known-dev guards: if `if (process.env.NODE_ENV !== 'production')`
 // is on the same statement or directly precedes, skip the finding (intentional dev surface).
@@ -378,30 +390,68 @@ export function probeStackTraceLeaks(files) {
     if (!/\.[jt]sx?$/.test(file.path)) return;
 
     const lines = file.content.split('\n');
+    const isErrorPage = FRAMEWORK_ERROR_PAGE_RE.test(file.path);
     lines.forEach((line, i) => {
       const hasResponse = RESPONSE_CALL_RE.test(line);
       const hasStack = STACK_REF_RE.test(line);
+      const hasMessage = MESSAGE_REF_RE.test(line);
+      const hasCause = CAUSE_REF_RE.test(line);
       const hasStringifyErr = JSON_STRINGIFY_ERR_RE.test(line);
+      // Depth round 3: framework error pages — direct interpolation of
+      // error.stack / error.message into the JSX/Svelte/Vue template renders
+      // to the visitor. Detect even without a response-call match because
+      // the file IS the response.
+      const isErrorPageInterpolation =
+        isErrorPage &&
+        (hasStack || hasMessage) &&
+        /\{[^}]*error\.(?:stack|message)[^}]*\}/.test(line);
       // A real leak: response call on a line that mentions err.stack, OR a
-      // response call that JSON.stringify's the raw error (which serializes
-      // its stack property).
-      if (!(hasResponse && (hasStack || hasStringifyErr))) return;
+      // response call that JSON.stringify's the raw error.
+      const isResponseStackLeak = hasResponse && (hasStack || hasStringifyErr);
+      // err.message in a response call is the lower-severity sibling: still
+      // discloses internals, less catastrophic than the stack.
+      const isResponseMessageLeak = hasResponse && hasMessage && !hasStack && !hasStringifyErr;
+      // ES2022 cause chain in a thrown error returned to the client.
+      const isCauseChainLeak = hasResponse && hasCause;
+
+      if (
+        !isResponseStackLeak &&
+        !isResponseMessageLeak &&
+        !isCauseChainLeak &&
+        !isErrorPageInterpolation
+      )
+        return;
 
       const ctx = lines.slice(Math.max(0, i - 5), Math.min(lines.length, i + 2)).join(' ');
       if (DEV_GUARD_RE.test(ctx)) return;
 
+      let title;
+      let severity;
+      if (isErrorPageInterpolation) {
+        title = 'Framework error page renders error.stack / error.message to the visitor';
+        severity = 'medium';
+      } else if (isResponseStackLeak) {
+        title = 'Server error response includes the stack trace';
+        severity = 'medium';
+      } else if (isCauseChainLeak) {
+        title = 'Error cause chain passed through to client response';
+        severity = 'medium';
+      } else {
+        title = 'Server error response includes raw err.message';
+        severity = 'low';
+      }
       findings.push({
         id: `stack-leak-${file.path}-${i}`,
         probe: 'Stack Trace Leaks',
-        title: 'Server error response includes the stack trace',
-        severity: 'medium',
+        title,
+        severity,
         category: 'Information Disclosure',
         cwe: 'CWE-209',
         file: file.path,
         line: i + 1,
         evidence: line.trim().slice(0, 200),
         remediation:
-          'Strip the stack from production error responses. Return a generic error shape (`{ error: "Internal Server Error" }`) with the actual stack logged server-side via your logger. Stack traces leak file paths, dependency versions, and call chains, all of which simplify follow-up attacks.',
+          'Strip server internals from production error responses. Return a generic error shape (`{ error: "Internal Server Error" }`) with the actual error logged server-side via your logger. Stack traces, raw err.message (often containing DB table names or library versions), and cause chains all leak reconnaissance.',
       });
     });
   });

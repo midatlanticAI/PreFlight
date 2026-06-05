@@ -1715,8 +1715,79 @@ export function probeCORS(files) {
   const findings = [];
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
-    if (!/\.[jt]sx?$/.test(file.path)) return;
-    const lines = file.content.split('\n');
+    if (!/\.[jt]sx?$|\.py$/.test(file.path)) return;
+    const c = file.content;
+    // Depth round 3: detect reflected-origin + credentials at file level. If
+    // the file echoes req.headers.origin into the ACAO header AND sets
+    // Allow-Credentials: true anywhere in the same file, it is the canonical
+    // CORS auth-bypass shape. Emits a single high-severity finding for the
+    // file (not per-line) to avoid double-emit with the wildcard rule.
+    const echoesOrigin =
+      /Access-Control-Allow-Origin['"`\s,:=]+(?:req|request)\.(?:headers|header)\s*\.?\s*\[?\s*['"]?origin['"]?\s*\]?/i.test(
+        c
+      ) ||
+      /Access-Control-Allow-Origin['"`\s,:=]+(?:request|req)\.headers\.get\s*\(\s*['"]origin['"]/i.test(
+        c
+      );
+    const allowsCredentials =
+      /Access-Control-Allow-Credentials['"`\s,:=]+['"`]?true['"`]?/i.test(c) ||
+      /credentials\s*:\s*true/.test(c);
+    const corsOriginTrue = /\bcors\s*\(\s*\{[^}]*origin\s*:\s*true/i.test(c);
+    const setsVaryOrigin = /Vary['"`\s,:=]+['"`]?Origin/i.test(c);
+    // FastAPI CORSMiddleware allow_origins=["*"] + allow_credentials=True
+    const fastapiBypass =
+      /CORSMiddleware\([^)]*allow_origins\s*=\s*\[[^\]]*['"]\*['"][^\]]*\][\s\S]*?allow_credentials\s*=\s*True/i.test(
+        c
+      ) ||
+      /CORSMiddleware\([^)]*allow_credentials\s*=\s*True[\s\S]*?allow_origins\s*=\s*\[[^\]]*['"]\*['"]/i.test(
+        c
+      );
+    if ((echoesOrigin || corsOriginTrue) && allowsCredentials) {
+      findings.push({
+        id: `cors-credentialed-reflect-${file.path}`,
+        probe: 'CORS Check',
+        title:
+          'CORS reflects request origin with Access-Control-Allow-Credentials: true (auth bypass)',
+        severity: 'high',
+        category: 'Misconfiguration',
+        cwe: 'CWE-942',
+        file: file.path,
+        line: 1,
+        evidence: 'Echoed Origin + Allow-Credentials true detected in same file',
+        remediation:
+          'Reflecting the request Origin while also enabling credentials lets any origin read authenticated responses. Pin to an allowlist instead, e.g. const ALLOWED = new Set([...]); if (ALLOWED.has(origin)) res.setHeader("Access-Control-Allow-Origin", origin). Add Vary: Origin to caches.',
+      });
+    } else if (echoesOrigin && !setsVaryOrigin) {
+      findings.push({
+        id: `cors-reflect-no-vary-${file.path}`,
+        probe: 'CORS Check',
+        title: 'CORS echoes request origin without Vary: Origin',
+        severity: 'low',
+        category: 'Misconfiguration',
+        cwe: 'CWE-942',
+        file: file.path,
+        line: 1,
+        evidence: 'Reflected Origin header without companion Vary: Origin',
+        remediation:
+          'Without Vary: Origin, intermediate caches may serve a response keyed on the wrong origin. Add res.setHeader("Vary", "Origin") whenever the response is origin-scoped.',
+      });
+    }
+    if (fastapiBypass) {
+      findings.push({
+        id: `cors-fastapi-bypass-${file.path}`,
+        probe: 'CORS Check',
+        title: 'FastAPI CORSMiddleware allow_origins=["*"] with allow_credentials=True',
+        severity: 'high',
+        category: 'Misconfiguration',
+        cwe: 'CWE-942',
+        file: file.path,
+        line: 1,
+        evidence: 'FastAPI CORSMiddleware misconfiguration',
+        remediation:
+          'FastAPI documents this as forbidden — browsers refuse to honor it but server-side intent is wrong. Either set allow_credentials=False or replace allow_origins=["*"] with an explicit allowlist.',
+      });
+    }
+    const lines = c.split('\n');
     lines.forEach((line, i) => {
       if (/Access-Control-Allow-Origin["']?\s*[:,]\s*["']\*["']/.test(line)) {
         findings.push({
@@ -1731,6 +1802,26 @@ export function probeCORS(files) {
           evidence: line.trim().slice(0, 200),
           remediation: `If this endpoint returns user-specific data or accepts authenticated requests, "*" allows any origin to read responses. Restrict to known origins or echo the request Origin against an allowlist.`,
         });
+      }
+      // Long Access-Control-Max-Age — preflight-cache poisoning surface.
+      const maxAgeMatch = line.match(/Access-Control-Max-Age["']?\s*[:,]\s*["']?(\d+)/i);
+      if (maxAgeMatch) {
+        const seconds = parseInt(maxAgeMatch[1], 10);
+        if (seconds > 86400) {
+          findings.push({
+            id: `cors-long-max-age-${file.path}-${i}`,
+            probe: 'CORS Check',
+            title: `Access-Control-Max-Age set to ${seconds}s (preflight cache too long)`,
+            severity: 'low',
+            category: 'Misconfiguration',
+            cwe: 'CWE-942',
+            file: file.path,
+            line: i + 1,
+            evidence: line.trim().slice(0, 200),
+            remediation:
+              'Browsers cap at 7200s anyway, but a configured value > 86400 (24h) signals that a stale CORS policy can persist for too long after a fix. Set Access-Control-Max-Age to 600-3600.',
+          });
+        }
       }
     });
   });

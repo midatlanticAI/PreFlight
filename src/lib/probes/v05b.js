@@ -140,9 +140,14 @@ export function probeSourceMapExposure(files) {
 // open popups, access the parent via window.parent. Even for first-party
 // iframes the sandbox attribute is the right default.
 
-const IFRAME_TAG_RE = /<iframe\b[^>]*>/gi;
+// Depth round 3: scan WHOLE-file with [\s\S] so multi-line JSX iframe tags
+// (very common: <iframe\n  src="..."\n  title="..."\n/>) are no longer
+// invisible to the regex. Recompute line number from match index.
+const IFRAME_TAG_RE = /<iframe\b[\s\S]*?>/gi;
 const IFRAME_SRC_RE = /\bsrc\s*=\s*["']([^"']+)["']/;
+const IFRAME_SRCDOC_RE = /\bsrcdoc\s*=\s*["']/;
 const IFRAME_SANDBOX_RE = /\bsandbox\s*=\s*["'][^"']*["']|\bsandbox\b(?!\s*=)/;
+const IFRAME_SANDBOX_VAL_RE = /\bsandbox\s*=\s*["']([^"']*)["']/;
 
 export function probeIframeSandbox(files) {
   const findings = [];
@@ -150,35 +155,108 @@ export function probeIframeSandbox(files) {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.(?:html?|jsx?|tsx?|astro|vue|svelte)$/.test(file.path)) return;
 
-    const lines = file.content.split('\n');
-    lines.forEach((line, i) => {
-      let m;
-      IFRAME_TAG_RE.lastIndex = 0;
-      while ((m = IFRAME_TAG_RE.exec(line)) !== null) {
-        const tag = m[0];
-        if (IFRAME_SANDBOX_RE.test(tag)) continue; // already sandboxed
-
-        const srcMatch = IFRAME_SRC_RE.exec(tag);
-        const src = srcMatch?.[1] || '';
-        const isCrossOrigin = /^(https?:)?\/\//i.test(src);
-
+    const content = file.content;
+    // postMessage handler without origin check — CWE-346, related to iframe
+    // boundary control. Detect window.addEventListener('message', ...) where
+    // the next ~30 lines have no `.origin` reference.
+    if (/\.[jt]sx?$/.test(file.path)) {
+      const msgListeners = [
+        ...content.matchAll(
+          /\b(?:window|globalThis|self)\.addEventListener\s*\(\s*['"`]message['"`]/g
+        ),
+      ];
+      for (const ml of msgListeners) {
+        const lineNum = content.slice(0, ml.index).split('\n').length;
+        // Look at the next ~30 lines for an origin check.
+        const after = content.slice(ml.index, ml.index + 1500);
+        const checksOrigin =
+          /\.origin\s*(?:===|!==|==|!=)|origin\s*===|expectedOrigin|trustedOrigins|allowedOrigins|window\.location\.origin/.test(
+            after
+          );
+        // Skip if it's actually a MessageChannel port (port.onmessage), which
+        // is origin-bound by construction.
+        if (checksOrigin) continue;
         findings.push({
-          id: `iframe-sandbox-${file.path}-${i}-${m.index}`,
+          id: `postmessage-no-origin-${file.path}-${ml.index}`,
           probe: 'Iframe Sandbox',
-          title: isCrossOrigin
-            ? 'Cross-origin <iframe> missing sandbox attribute'
-            : '<iframe> missing sandbox attribute',
-          severity: isCrossOrigin ? 'high' : 'medium',
+          title: 'postMessage handler does not validate event.origin',
+          severity: 'medium',
+          category: 'Misconfiguration',
+          cwe: 'CWE-346',
+          file: file.path,
+          line: lineNum,
+          evidence: content
+            .slice(ml.index, ml.index + 80)
+            .replace(/\s+/g, ' ')
+            .slice(0, 200),
+          remediation:
+            'Without an event.origin check, any window (iframe, popup, parent) can send messages to your handler. Verify origin against an allowlist at the top of the handler: if (event.origin !== "https://trusted.example") return.',
+        });
+      }
+    }
+
+    // Iframe tags (whole-file scan, multi-line tolerant).
+    let m;
+    IFRAME_TAG_RE.lastIndex = 0;
+    while ((m = IFRAME_TAG_RE.exec(content)) !== null) {
+      const tag = m[0];
+      const lineNum = content.slice(0, m.index).split('\n').length;
+      const srcMatch = IFRAME_SRC_RE.exec(tag);
+      const src = srcMatch?.[1] || '';
+      const isCrossOrigin = /^(https?:)?\/\//i.test(src);
+      const hasSrcdoc = IFRAME_SRCDOC_RE.test(tag);
+      const hasSandbox = IFRAME_SANDBOX_RE.test(tag);
+      if (!hasSandbox) {
+        let title;
+        let severity;
+        if (hasSrcdoc) {
+          title = '<iframe srcdoc> without sandbox runs inline HTML as same-origin';
+          severity = 'medium';
+        } else if (isCrossOrigin) {
+          title = 'Cross-origin <iframe> missing sandbox attribute';
+          severity = 'high';
+        } else {
+          title = '<iframe> missing sandbox attribute';
+          severity = 'medium';
+        }
+        findings.push({
+          id: `iframe-sandbox-${file.path}-${m.index}`,
+          probe: 'Iframe Sandbox',
+          title,
+          severity,
           category: 'Misconfiguration',
           cwe: 'CWE-1021',
           file: file.path,
-          line: i + 1,
+          line: lineNum,
           evidence: tag.trim().slice(0, 200),
           remediation:
-            'Add a `sandbox` attribute to the iframe. The most restrictive useful default is `sandbox=""` (no scripts, no forms, no top-level navigation, no popups, fresh origin). Relax incrementally with named tokens (`sandbox="allow-scripts allow-same-origin"`) only for what the embedded page actually needs. Avoid combining `allow-scripts` and `allow-same-origin` for cross-origin iframes; the combination defeats the origin isolation.',
+            'Add a `sandbox` attribute to the iframe. The most restrictive useful default is `sandbox=""`. Relax incrementally with named tokens only for what the embedded page actually needs. Avoid combining `allow-scripts` and `allow-same-origin` for cross-origin iframes; the combination defeats the origin isolation.',
         });
+        continue;
       }
-    });
+      // Sandbox IS present — depth check the value.
+      if (isCrossOrigin) {
+        const valMatch = IFRAME_SANDBOX_VAL_RE.exec(tag);
+        const val = valMatch?.[1] || '';
+        const tokens = val.split(/\s+/).filter(Boolean);
+        if (tokens.includes('allow-scripts') && tokens.includes('allow-same-origin')) {
+          findings.push({
+            id: `iframe-sandbox-defeat-${file.path}-${m.index}`,
+            probe: 'Iframe Sandbox',
+            title:
+              'sandbox grants allow-scripts + allow-same-origin to cross-origin iframe (sandbox can be removed)',
+            severity: 'medium',
+            category: 'Misconfiguration',
+            cwe: 'CWE-1021',
+            file: file.path,
+            line: lineNum,
+            evidence: tag.trim().slice(0, 200),
+            remediation:
+              'When both tokens are present on a cross-origin iframe, the embedded page can call parent.document.querySelector("iframe").removeAttribute("sandbox") and reload itself, defeating the sandbox completely. MDN flags this explicitly. Drop allow-same-origin, or move the iframe to a same-origin context.',
+          });
+        }
+      }
+    }
   });
   return findings;
 }
