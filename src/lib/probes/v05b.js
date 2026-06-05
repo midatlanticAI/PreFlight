@@ -247,8 +247,12 @@ export function probeSecurityLogging(files) {
 const EMBEDDING_CREATE_RE = /\b(?:embeddings|openai|client)\.(?:embeddings\.)?create\s*\(/;
 const VECTOR_STORE_WRITE_RE =
   /\b(?:pinecone|weaviate|qdrant|chroma|milvus|faiss|pgvector|supabase\.vectors|vectorStore)\.(?:upsert|add|insert|index|write|save|put)\s*\(/i;
+// Same `url`/`originalUrl`/`path`/`baseUrl` widening as USER_INPUT_TOKEN_RE
+// in v05.js. RAG ingestion has the same shape of risk: a request-derived
+// URL or path landing in the embedding/vector-store payload should be
+// flagged for sanitize/validate review.
 const USER_INPUT_NEAR_RE =
-  /\b(?:req|request|ctx|context|event)\.(?:body|query|params|files|formData)(?:\.\w+)?|\buserInput\b|\buserDoc(?:ument)?\b|\buploaded(?:File|Document|Content)?\b/;
+  /\b(?:req|request|ctx|context|event)\.(?:body|query|params|files|formData|url|originalUrl|path|baseUrl)(?:\.\w+)?|\buserInput\b|\buserDoc(?:ument)?\b|\buploaded(?:File|Document|Content)?\b/;
 // No word boundaries: validation function names are frequently camelCase
 // (`sanitizeDocument`, `validateInput`, `stripInjection`, `moderatePrompt`)
 // and \b breaks inside CamelCase joins.

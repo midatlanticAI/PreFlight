@@ -117,8 +117,14 @@ export function probeSQLInjectionTemplateLiterals(files) {
 const FS_CALL_RE =
   /\b(?:fs|fsPromises|fsp|node:fs)\.(?:read|write|append|create(?:Read|Write)Stream|stat|lstat|access|unlink|rmdir|readdir|opendir|cp|copy)(?:File|Sync)?\s*\(/g;
 const PATH_JOIN_RE = /\bpath\.(?:join|resolve)\s*\(/g;
+// Includes `url`, `originalUrl`, `path`, `baseUrl`. The first is the single
+// most fundamental request-derived value on a raw Node http.createServer
+// handler (`http.createServer((req, res) => { path.join(__dirname, req.url) })`)
+// and missing it produced a silent FN on the May 2026 emailassist field-tech
+// PWA gap report: arbitrary file read landed unflagged because req.url was
+// not in the alternation. The other three cover Express's URL accessors.
 const USER_INPUT_TOKEN_RE =
-  /\b(?:req|request|ctx|context|event)\.(?:body|query|params|headers|cookies|searchParams)(?:\.\w+)?/;
+  /\b(?:req|request|ctx|context|event)\.(?:body|query|params|headers|cookies|searchParams|url|originalUrl|path|baseUrl)(?:\.\w+)?/;
 const SAFE_NORMALIZE_RE =
   /\bpath\.(?:normalize|relative|isAbsolute)|escape|sanitize|allow(?:list)?|whitelist/i;
 
