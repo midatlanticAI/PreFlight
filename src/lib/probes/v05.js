@@ -204,8 +204,15 @@ const PATH_JOIN_RE = /\bpath\.(?:join|resolve)\s*\(/g;
 // not in the alternation. The other three cover Express's URL accessors.
 const USER_INPUT_TOKEN_RE =
   /\b(?:req|request|ctx|context|event)\.(?:body|query|params|headers|cookies|searchParams|url|originalUrl|path|baseUrl)(?:\.\w+)?/;
+// Depth round 5: the canonical resolve+confine mitigation
+// `const safe = path.resolve(BASE, x); if (!safe.startsWith(BASE)) ...`
+// is the textbook traversal fix. The old regex only recognized
+// path.normalize/relative/isAbsolute, so the standard fix produced a
+// false positive on its own line. Now: resolve + startsWith in the same
+// ±3-line window counts as a mitigation. Same for path.resolve called
+// with a literal first arg (defensive base), which is the same intent.
 const SAFE_NORMALIZE_RE =
-  /\bpath\.(?:normalize|relative|isAbsolute)|escape|sanitize|allow(?:list)?|whitelist/i;
+  /\bpath\.(?:normalize|relative|isAbsolute)|escape|sanitize|allow(?:list)?|whitelist|path\.resolve\s*\(\s*['"`][^'"`]+['"`]\s*,[\s\S]*?\.\s*startsWith\s*\(|\.\s*startsWith\s*\([\s\S]*?path\.resolve\s*\(\s*['"`]/i;
 
 export function probePathTraversal(files) {
   const findings = [];
