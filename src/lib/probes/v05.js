@@ -32,11 +32,39 @@ import { isTestFile, isScannerSelfSource } from '../file-filter.js';
 //     `@vercel/postgres` are parameterized; we whitelist by tag name).
 //   - String literals without interpolation.
 
-const SQL_PARAMETERIZED_TAGS = new Set(['sql', 'pg', 'postgres', 'slonik', 'drizzle']);
+const SQL_PARAMETERIZED_TAGS = new Set([
+  'sql',
+  'pg',
+  'postgres',
+  'slonik',
+  'drizzle',
+  'neon',
+  'kysely',
+]);
+// Widened (depth round 2): added Prisma raw escape hatches (the documented
+// foot-shot), Knex raw chainers (whereRaw/orderByRaw/etc.), Drizzle escape
+// hatch, Cloudflare D1 prepare/exec, Supabase rpc, TypeORM manager, plus
+// better-sqlite3 .exec.
 const SQL_RISK_CALLEES =
-  /\b(?:db|client|connection|conn|pool|knex|sequelize)\.(?:query|raw|execute|unsafe)\s*\(\s*`/g;
-const SQL_BARE_CALLEES = /\b(?:query|execute|raw|unsafe|prepare)\s*\(\s*`/g;
+  /\b(?:db|client|connection|conn|pool|knex|sequelize|manager|repository|repo|datasource|dataSource|prisma|supabase|DB)\.(?:\$?query|\$?execute|\$?queryRaw|\$?executeRaw|\$?queryRawUnsafe|\$?executeRawUnsafe|raw|unsafe|prepare|exec|whereRaw|orderByRaw|havingRaw|joinRaw|fromRaw|unionRaw|groupByRaw|selectRaw|rpc)\s*\(\s*`/g;
+const SQL_BARE_CALLEES =
+  /\b(?:query|execute|raw|unsafe|prepare|exec|executeQuery|runQuery|runSql|rawQuery|sqlQuery|executeRaw|queryRaw|executeRawUnsafe|queryRawUnsafe)\s*\(\s*`/g;
 const SQL_HAS_INTERPOLATION = /\$\{[^}]+\}/;
+// Concatenation-shape sink: `db.query("SELECT ... " + userVar)`. Anchor on
+// the SQL keyword in the literal AND a user-input token on the right-hand
+// side to keep FP low.
+const SQL_CONCAT_SINK =
+  /\b(?:db|client|connection|conn|pool|knex|sequelize|prisma|supabase|cursor)\s*\.\s*(?:query|execute|exec|raw|prepare|run)\s*\(\s*['"]\s*(?:SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)\b[^'"]*['"]\s*\+\s*(?:req|request|ctx|event|userInput|userMessage|body|query|params|searchParams|user_input)/i;
+// Python f-string into cursor.execute or SQLAlchemy text(): the Python
+// analog of template-literal interpolation.
+const PY_SQL_FSTRING =
+  /\b(?:cursor|conn|connection|engine|db|session)\s*\.\s*(?:execute|executemany|executescript|exec_driver_sql)\s*\(\s*(?:text\s*\(\s*)?f["']/;
+const PY_SQL_PERCENT_OR_FORMAT =
+  /\b(?:cursor|conn|connection|engine|db|session)\s*\.\s*(?:execute|executemany|executescript)\s*\(\s*["'][^"']*(?:SELECT|INSERT|UPDATE|DELETE)[^"']*["']\s*(?:%|\.\s*format\s*\()/i;
+// Go fmt.Sprintf into db.Query/Exec — the Go analog of template-literal
+// interpolation.
+const GO_SQL_SPRINTF =
+  /\b(?:db|tx|conn|stmt)\.(?:Query|QueryRow|QueryContext|QueryRowContext|Exec|ExecContext|Prepare)\s*\(\s*(?:fmt\.Sprintf|"[^"]*"\s*\+)/;
 
 export function probeSQLInjectionTemplateLiterals(files) {
   const findings = [];
@@ -98,6 +126,57 @@ export function probeSQLInjectionTemplateLiterals(files) {
               "This call interpolates user input into a SQL string. Switch to parameterized queries using the driver's built-in placeholder syntax. See the related Learn pattern for driver-specific examples.",
           });
         }
+      }
+      // Depth round 2: concatenation-shape sink. `db.query("..." + req.body.x)`.
+      if (SQL_CONCAT_SINK.test(line)) {
+        findings.push({
+          id: `sqli-concat-${file.path}-${i}`,
+          probe: 'SQL Injection',
+          title: 'SQL query built by concatenating user input',
+          severity: 'critical',
+          category: 'Injection',
+          cwe: 'CWE-89',
+          file: file.path,
+          line: i + 1,
+          evidence: line.trim().slice(0, 200),
+          remediation:
+            'String concatenation into a SQL call is the textbook SQLi shape. Switch to parameterized placeholders: pg `$1`, mysql/SQLite `?`, prisma `prisma.user.findUnique({ where: { id } })`. Never `+` a request value into a query.',
+        });
+      }
+      // Depth round 2: Python f-string and %/.format() into a cursor.execute.
+      if (
+        file.path.endsWith('.py') &&
+        (PY_SQL_FSTRING.test(line) || PY_SQL_PERCENT_OR_FORMAT.test(line))
+      ) {
+        findings.push({
+          id: `sqli-py-${file.path}-${i}`,
+          probe: 'SQL Injection',
+          title: 'Python query built with f-string or % / .format() interpolation',
+          severity: 'critical',
+          category: 'Injection',
+          cwe: 'CWE-89',
+          file: file.path,
+          line: i + 1,
+          evidence: line.trim().slice(0, 200),
+          remediation:
+            'Parameterize. With psycopg/sqlite3 use `cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))`. With SQLAlchemy use `text("... WHERE id = :id").bindparams(id=user_id)`.',
+        });
+      }
+      // Depth round 2: Go fmt.Sprintf into db.Query/Exec.
+      if (file.path.endsWith('.go') && GO_SQL_SPRINTF.test(line)) {
+        findings.push({
+          id: `sqli-go-${file.path}-${i}`,
+          probe: 'SQL Injection',
+          title: 'Go query built with fmt.Sprintf or string concatenation',
+          severity: 'critical',
+          category: 'Injection',
+          cwe: 'CWE-89',
+          file: file.path,
+          line: i + 1,
+          evidence: line.trim().slice(0, 200),
+          remediation:
+            'Use $1 placeholders with database/sql: `db.Query("SELECT * FROM users WHERE id = $1", id)`. With GORM use `db.Where("name = ?", name)`.',
+        });
       }
     });
   });
@@ -179,15 +258,28 @@ export function probePathTraversal(files) {
 // shuffle) where Math.random is appropriate.
 
 const WEAK_RANDOM_CALL_RE = /Math\.random\s*\(\s*\)/g;
-// Match security-related words anywhere in the surrounding context, including
-// inside camelCase identifiers (`generateResetToken`, `csrfToken`, `magicLink`).
-// We deliberately drop \b word boundaries because camelCase identifiers like
-// `ResetToken` would not match `\btoken\b`. Accepting some "secretly" / "keyboard"
-// false positives is the right trade given the severity.
+// Depth round 2: extended weak-PRNG family. crypto.pseudoRandomBytes (Node,
+// deprecated and explicitly insecure), Date.now()-as-token via security-named
+// LHS, lodash _.random/shuffle/sample.
+const PSEUDO_RANDOM_BYTES_RE = /\bcrypto\.pseudoRandomBytes\s*\(/;
+const LODASH_RANDOM_RE = /\b_\.(?:random|shuffle|sample)\s*\(/;
+// Match security-related words anywhere in the surrounding context. Widened
+// per the depth audit: documented but previously-missing tokens — `key`,
+// `salt`, `iv`, `hash`, `uuid`, `pin`, `access[_]?code`, `coupon[_]?code`,
+// `discount[_]?code`, `referral[_]?code`, `api[_-]?key`, `jwt`, `sid`,
+// `bearer`. The original list was missing every one of these.
 const SECURITY_CONTEXT_RE =
-  /token|secret|password|nonce|csrf|otp|verification|verifyemail|reset|signature|recovery|magiclink|invitetoken|magic[A-Z]|invite[A-Z]/i;
+  /token|secret|password|nonce|csrf|otp|verification|verifyemail|reset|signature|recovery|magiclink|invitetoken|magic[A-Z]|invite[A-Z]|\bkey\b|\bsalt\b|\biv\b|\bhash\b|\buuid\b|\bpin\b|access[_-]?code|coupon[_-]?code|discount[_-]?code|referral[_-]?code|api[_-]?key|\bjwt\b|\bsid\b|\bbearer\b/i;
 const UI_CONTEXT_RE =
-  /\b(?:jitter|delay|shuffle|animation|fade|color|hsl|rgb|pixel|particle|preview|placeholder|mock|fake)\b/i;
+  /\b(?:jitter|delay|shuffle|animation|fade|color|hsl|rgb|pixel|particle|preview|placeholder|mock|fake|wobble|tween|ease|bounce|opacity|hue|chart|axis|mesh|vertex|scene|camera|sample|bucket|backoff|retry)\b/i;
+// LHS identifier heuristic — the strongest signal. If the line is an
+// assignment whose LHS name contains a security keyword, fire regardless of
+// surrounding context. This catches `const apiKey = Math.random()...` even
+// in files with no other security words.
+const LHS_SECURITY_NAME_RE =
+  /(?:const|let|var)\s+(\w*(?:token|secret|password|nonce|csrf|otp|key|salt|iv|hash|uuid|pin|api[_-]?key|jwt|sid|bearer|magic|invite|session|access[_-]?code|coupon[_-]?code|discount[_-]?code)\w*)\s*[:=]/i;
+const LHS_UI_NAME_RE =
+  /(?:const|let|var)\s+(\w*(?:width|height|opacity|hue|tone|jitter|wobble|bucket|sample|delay|fade|chart|axis|mesh|particle|bullet|color)\w*)\s*[:=]/i;
 
 export function probeWeakRandomness(files) {
   const findings = [];
@@ -197,18 +289,50 @@ export function probeWeakRandomness(files) {
 
     const lines = file.content.split('\n');
     lines.forEach((line, i) => {
+      // Depth round 2: crypto.pseudoRandomBytes is deprecated AND
+      // explicitly insecure — always fire, no context gate needed.
+      if (PSEUDO_RANDOM_BYTES_RE.test(line)) {
+        findings.push({
+          id: `weak-random-pseudorbyt-${file.path}-${i}`,
+          probe: 'Weak Randomness',
+          title: 'crypto.pseudoRandomBytes is deprecated and insecure',
+          severity: 'high',
+          category: 'Cryptographic Failure',
+          cwe: 'CWE-338',
+          file: file.path,
+          line: i + 1,
+          evidence: line.trim().slice(0, 200),
+          remediation:
+            'Replace crypto.pseudoRandomBytes with crypto.randomBytes (Node 18+) or crypto.getRandomValues (web). pseudoRandomBytes was deprecated specifically because it is predictable.',
+        });
+      }
       const hit = WEAK_RANDOM_CALL_RE.exec(line);
       WEAK_RANDOM_CALL_RE.lastIndex = 0;
-      if (!hit) return;
+      const lodashHit = LODASH_RANDOM_RE.exec(line);
+      LODASH_RANDOM_RE.lastIndex = 0;
+      if (!hit && !lodashHit) return;
 
-      const ctx = lines.slice(Math.max(0, i - 3), Math.min(lines.length, i + 4)).join(' ');
-      if (UI_CONTEXT_RE.test(ctx)) return; // animation / preview use; fine
-      if (!SECURITY_CONTEXT_RE.test(ctx)) return;
+      // Depth round 2: LHS identifier is the strongest signal. Use it as
+      // the primary classifier. UI-named LHS suppresses; security-named
+      // LHS forces fire regardless of surrounding context.
+      const lhsSecurity = LHS_SECURITY_NAME_RE.test(line);
+      const lhsUi = LHS_UI_NAME_RE.test(line);
+
+      if (lhsUi) return; // animation / preview LHS; suppress.
+
+      if (!lhsSecurity) {
+        // Fall back to the original window check.
+        const ctx = lines.slice(Math.max(0, i - 3), Math.min(lines.length, i + 4)).join(' ');
+        if (UI_CONTEXT_RE.test(ctx)) return; // animation / preview use; fine
+        if (!SECURITY_CONTEXT_RE.test(ctx)) return;
+      }
 
       findings.push({
         id: `weak-random-${file.path}-${i}`,
         probe: 'Weak Randomness',
-        title: 'Math.random() used in a security-sensitive context',
+        title: lodashHit
+          ? 'Lodash _.random/shuffle/sample used in a security-sensitive context'
+          : 'Math.random() used in a security-sensitive context',
         severity: 'high',
         category: 'Cryptographic Failure',
         cwe: 'CWE-338',

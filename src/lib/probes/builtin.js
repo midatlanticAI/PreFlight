@@ -780,6 +780,50 @@ export function probeAuthWeakness(files) {
           remediation: `dangerouslySetInnerHTML bypasses React's XSS protection. Confirm the input is sanitized with DOMPurify or similar. If the content is from user input or a third party, you have an XSS risk.`,
         });
       }
+      // XSS depth round 2 (2026-06-05): the original probe knew one sink. Real
+      // XSS surface is 25+ sinks across DOM, framework HTML bypasses, and
+      // Trusted-Types disabling. Add the API-contract-unsafe sinks (always
+      // unsafe by API definition regardless of source) at medium. Sanitizer-
+      // wrapped values (DOMPurify, sanitize-html, xss, validator.escape, he)
+      // are suppressed by the masked-line scan we already apply earlier.
+      const XSS_SANITIZED_RE =
+        /\b(?:DOMPurify\.sanitize|sanitizeHtml|xss\s*\(|he\.encode|escapeHtml|validator\.escape)\s*\(/;
+      if (!XSS_SANITIZED_RE.test(line)) {
+        // DOM API sinks. innerHTML/outerHTML assigning a NON-literal value;
+        // insertAdjacentHTML; document.write/writeln; setHTMLUnsafe;
+        // parseHTMLUnsafe; createContextualFragment; jQuery .html() / $.parseHTML;
+        // javascript: URL assignment.
+        const xssDomRe =
+          /\.\s*insertAdjacentHTML\s*\(|\bdocument\s*\.\s*write(?:ln)?\s*\(|\.\s*setHTMLUnsafe\s*\(|\b(?:Document|Element)\s*\.\s*parseHTMLUnsafe\s*\(|\.\s*createContextualFragment\s*\(|\$\([^)]*\)\s*\.\s*html\s*\(|\$\s*\.\s*parseHTML\s*\(/;
+        const xssInnerHTMLAssign =
+          /\b(?:innerHTML|outerHTML)\s*\+?=\s*(?!['"`][^'"`]{0,80}['"`]\s*[;,)\]]?\s*$)/;
+        const xssFrameworkRe =
+          /\bv-html\s*=\s*["']|\{@html\s+|<\w[^>]*\sinnerHTML\s*=\s*\{|\[\s*innerHTML\s*\]\s*=\s*["']|\.\s*bypassSecurityTrust(?:Html|Script|Style|Url|ResourceUrl)\s*\(|\bng-bind-html\s*=\s*["']|\$sce\s*\.\s*trustAs(?:Html|Js|Css|Url|ResourceUrl)\s*\(|\bunsafe(?:HTML|SVG|Static)\s*\(|\{\{\{[^}]+\}\}\}/;
+        const xssJsUrlRe =
+          /\b(?:location(?:\.href|\.assign)?|window\.location|\.href|\.src)\s*=\s*['"`]\s*javascript:/i;
+        const xssTrustedTypesBypassRe = /trustedTypes\s*\.\s*createPolicy\s*\(\s*['"]default['"]/;
+        if (
+          xssDomRe.test(line) ||
+          xssInnerHTMLAssign.test(line) ||
+          xssFrameworkRe.test(line) ||
+          xssJsUrlRe.test(line) ||
+          xssTrustedTypesBypassRe.test(line)
+        ) {
+          findings.push({
+            id: `code-xss-${file.path}-${i}`,
+            probe: 'Code Injection',
+            title: 'Unsafe HTML/JS sink (XSS surface)',
+            severity: 'medium',
+            category: 'Code Injection',
+            cwe: 'CWE-79',
+            file: file.path,
+            line: i + 1,
+            evidence: realLine.trim().slice(0, 200),
+            remediation:
+              'This sink parses its input as HTML or JS at runtime. If the value can reach this from request, storage, message, or third-party fetch, it is XSS. Sanitize with DOMPurify (HTML) or escape (text). For frameworks: prefer text bindings; avoid v-html, {@html}, [innerHTML], bypassSecurityTrustHtml, unsafeHTML, Handlebars triple-stache. For JS-URL sinks: validate the protocol explicitly.',
+          });
+        }
+      }
       // EXPANSION (Thread 6, 2026-06-05): the documented 4 shapes above are
       // far from the full A07 surface. The shapes below are the most common
       // shapes AI-generated code produces and that cause real auth breaks.
@@ -1710,7 +1754,10 @@ export function probeWebhookValidation(files) {
       }
     }
     if (/github|x-hub-signature/i.test(c) && /webhook/i.test(file.path)) {
-      if (!/(x-hub-signature|verifyHmac|crypto\.timingSafeEqual)/i.test(c)) {
+      // Depth round 2: also accept crypto.subtle.verify (Web Crypto used by
+      // CF Workers / Edge runtimes) — earlier the only "verified" signal was
+      // Node's crypto.timingSafeEqual, FP-firing on every Worker.
+      if (!/(x-hub-signature|verifyHmac|crypto\.timingSafeEqual|crypto\.subtle\.verify)/i.test(c)) {
         findings.push({
           id: `webhook-github-${file.path}`,
           probe: 'Webhook Validation',
@@ -1722,8 +1769,102 @@ export function probeWebhookValidation(files) {
           line: 1,
           evidence: 'No X-Hub-Signature-256 verification detected',
           remediation:
-            'Verify the X-Hub-Signature-256 header against your webhook secret using crypto.timingSafeEqual. Otherwise any attacker can forge events.',
+            'Verify the X-Hub-Signature-256 header against your webhook secret using crypto.timingSafeEqual or crypto.subtle.verify. Otherwise any attacker can forge events.',
         });
+      }
+    }
+    // Depth round 2: provider widening. Each provider has (a) a name signal
+    // (header or content keyword), and (b) a verification signal that, when
+    // ABSENT in a body-reading handler, fires HIGH severity. Path-name
+    // requirement dropped — Stripe handlers commonly live at /api/billing/...
+    // without `webhook` in the path.
+    const readsBody =
+      /(req\.body|request\.body|await\s+req\.text|await\s+req\.json|request\.get_json|request\.data|request\.read)/i.test(
+        c
+      );
+    const isHandler =
+      readsBody &&
+      /\bPOST\b|\bapp\.post\(|\brouter\.post\(|\@(?:app|router)\.(?:post|route)/i.test(c);
+
+    const PROVIDERS = [
+      {
+        name: 'Slack',
+        sig: /x-slack-signature/i,
+        verify: /(?:createHmac|crypto\.subtle|hmac\.|verify)/i,
+      },
+      {
+        name: 'Discord interactions',
+        sig: /x-signature-ed25519|x-signature-timestamp/i,
+        verify: /(?:nacl\.sign\.detached\.verify|tweetnacl|@noble\/ed25519)/i,
+      },
+      {
+        name: 'Twilio',
+        sig: /x-twilio-signature/i,
+        verify: /(?:validateRequest|RequestValidator)/i,
+      },
+      {
+        name: 'Shopify',
+        sig: /x-shopify-hmac-sha256/i,
+        verify: /(?:createHmac|hmac\.|timingSafeEqual|crypto\.subtle)/i,
+      },
+      {
+        name: 'Square',
+        sig: /x-square-hmacsha256-signature/i,
+        verify: /(?:isValidWebhookEventSignature|createHmac|crypto\.subtle)/i,
+      },
+      {
+        name: 'Svix / Standard Webhooks',
+        sig: /\bsvix-(?:id|timestamp|signature)\b|\bwebhook-(?:id|timestamp|signature)\b/i,
+        verify: /(?:wh\.verify|new\s+Webhook\s*\(|StandardWebhook|svix\.verify)/i,
+      },
+      {
+        name: 'GitLab',
+        sig: /x-gitlab-token/i,
+        verify: /(?:x-gitlab-token['"\]]\s*[)=]|gitlabToken|secretCompare)/i,
+      },
+      {
+        name: 'HubSpot',
+        sig: /x-hubspot-signature/i,
+        verify: /(?:createHmac|hmac\.|timingSafeEqual)/i,
+      },
+      {
+        name: 'Vercel',
+        sig: /x-vercel-signature/i,
+        verify: /(?:createHmac|timingSafeEqual|crypto\.subtle)/i,
+      },
+      {
+        name: 'Zoom',
+        sig: /x-zm-signature|x-zm-request-timestamp/i,
+        verify: /(?:createHmac|timingSafeEqual|crypto\.subtle)/i,
+      },
+      {
+        name: 'Paddle',
+        sig: /paddle-signature/i,
+        verify: /(?:createHmac|timingSafeEqual)/i,
+      },
+      {
+        name: 'LemonSqueezy',
+        sig: /x-signature/i,
+        verify: /(?:createHmac|timingSafeEqual)/i,
+      },
+    ];
+    if (isHandler) {
+      for (const p of PROVIDERS) {
+        if (p.sig.test(c) && !p.verify.test(c)) {
+          findings.push({
+            id: `webhook-${p.name.replace(/\W+/g, '-').toLowerCase()}-${file.path}`,
+            probe: 'Webhook Validation',
+            title: `${p.name} webhook handler missing signature verification`,
+            severity: 'high',
+            category: 'Auth & Access',
+            cwe: 'CWE-345',
+            file: file.path,
+            line: 1,
+            evidence: `Reads request body and references ${p.name} signature header, but no verification call detected.`,
+            remediation: `Validate the webhook signature with the provider's documented helper before trusting the event payload. ${p.name} signatures bind body + timestamp + secret; without the check, the endpoint accepts forged events.`,
+          });
+          break; // one provider per file is enough; don't multi-emit
+        }
       }
     }
   });
@@ -2083,20 +2224,17 @@ export function probeSSRFOpenRedirect(files) {
   // siblings: Koa `ctx.*`, Lambda `event.body|queryStringParameters`,
   // CF Worker / Hono `c.req.*`, Web Fetch API `request.*`. `headers` is
   // included because Host / X-Forwarded-Host / Referer are real SSRF vectors.
-  const USER_INPUT =
-    `(?:req|request|ctx|context|event|c\\.req)\\.(?:body|query|params|headers|cookies|searchParams|url|originalUrl|path|baseUrl|queryStringParameters)|searchParams\\.get|params\\.`;
+  const USER_INPUT = `(?:req|request|ctx|context|event|c\\.req)\\.(?:body|query|params|headers|cookies|searchParams|url|originalUrl|path|baseUrl|queryStringParameters)|searchParams\\.get|params\\.`;
   // HTTP-client family for SSRF detection. The original regex covered only
   // fetch / axios / node:http. Real Node code uses far more: got, request,
   // node-fetch, undici, superagent, phin, ky, https.*, plus the Web Streams
   // Response.redirect() for the redirect side.
-  const HTTP_CLIENT =
-    `fetch|axios(?:\\.(?:get|post|put|delete|patch|head|options|request))?|https?\\.(?:get|request)|got(?:\\.(?:get|post|put|delete|patch|head|stream))?|node-fetch|undici(?:\\.(?:fetch|request))?|superagent(?:\\.(?:get|post|put|delete|patch))?|phin|ky(?:\\.(?:get|post|put|delete|patch))?|request`;
+  const HTTP_CLIENT = `fetch|axios(?:\\.(?:get|post|put|delete|patch|head|options|request))?|https?\\.(?:get|request)|got(?:\\.(?:get|post|put|delete|patch|head|stream))?|node-fetch|undici(?:\\.(?:fetch|request))?|superagent(?:\\.(?:get|post|put|delete|patch))?|phin|ky(?:\\.(?:get|post|put|delete|patch))?|request`;
   // Redirect family. Adds Response.redirect, the SvelteKit `redirect()`
   // from $app/navigation, and Next App-Router `redirect()` from
   // next/navigation. `location =` window assignment is a client-side open
   // redirect; we treat both the same.
-  const REDIRECT =
-    `res\\.redirect|NextResponse\\.redirect|Response\\.redirect|(?<![.\\w])redirect|location\\s*=`;
+  const REDIRECT = `res\\.redirect|NextResponse\\.redirect|Response\\.redirect|(?<![.\\w])redirect|location\\s*=`;
   const ssrfRe = new RegExp(`(?:${HTTP_CLIENT})\\s*\\(\\s*(?:${USER_INPUT})`, 'i');
   const redirectRe = new RegExp(`(?:${REDIRECT})\\s*\\(\\s*(?:${USER_INPUT})`, 'i');
   // Location-header write: res.setHeader("Location", <userInput>) — comma-
@@ -2153,14 +2291,44 @@ export function probeCookieFlags(files) {
     if (!/\.[jt]sx?$|\.py$/.test(file.path)) return;
     const lines = file.content.split('\n');
     lines.forEach((line, i) => {
-      if (!/(?:setCookie|cookies\.set|res\.cookie|Set-Cookie)/i.test(line)) return;
-      if (!/(?:session|auth|token|jwt|csrf)/i.test(line)) return;
-      const ctx = lines.slice(i, Math.min(lines.length, i + 4)).join(' ');
+      // Depth round 2: widened cookie-set detector. Adds Python `set_cookie`,
+      // Next.js App Router `cookies().set(...)` (parens break the literal
+      // `cookies.set` match), Hono `setSignedCookie`, NestJS `response.cookie`.
+      const isCookieSet =
+        /(?:setCookie|setSignedCookie|cookies\.set|cookies\(\)\.set|res\.cookie|response\.cookie|reply\.setCookie|reply\.cookie|Astro\.cookies\.set|ctx\.cookies\.set|event\.cookies\.set|set_cookie|Set-Cookie)/i.test(
+          line
+        );
+      if (!isCookieSet) return;
+      // Auth-cookie name signal widened: connect.sid, PHPSESSID, JSESSIONID,
+      // __Host-*, __Secure-*, oauth/sso/bearer/sid/uid/login/account/
+      // remember/appSession/sb-access-token (Supabase) / clerk-session.
+      const isAuthNamed =
+        /(?:session|auth|token|jwt|csrf|connect\.sid|PHPSESSID|JSESSIONID|__Host-|__Secure-|sb-(?:access|refresh)-token|appSession|clerk-session|remember|access[_-]?code|bearer|sso)/i.test(
+          line
+        );
+      if (!isAuthNamed) return;
+      // OAuth public-flow values (state, nonce, code_verifier) are NOT
+      // credentials per RFC 7636. Skip them.
+      if (/\b(?:oauth[_-]?state|nonce|code[_-]?verifier|pkce[_-]?verifier)\b/i.test(line)) return;
+      // CSRF double-submit cookies MUST be JS-readable. If the cookie name
+      // contains 'csrf', do not flag missing httpOnly.
+      const isCsrfDoubleSubmit = /\bcsrf\b/i.test(line);
+      // Wider window — multi-line option objects span 8+ lines on prettier.
+      const ctx = lines.slice(i, Math.min(lines.length, i + 10)).join(' ');
       const missing = [];
-      if (!/httpOnly\s*:\s*true|HttpOnly/i.test(ctx)) missing.push('httpOnly');
-      if (!/secure\s*:\s*true|;\s*Secure/i.test(ctx)) missing.push('secure');
-      if (!/sameSite/i.test(ctx)) missing.push('sameSite');
-      if (missing.length >= 2) {
+      if (
+        !isCsrfDoubleSubmit &&
+        !/httpOnly\s*[:=]\s*(?:true|True)|HttpOnly|httponly\s*=\s*True/i.test(ctx)
+      )
+        missing.push('httpOnly');
+      if (!/secure\s*[:=]\s*(?:true|True)|;\s*Secure|secure\s*=\s*True/i.test(ctx))
+        missing.push('secure');
+      if (!/sameSite|same[_-]?site|samesite/i.test(ctx)) missing.push('sameSite');
+      // SameSite=None without Secure is the canonical dangerous combo.
+      const sameSiteNoneNoSecure =
+        /sameSite\s*[:=]\s*['"]none['"]|samesite\s*=\s*['"]none['"]/i.test(ctx) &&
+        !/secure\s*[:=]\s*(?:true|True)|;\s*Secure/i.test(ctx);
+      if (missing.length >= 2 || sameSiteNoneNoSecure) {
         findings.push({
           id: `cookie-${file.path}-${i}`,
           probe: 'Cookie Security',
