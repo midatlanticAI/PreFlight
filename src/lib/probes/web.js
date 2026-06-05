@@ -155,6 +155,19 @@ export function probeExternalURLs(files) {
 
       const lineNum = content.slice(0, m.index).split('\n').length;
       const isHttp = raw.startsWith('http:');
+      // Depth round 4: XML/JSON-Schema/RDF namespace URIs are conventionally
+      // http://, not because the resource is unencrypted — they are URI
+      // IDENTIFIERS, not URLs to dereference. The W3C / sitemaps.org /
+      // schema.org / xmlns:foaf families never redirect to https because the
+      // namespace identifier IS the canonical URI. Suppress.
+      const isNamespaceURI =
+        /(?:sitemaps|schema|schemas|xmlns|opensearch|atom|rdf|foaf|dublincore|purl)\.org|w3\.org\/(?:[12]\d\d\d|ns|xml|tr|graphics)|xmlns="http|"http:\/\/schema\.org/.test(
+          raw
+        ) ||
+        /^http:\/\/(?:www\.)?(?:sitemaps\.org|w3\.org|purl\.org|opensearch\.org|atom\.geo\.org)/i.test(
+          raw
+        );
+      if (isNamespaceURI && isHttp) continue;
       const entry = seen.get(host) || { occurrences: [], allHttp: true };
       entry.occurrences.push({ file: file.path, line: lineNum, url: raw });
       entry.allHttp = entry.allHttp && isHttp;

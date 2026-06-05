@@ -118,6 +118,9 @@ export {
 // this direct import introduces no cycle.
 import { MANIFEST_LIVE_PROBES } from './probes/v05/manifest.js';
 
+// v0.6 taint engine — intra-procedural dataflow analyzer.
+import { probeTaintFlow } from './probes/taint-engine.js';
+
 import {
   probeExternalURLs,
   probeHTML,
@@ -162,6 +165,7 @@ export {
   probeRAGIngestion,
   probeVectorEmbeddingWeaknesses,
 };
+export { probeTaintFlow } from './probes/taint-engine.js';
 export const PROBES = [
   { name: 'Architecture', fn: probeArchitecture },
   { name: 'Secret Scanner', fn: probeSecrets },
@@ -208,6 +212,12 @@ export const PROBES = [
   { name: 'Security Logging', fn: probeSecurityLogging },
   { name: 'RAG Ingestion', fn: probeRAGIngestion },
   { name: 'Vector Embedding Weaknesses', fn: probeVectorEmbeddingWeaknesses },
+  // v0.6: lightweight intra-procedural taint analyzer for JS/TS. Sources are
+  // request inputs (req.url, req.body, etc.) and browser storage; sinks are
+  // filesystem calls, dynamic code execution, and shell spawn. Complements
+  // the regex-list probes by catching multi-line flows the literal regexes
+  // miss (e.g. `const x = req.body.path; ... ; fs.readFile(x)`).
+  { name: 'Taint Flow', fn: probeTaintFlow },
   // v0.5: the live (shadow:false, net-new) language-agnostic adapters,
   // projected from PROBE_MANIFEST_V05. Migration adapters are held out
   // until the v0.4 cutover (see isLiveAdapter).

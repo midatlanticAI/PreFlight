@@ -308,6 +308,16 @@ export const PROBE_META = {
     learn_more_slug: 'vector-embedding-weaknesses',
   },
 
+  // v0.6: intra-procedural taint analyzer for JS/TS. The findings come from
+  // dataflow analysis, not regex; routing them to the path-traversal Learn
+  // page is the closest fit for the canonical CWE-22 case, with the
+  // remediation in the finding itself explaining the source-to-sink path.
+  'Taint Flow': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'path-traversal',
+  },
+
   // Architectural classification — informational, no autofix, no dedicated pattern.
   // Architecture findings are themselves shape descriptions; the per-shape Learn
   // pages under /learn/shapes/ are the natural destination but those don't map
@@ -355,6 +365,7 @@ const HAND_CODED_OWASP_MAP = {
     'Supabase RLS',
     'Firebase Rules',
     'Path Traversal',
+    'Taint Flow',
   ],
   A02: [
     'Secret Scanner',
