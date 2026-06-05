@@ -1804,6 +1804,36 @@ export function probeClientAuthStorage(files) {
     // match without imposing word-boundary constraints.
     const AUTH_KEY_RE =
       /['"`][^'"`]*(?:token|jwt|auth|session|bearer|access_?token|refresh_?token|api[_-]?key)[^'"`]*['"`]/i;
+    // Build a tiny constant-fold map for the common obfuscation shape
+    // `const KEY = 'tok' + 'en';` (or 'au' + 'th', etc.) and check whether
+    // the folded value contains an auth keyword. Then when
+    // `localStorage.setItem(KEY, ...)` is seen, we treat it the same as a
+    // string-literal auth-key write. Bounded to 4-segment concats and to
+    // top-of-file declarations to keep this tight.
+    const folded = new Map();
+    {
+      const declRe =
+        /\b(?:const|let|var)\s+(\w+)\s*=\s*(['"`])([^'"`\n]*)\2(?:\s*\+\s*(['"`])([^'"`\n]*)\4)?(?:\s*\+\s*(['"`])([^'"`\n]*)\6)?(?:\s*\+\s*(['"`])([^'"`\n]*)\8)?/g;
+      let dm;
+      while ((dm = declRe.exec(maskedContent)) !== null) {
+        const name = dm[1];
+        // Skip placeholder/sample variable names — these are intentional
+        // fixture identifiers, not real credentials.
+        if (/^(?:SAMPLE|EXAMPLE|FAKE|DUMMY|MOCK|FIXTURE|PLACEHOLDER|STUB)[_A-Z0-9]*$/.test(name)) {
+          continue;
+        }
+        const value = (dm[3] || '') + (dm[5] || '') + (dm[7] || '') + (dm[9] || '');
+        if (!value) continue;
+        if (
+          /(?:token|jwt|auth|session|bearer|access_?token|refresh_?token|api[_-]?key)/i.test(value)
+        ) {
+          folded.set(name, value);
+        }
+      }
+    }
+    const AUTH_FOLDED_VAR_RE = folded.size
+      ? new RegExp('\\b(?:' + Array.from(folded.keys()).join('|') + ')\\b')
+      : null;
     // Exclude OAuth/PKCE flow values that are PUBLIC by RFC 7636 design —
     // state, nonce, code_verifier, pkce. Storing these in sessionStorage is
     // intentional CSRF protection, not a credential leak.
@@ -1814,7 +1844,14 @@ export function probeClientAuthStorage(files) {
       if (/localStorage\.setItem\s*\(\s*[^,)]*\)/i.test(maskedLine) === false) {
         // skip
       }
-      if (/localStorage\.setItem\s*\(/i.test(maskedLine) && AUTH_KEY_RE.test(maskedLine)) {
+      const lineRefsFoldedAuthVar =
+        AUTH_FOLDED_VAR_RE &&
+        /localStorage\.setItem\s*\(\s*(\w+)/.test(maskedLine) &&
+        AUTH_FOLDED_VAR_RE.test(maskedLine);
+      if (
+        /localStorage\.setItem\s*\(/i.test(maskedLine) &&
+        (AUTH_KEY_RE.test(maskedLine) || lineRefsFoldedAuthVar)
+      ) {
         findings.push({
           id: `auth-localstorage-${file.path}-${i}`,
           probe: 'Client Auth Storage',
@@ -2280,17 +2317,37 @@ export function probeAPIRouteAuth(files) {
       // direct destructive SQL call (no taint-flow needed; the SQL is literal).
       (isCFWorker && /\benv\.[A-Z_]+\.prepare\s*\(\s*['"`](?:INSERT|UPDATE|DELETE)/i.test(c));
 
+    // If the dev marked the gap with a TODO/FIXME/XXX comment about auth,
+    // they've ACKNOWLEDGED the gap. Still fire (TODO comments don't add
+    // auth), but downgrade severity one band — the signal is "tracked, not
+    // yet fixed" rather than "nobody noticed". External CDN/edge-auth
+    // mentions (Cloudflare Access, Vercel Authentication, Zero Trust)
+    // count the same — out-of-band auth that exists but is not statically
+    // verifiable in source.
+    const hasAuthAcknowledgmentComment =
+      /\/\/\s*(?:TODO|FIXME|XXX|HACK)[^\n]*\bauth\b/i.test(c) ||
+      /\/\*\s*(?:TODO|FIXME|XXX|HACK)[^*]*\bauth\b/i.test(c) ||
+      /\bgated by\s+(?:Cloudflare(?:\s+Access)?|Vercel\s+Authentication|Zero[\s-]?Trust|Akamai|reverse[\s-]?proxy)/i.test(
+        c
+      );
+    const sensitiveSeverity = hasAuthAcknowledgmentComment ? 'medium' : 'critical';
+    const destructiveSeverity = hasAuthAcknowledgmentComment ? 'medium' : 'high';
+
     if (isSensitivePath && !hasAuth) {
       findings.push({
         id: `api-noauth-${file.path}`,
         probe: 'API Route Auth',
-        title: 'Sensitive API route without auth check',
-        severity: 'critical',
+        title: hasAuthAcknowledgmentComment
+          ? 'Sensitive API route without static auth check (TODO/FIXME/CDN-gated)'
+          : 'Sensitive API route without auth check',
+        severity: sensitiveSeverity,
         category: 'Auth & Access',
         cwe: 'CWE-306',
         file: file.path,
         line: 1,
-        evidence: `Path matches sensitive pattern, no auth function call detected`,
+        evidence: hasAuthAcknowledgmentComment
+          ? `Path matches sensitive pattern, no in-source auth call (gap acknowledged by comment or external gating mention)`
+          : `Path matches sensitive pattern, no auth function call detected`,
         remediation:
           'API routes are reachable by direct fetch from anywhere. Verify auth at the top of the handler: getServerSession (Next), locals.user (SvelteKit), c.get("user") (Hono), passport.authenticate (Express). Then check role and resource ownership. Manual review recommended if auth lives in middleware not visible here.',
       });
@@ -2299,13 +2356,17 @@ export function probeAPIRouteAuth(files) {
       findings.push({
         id: `api-destructive-${file.path}`,
         probe: 'API Route Auth',
-        title: 'Destructive HTTP handler (DELETE/PUT/PATCH) without auth check',
-        severity: 'high',
+        title: hasAuthAcknowledgmentComment
+          ? 'Destructive HTTP handler (DELETE/PUT/PATCH) without static auth check (TODO/FIXME/CDN-gated)'
+          : 'Destructive HTTP handler (DELETE/PUT/PATCH) without auth check',
+        severity: destructiveSeverity,
         category: 'Auth & Access',
         cwe: 'CWE-306',
         file: file.path,
         line: 1,
-        evidence: 'Destructive handler / mutation export found, no auth call in same file',
+        evidence: hasAuthAcknowledgmentComment
+          ? 'Destructive handler / mutation export found, no in-source auth (gap acknowledged by comment or external gating mention)'
+          : 'Destructive handler / mutation export found, no auth call in same file',
         remediation:
           'Mutation endpoints must verify the caller is authenticated AND authorized for the specific resource. Otherwise an unauthenticated curl can delete or modify any record. The May 2025 Lovable BOLA incident (CVE-2025-48757) is an instance of this class.',
       });
