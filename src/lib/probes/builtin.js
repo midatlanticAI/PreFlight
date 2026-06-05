@@ -2077,15 +2077,40 @@ export function probeClientAuthStorage(files) {
 // --- SSRF / Open Redirect ---
 export function probeSSRFOpenRedirect(files) {
   const findings = [];
+  // Same input-source family as v05.js USER_INPUT_TOKEN_RE — widened post the
+  // May 2026 emailassist gap to include `url`, `originalUrl`, `path`, `baseUrl`
+  // (raw Node http.createServer + Express URL accessors), plus the framework
+  // siblings: Koa `ctx.*`, Lambda `event.body|queryStringParameters`,
+  // CF Worker / Hono `c.req.*`, Web Fetch API `request.*`. `headers` is
+  // included because Host / X-Forwarded-Host / Referer are real SSRF vectors.
+  const USER_INPUT =
+    `(?:req|request|ctx|context|event|c\\.req)\\.(?:body|query|params|headers|cookies|searchParams|url|originalUrl|path|baseUrl|queryStringParameters)|searchParams\\.get|params\\.`;
+  // HTTP-client family for SSRF detection. The original regex covered only
+  // fetch / axios / node:http. Real Node code uses far more: got, request,
+  // node-fetch, undici, superagent, phin, ky, https.*, plus the Web Streams
+  // Response.redirect() for the redirect side.
+  const HTTP_CLIENT =
+    `fetch|axios(?:\\.(?:get|post|put|delete|patch|head|options|request))?|https?\\.(?:get|request)|got(?:\\.(?:get|post|put|delete|patch|head|stream))?|node-fetch|undici(?:\\.(?:fetch|request))?|superagent(?:\\.(?:get|post|put|delete|patch))?|phin|ky(?:\\.(?:get|post|put|delete|patch))?|request`;
+  // Redirect family. Adds Response.redirect, the SvelteKit `redirect()`
+  // from $app/navigation, and Next App-Router `redirect()` from
+  // next/navigation. `location =` window assignment is a client-side open
+  // redirect; we treat both the same.
+  const REDIRECT =
+    `res\\.redirect|NextResponse\\.redirect|Response\\.redirect|(?<![.\\w])redirect|location\\s*=`;
+  const ssrfRe = new RegExp(`(?:${HTTP_CLIENT})\\s*\\(\\s*(?:${USER_INPUT})`, 'i');
+  const redirectRe = new RegExp(`(?:${REDIRECT})\\s*\\(\\s*(?:${USER_INPUT})`, 'i');
+  // Location-header write: res.setHeader("Location", <userInput>) — comma-
+  // separated args, separate match from the redirect-call shape above.
+  const locationHeaderRe = new RegExp(
+    `res\\.setHeader\\s*\\(\\s*['"\`]Location['"\`]\\s*,\\s*(?:${USER_INPUT})`,
+    'i'
+  );
+
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$|\.py$/.test(file.path)) return;
     file.content.split('\n').forEach((line, i) => {
-      if (
-        /(?:res\.redirect|NextResponse\.redirect|redirect)\s*\(\s*(?:req\.|request\.|searchParams\.get|params\.)/i.test(
-          line
-        )
-      ) {
+      if (redirectRe.test(line) || locationHeaderRe.test(line)) {
         findings.push({
           id: `redirect-${file.path}-${i}`,
           probe: 'Open Redirect',
@@ -2100,11 +2125,7 @@ export function probeSSRFOpenRedirect(files) {
             'Open redirects feed phishing campaigns: your-domain.com/?next=evil.com looks legitimate. Validate the target against an allowlist of known-safe paths or domains before redirecting.',
         });
       }
-      if (
-        /(?:fetch|axios\.(?:get|post|put|delete|request)|http\.(?:get|request))\s*\(\s*(?:req\.|request\.)(?:body|query|params)\./i.test(
-          line
-        )
-      ) {
+      if (ssrfRe.test(line)) {
         findings.push({
           id: `ssrf-${file.path}-${i}`,
           probe: 'SSRF',
