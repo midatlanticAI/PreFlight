@@ -45,7 +45,7 @@ import {
 // `AKIAIOSFODNN7EXAMPLE` (the AWS-published documentation value),
 // `<your-key-here>`.
 const SECRET_VALUE_PLACEHOLDER_RE =
-  /x{4,}|REPLACE[_\-]?(?:ME|THIS|HERE|WITH|YOUR)?|YOUR[_\-]?(?:KEY|API|TOKEN|SECRET|PRIVATE|SLACK|AWS|STRIPE|OPENAI|ANTHROPIC|GITHUB|GOOGLE|[A-Z]+)[_\-A-Z]*HERE|YOUR[_\-]?(?:KEY|API|TOKEN|SECRET|PRIVATE)|PLACEHOLDER|DEMO[_\-]?(?:DEMO|TOKEN|KEY)?|EXAMPLE|<[^<>]+>/i;
+  /x{4,}|REPLACE[_\-]?(?:ME|THIS|HERE|WITH|YOUR)?|YOUR[_\-]?(?:KEY|API|TOKEN|SECRET|PRIVATE|SLACK|AWS|STRIPE|OPENAI|ANTHROPIC|GITHUB|GOOGLE|[A-Z]+)[_\-A-Z]*HERE|YOUR[_\-]?(?:KEY|API|TOKEN|SECRET|PRIVATE)|PLACEHOLDER|DEMO[_\-]?(?:DEMO|TOKEN|KEY)?|EXAMPLE|<[^<>]+>|CHANGE[_\-]?ME|\bTODO(?:[_\-]\w+)*\b|FILL[_\-]?(?:IN|ME|HERE)/i;
 
 // True when the match's enclosing statement assigns to a variable whose
 // name explicitly marks it as a sample/example/test/fake fixture, e.g.
@@ -91,6 +91,67 @@ function isMatchInsideComment(content, matchIndex) {
 // line numbers and slice positions stay correct. This is the version
 // structural probes should use when the FP set includes patterns hidden
 // inside multi-line comments or template-literal docstrings.
+// Narrower mask for probes that scan per-line for real code patterns inside
+// string literals (e.g. `localStorage.setItem('jwt', token)` — the literal
+// 'jwt' MUST stay visible). This mask blanks only block comments, line
+// comments, and BACKTICK template literals. Single/double-quoted string
+// content is preserved. Indices and newlines preserved.
+function maskBlockCommentsAndTemplateLiterals(content) {
+  if (typeof content !== 'string' || content.length === 0) return content || '';
+  const out = [];
+  const len = content.length;
+  let i = 0;
+  const blankExceptNewline = (ch) => (ch === '\n' ? '\n' : ' ');
+  while (i < len) {
+    const c = content[i];
+    const c2 = i + 1 < len ? content[i + 1] : '';
+    if (c === '/' && c2 === '*') {
+      out.push('/', '*');
+      const end = content.indexOf('*/', i + 2);
+      if (end === -1) {
+        for (let j = i + 2; j < len; j++) out.push(blankExceptNewline(content[j]));
+        return out.join('');
+      }
+      for (let j = i + 2; j < end; j++) out.push(blankExceptNewline(content[j]));
+      out.push('*', '/');
+      i = end + 2;
+      continue;
+    }
+    if (c === '/' && c2 === '/') {
+      out.push('/', '/');
+      let j = i + 2;
+      while (j < len && content[j] !== '\n') {
+        out.push(' ');
+        j++;
+      }
+      i = j;
+      continue;
+    }
+    if (c === '`') {
+      out.push('`');
+      let j = i + 1;
+      while (j < len) {
+        if (content[j] === '\\' && j + 1 < len) {
+          out.push(blankExceptNewline(content[j]));
+          out.push(blankExceptNewline(content[j + 1]));
+          j += 2;
+          continue;
+        }
+        if (content[j] === '`') break;
+        out.push(blankExceptNewline(content[j]));
+        j++;
+      }
+      if (j >= len) return out.join('');
+      out.push('`');
+      i = j + 1;
+      continue;
+    }
+    out.push(c);
+    i++;
+  }
+  return out.join('');
+}
+
 function maskCommentsAndStringsFromContent(content) {
   if (typeof content !== 'string' || content.length === 0) return content || '';
   const out = [];
@@ -565,9 +626,19 @@ export function probeAuthWeakness(files) {
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$/.test(file.path)) return;
-    const lines = file.content.split('\n');
-    lines.forEach((rawLine, i) => {
+    // Mask the whole content so block comments AND template-literal documentation
+    // snippets (e.g. Demi persona spec strings) no longer trip the regexes.
+    // The mask preserves indices and newlines, so per-line iteration and the
+    // emitted line numbers stay correct.
+    // Narrow mask: blanks block comments, line comments, and backtick template
+    // literals. Single/double-quoted string content stays visible so the
+    // regexes can still see real auth-token-name string literals.
+    const maskedContent = maskBlockCommentsAndTemplateLiterals(file.content);
+    const maskedLines = maskedContent.split('\n');
+    const originalLines = file.content.split('\n');
+    maskedLines.forEach((rawLine, i) => {
       const line = stripLineComments(rawLine);
+      const realLine = originalLines[i] || '';
       // Match quoted OR unquoted "none" — agent FN: `algorithm: none` (no quotes) used to evade.
       if (/(?:algorithm|alg)\s*:\s*['"]?none['"]?(?:\s|,|$)/i.test(line)) {
         findings.push({
@@ -579,7 +650,7 @@ export function probeAuthWeakness(files) {
           cwe: 'CWE-327',
           file: file.path,
           line: i + 1,
-          evidence: line.trim(),
+          evidence: realLine.trim(),
           remediation: `alg: none means tokens are unsigned. Anyone can forge a token claiming to be any user. Use HS256 with a strong secret or RS256 with a key pair.`,
         });
       }
@@ -593,7 +664,7 @@ export function probeAuthWeakness(files) {
           cwe: 'CWE-347',
           file: file.path,
           line: i + 1,
-          evidence: line.trim(),
+          evidence: realLine.trim(),
           remediation: `Verify with an explicit secret or public key. Without one, signature validation may be skipped depending on the library, allowing forged tokens.`,
         });
       }
@@ -607,7 +678,7 @@ export function probeAuthWeakness(files) {
           cwe: 'CWE-95',
           file: file.path,
           line: i + 1,
-          evidence: line.trim().slice(0, 200),
+          evidence: realLine.trim().slice(0, 200),
           remediation: `eval() executes arbitrary code. If the input is ever user-controlled, this is RCE. Replace with safe alternatives: JSON.parse for data, a real expression parser, or a switch statement for known operations.`,
         });
       }
@@ -621,8 +692,267 @@ export function probeAuthWeakness(files) {
           cwe: 'CWE-79',
           file: file.path,
           line: i + 1,
-          evidence: line.trim().slice(0, 200),
+          evidence: realLine.trim().slice(0, 200),
           remediation: `dangerouslySetInnerHTML bypasses React's XSS protection. Confirm the input is sanitized with DOMPurify or similar. If the content is from user input or a third party, you have an XSS risk.`,
+        });
+      }
+      // EXPANSION (Thread 6, 2026-06-05): the documented 4 shapes above are
+      // far from the full A07 surface. The shapes below are the most common
+      // shapes AI-generated code produces and that cause real auth breaks.
+      //
+      // Plaintext password comparison: `req.body.password === user.password`
+      // or against a `.password`/`storedPassword` field. The defining shape is
+      // equality (=== or ==) against an identifier whose name ends in
+      // `password` (case-insensitive). Real auth uses bcrypt.compare or
+      // argon2.verify, which look completely different.
+      if (
+        /(?:\b\w*(?:password|passwd|pwd)\b)\s*(?:===|==)\s*\w+(?:\.\w+)*\b/i.test(line) ||
+        /\w+(?:\.\w+)*\s*(?:===|==)\s*\b\w*(?:password|passwd|pwd)\b/i.test(line)
+      ) {
+        findings.push({
+          id: `auth-plainpasswordcompare-${file.path}-${i}`,
+          probe: 'Auth Weakness',
+          title: 'Plaintext password comparison',
+          severity: 'critical',
+          category: 'Auth & Access',
+          cwe: 'CWE-261',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'Never compare passwords with === / ==. That implies the password is stored in plaintext or compared as raw input. Use bcrypt.compare(input, hash) or argon2.verify(hash, input) — both are constant-time and force you to store a real hash.',
+        });
+      }
+      // Weak password hashing: md5 / sha1 / sha256 (no KDF) applied to a value
+      // named password/passwd/pwd. Cryptographic hashes are designed to be fast;
+      // password hashes (bcrypt/argon2/scrypt) are designed to be slow with a
+      // tunable work factor. Using a plain hash for passwords is an OWASP A02
+      // classic.
+      if (
+        /\b(?:md5|sha1)\s*\([^)]*\b\w*(?:password|passwd|pwd|pw)\b/i.test(line) ||
+        /createHash\(\s*['"](?:md5|sha1)['"]\s*\)\s*\.\s*update\s*\(\s*\w*\b(?:password|passwd|pwd|pw)\b/i.test(
+          line
+        )
+      ) {
+        findings.push({
+          id: `auth-weakhash-${file.path}-${i}`,
+          probe: 'Auth Weakness',
+          title: 'Weak password hash (MD5/SHA1)',
+          severity: 'critical',
+          category: 'Auth & Access',
+          cwe: 'CWE-916',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'MD5 and SHA1 are designed to be fast — that is exactly wrong for password hashing. Modern attackers crack them at billions of attempts per second on commodity GPUs. Use bcrypt (cost factor 12+), argon2id (memory cost 19 MiB+), or scrypt.',
+        });
+      }
+      // sha256 used for password hashing (without a KDF wrapper like
+      // PBKDF2/HKDF): still cryptographic, still wrong for passwords. Same
+      // reason as MD5/SHA1 — too fast, no work factor.
+      if (
+        /createHash\(\s*['"]sha256['"]\s*\)\s*\.\s*update\s*\(\s*\b\w*(?:password|passwd|pwd)\b/i.test(
+          line
+        ) ||
+        /\bsha256\s*\(\s*\b\w*(?:password|passwd|pwd)\b/i.test(line)
+      ) {
+        // Only fire if PBKDF2/HKDF/scrypt/bcrypt/argon2 is NOT in the same file.
+        // If the developer is wrapping sha256 in a real KDF, it's defensible.
+        const fileHasKdf = /pbkdf2|hkdf|scrypt|bcrypt|argon2/i.test(file.content);
+        if (!fileHasKdf) {
+          findings.push({
+            id: `auth-sha256pwd-${file.path}-${i}`,
+            probe: 'Auth Weakness',
+            title: 'SHA-256 used for password hashing without a KDF',
+            severity: 'high',
+            category: 'Auth & Access',
+            cwe: 'CWE-916',
+            file: file.path,
+            line: i + 1,
+            evidence: realLine.trim().slice(0, 200),
+            remediation:
+              'SHA-256 alone is still a fast hash. Wrap it in PBKDF2 (Node crypto.pbkdf2 with at least 600,000 iterations) or switch to bcrypt/argon2id/scrypt. Adding a salt does not fix the speed problem.',
+          });
+        }
+      }
+      // Default credentials: admin/admin, root/root, test/test123,
+      // user/password patterns in source. Strong "this was never updated"
+      // signal in AI-generated code. Match the pattern as a kv-pair where the
+      // key is admin/root/test/user/etc. and the value is the same word, a
+      // single digit, or a known weak default.
+      if (
+        /(['"])(admin|root|test|user|guest)\1\s*[,:]\s*(['"])(\2|admin|root|password|123456|test123|password1|guest)\3/i.test(
+          line
+        ) ||
+        /(?:user(?:name)?|login)\s*[:=]\s*['"](?:admin|root|test)['"][\s\S]{0,40}?(?:password|pass|pwd)\s*[:=]\s*['"](?:admin|root|password|123456|test123|password1)['"]/i.test(
+          line
+        )
+      ) {
+        findings.push({
+          id: `auth-defaultcreds-${file.path}-${i}`,
+          probe: 'Auth Weakness',
+          title: 'Default credentials in source',
+          severity: 'critical',
+          category: 'Auth & Access',
+          cwe: 'CWE-798',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'admin/admin, root/root, test/test123 — these are the first guesses an attacker tries. Defaults baked into source mean every clone of this repo ships with the same backdoor. Generate per-deploy credentials with a real secret manager; require rotation on first login.',
+        });
+      }
+      // Session token in URL. Putting an auth token in the query string puts
+      // it in browser history, in the Referer header sent to third parties,
+      // in server access logs, and in any analytics SDK the page loads. The
+      // shape: a literal or template-string URL containing ?token= /
+      // ?sessionId= / ?accessToken= / ?jwt= with a real-looking value.
+      if (
+        /[?&](?:token|sessionId|session_id|accessToken|access_token|jwt|auth(?:Token)?)=/i.test(
+          line
+        ) &&
+        /(?:fetch|axios|http|location\.href|window\.location|new\s+URL|navigate|router\.push|redirect)/i.test(
+          line
+        )
+      ) {
+        findings.push({
+          id: `auth-tokeninurl-${file.path}-${i}`,
+          probe: 'Auth Weakness',
+          title: 'Auth token passed in URL query string',
+          severity: 'high',
+          category: 'Auth & Access',
+          cwe: 'CWE-598',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'Query strings leak: browser history, server access logs, the Referer header sent to every third-party resource the page loads, analytics SDKs. Send tokens in an Authorization: Bearer header or an httpOnly cookie. Never as ?token=.',
+        });
+      }
+      // Hardcoded password literal in a const/let/var. probeSecrets handles
+      // known provider patterns (sk_live_, AKIA, etc.); a bare
+      // `const PASSWORD = 'admin123'` is a different shape. The placeholder-
+      // name filter (SAMPLE_/EXAMPLE_/FAKE_/TEST_KEY etc., reused from
+      // probeSecrets via isMatchInPlaceholderNamedAssignment) suppresses
+      // sample/test fixtures; the secret-value placeholder filter suppresses
+      // CHANGEME/REPLACE/etc. values.
+      {
+        // Match the assignment RHS specifically. Only fire if the value
+        // IMMEDIATELY after `=` is a string literal (not a function call,
+        // not a process.env access, not a logical-or default chain). The
+        // canonical leak is `const PASSWORD = 'literal'` — exactly that.
+        // Identifier must end in PASSWORD/PASSWD/PWD/SECRET, possibly with
+        // a prefix like API_, DB_, JWT_ (all-caps + underscore + suffix).
+        const credLiteral =
+          /(?:const|let|var)\s+((?:[A-Z][A-Z0-9_]*_)?(?:PASSWORD|PASSWD|PWD|SECRET))\b\s*[:=]\s*(['"])([^'"\n]{3,})\2\s*[;,)\]}\s]*$/;
+        const m = line.match(credLiteral);
+        if (m) {
+          const varName = m[1];
+          const value = m[3];
+          const matchIdx = file.content.indexOf(realLine);
+          const inPlaceholderCtx =
+            matchIdx >= 0 && isMatchInPlaceholderNamedAssignment(file.content, matchIdx);
+          const valueIsPlaceholder = SECRET_VALUE_PLACEHOLDER_RE.test(value);
+          if (!inPlaceholderCtx && !valueIsPlaceholder) {
+            findings.push({
+              id: `auth-hardcodedpwd-${file.path}-${i}`,
+              probe: 'Auth Weakness',
+              title: `Hardcoded password literal (${varName})`,
+              severity: 'critical',
+              category: 'Auth & Access',
+              cwe: 'CWE-798',
+              file: file.path,
+              line: i + 1,
+              evidence: realLine.trim().slice(0, 200),
+              remediation:
+                'Passwords pasted into source are committed to git history forever and shipped to every developer who clones the repo. Load from a secret manager (Doppler, 1Password, Vault, AWS Secrets Manager) or environment variable, NEVER a literal.',
+            });
+          }
+        }
+      }
+      // JWT signing with a literal short secret. jwt.sign(payload, 'literal').
+      // Short literal secrets (typically <32 chars) are brute-forceable in
+      // hours on a laptop. Use `[^)]*?` so the regex backtracks past commas
+      // INSIDE the payload object (e.g. `jwt.sign({sub, role}, 'secret')`).
+      if (/jwt\.sign\s*\([^)]*?,\s*['"][^'"]{1,31}['"]\s*[\),]/.test(line)) {
+        findings.push({
+          id: `auth-weakjwtsecret-${file.path}-${i}`,
+          probe: 'Auth Weakness',
+          title: 'JWT signed with a short literal secret',
+          severity: 'critical',
+          category: 'Auth & Access',
+          cwe: 'CWE-321',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'A 6-character literal secret is brute-forceable in seconds. Use crypto.randomBytes(64).toString("hex") at minimum, loaded from env / secret manager. The secret must be unguessable.',
+        });
+      }
+      // JWT verify with empty-string secret: `jwt.verify(token, '')`. Some
+      // legacy library versions accept this and skip verification entirely.
+      if (/jwt\.verify\s*\(\s*[^,)]+,\s*(['"])\1\s*[\),]/.test(line)) {
+        findings.push({
+          id: `auth-emptyjwtsecret-${file.path}-${i}`,
+          probe: 'Auth Weakness',
+          title: 'jwt.verify called with empty-string secret',
+          severity: 'critical',
+          category: 'Auth & Access',
+          cwe: 'CWE-347',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'An empty string is not a secret. Some library versions treat empty-string secrets as "skip verification" — every forged token verifies as authentic. Load the real secret from env / secret manager and assert it is non-empty before passing.',
+        });
+      }
+      // Default credentials inside a connection-string URL:
+      // `mysql://root:root@host`, `postgres://admin:admin@host`. Same identifier
+      // for user AND password is the strongest "this was never changed" signal.
+      if (
+        /(?:mysql|postgres(?:ql)?|mongodb|mongo|redis|amqp|http|https|ftp|smtp|imap):\/\/(\w+):(\w+)@/i.test(
+          line
+        )
+      ) {
+        const urlMatch = line.match(
+          /(?:mysql|postgres(?:ql)?|mongodb|mongo|redis|amqp|http|https|ftp|smtp|imap):\/\/(\w+):(\w+)@/i
+        );
+        if (urlMatch && urlMatch[1].toLowerCase() === urlMatch[2].toLowerCase()) {
+          findings.push({
+            id: `auth-defaultcredsurl-${file.path}-${i}`,
+            probe: 'Auth Weakness',
+            title: 'Default credentials in connection string (user == password)',
+            severity: 'critical',
+            category: 'Auth & Access',
+            cwe: 'CWE-798',
+            file: file.path,
+            line: i + 1,
+            evidence: realLine.trim().slice(0, 200),
+            remediation:
+              'Same identifier for both user AND password (root:root, admin:admin) is the strongest "this is the install default" signal. Set per-deploy credentials at provisioning time.',
+          });
+        }
+      }
+      // JWT verify accepting algorithms allowlist containing 'none'. Even if
+      // the developer remembered to allowlist, including 'none' defeats the
+      // entire point — an attacker just sends an unsigned token.
+      if (
+        /jwt\.verify\s*\([^)]*algorithms\s*:\s*\[[^\]]*['"]none['"]/i.test(line) ||
+        /jwt\.verify\s*\([^)]*algorithms\s*:\s*\[[^\]]*['"]None['"]/.test(line)
+      ) {
+        findings.push({
+          id: `auth-noneinallowlist-${file.path}-${i}`,
+          probe: 'Auth Weakness',
+          title: 'JWT verify algorithms allowlist includes "none"',
+          severity: 'critical',
+          category: 'Auth & Access',
+          cwe: 'CWE-327',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'Allowlisting "none" defeats the allowlist. Remove "none" from the algorithms array. Pin to one strong algorithm like HS256 with a strong secret or RS256 with a key pair.',
         });
       }
     });
@@ -1233,12 +1563,30 @@ export function probeClientAuthStorage(files) {
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$/.test(file.path)) return;
-    file.content.split('\n').forEach((line, i) => {
-      if (
-        /localStorage\.setItem\s*\(\s*['"`][^'"`]*(?:token|jwt|auth|session|access_token|refresh_token)[^'"`]*['"`]/i.test(
-          line
-        )
-      ) {
+    // Mask comments + string literals so the anti-pattern shape inside
+    // documentation comments, JSDoc warnings, and code-as-string snippets
+    // (teaching examples) no longer trips the regex. Indices preserved so the
+    // emitted line numbers stay correct against the real source.
+    // Narrow mask: blanks block comments, line comments, and backtick template
+    // literals. Single/double-quoted string content stays visible so the
+    // regexes can still see real auth-token-name string literals.
+    const maskedContent = maskBlockCommentsAndTemplateLiterals(file.content);
+    const maskedLines = maskedContent.split('\n');
+    const originalLines = file.content.split('\n');
+    // Common auth-name regex for storage keys. The keyword family must
+    // appear as a substring inside a quoted key. Underscored forms
+    // (auth_token, access_token) and camelCase forms (authToken) both
+    // match without imposing word-boundary constraints, since real key
+    // names use both conventions.
+    const AUTH_KEY_RE =
+      /['"`][^'"`]*(?:token|jwt|auth|session|bearer|access_?token|refresh_?token|api[_-]?key)[^'"`]*['"`]/i;
+    maskedLines.forEach((maskedLine, i) => {
+      const realLine = originalLines[i] || '';
+      // localStorage.setItem('jwt', ...)
+      if (/localStorage\.setItem\s*\(\s*[^,)]*\)/i.test(maskedLine) === false) {
+        // skip
+      }
+      if (/localStorage\.setItem\s*\(/i.test(maskedLine) && AUTH_KEY_RE.test(maskedLine)) {
         findings.push({
           id: `auth-localstorage-${file.path}-${i}`,
           probe: 'Client Auth Storage',
@@ -1248,12 +1596,154 @@ export function probeClientAuthStorage(files) {
           cwe: 'CWE-922',
           file: file.path,
           line: i + 1,
-          evidence: line.trim().slice(0, 200),
+          evidence: realLine.trim().slice(0, 200),
           remediation:
             'localStorage is readable by any JS on the page, including third-party scripts and successful XSS. Use httpOnly secure SameSite cookies set server-side. If JS-readable storage is necessary, accept the risk explicitly and harden CSP.',
         });
       }
+      // sessionStorage.setItem — slightly better than localStorage (cleared on
+      // tab close) but still XSS-readable. Same XSS-readable threat model.
+      if (/sessionStorage\.setItem\s*\(/i.test(maskedLine) && AUTH_KEY_RE.test(maskedLine)) {
+        findings.push({
+          id: `auth-sessionstorage-${file.path}-${i}`,
+          probe: 'Client Auth Storage',
+          title: 'Auth token stored in sessionStorage',
+          severity: 'medium',
+          category: 'Auth & Access',
+          cwe: 'CWE-922',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'sessionStorage is XSS-readable just like localStorage. The only difference is it clears on tab close. Same fix: httpOnly secure SameSite cookies set server-side.',
+        });
+      }
+      // IndexedDB writes carrying auth: db.put('auth', ...), objectStore.put(
+      // { token: ... }), idb-keyval set('jwt', ...). Indexed storage is
+      // JS-readable too.
+      if (
+        /(?:\.put\s*\(|\.add\s*\(|idb(?:Keyval)?\.set\s*\(|set\s*\(\s*['"][^'"]*\b(?:token|jwt|auth|session)\b)/i.test(
+          maskedLine
+        ) &&
+        AUTH_KEY_RE.test(maskedLine) &&
+        /indexedDB|objectStore|idb|openDB/i.test(file.content)
+      ) {
+        findings.push({
+          id: `auth-indexeddb-${file.path}-${i}`,
+          probe: 'Client Auth Storage',
+          title: 'Auth token stored in IndexedDB',
+          severity: 'medium',
+          category: 'Auth & Access',
+          cwe: 'CWE-922',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'IndexedDB is JavaScript-readable, same XSS exposure as localStorage. Use httpOnly cookies set by the server.',
+        });
+      }
+      // document.cookie = 'token=...' WITHOUT HttpOnly. Setting a cookie from
+      // JS cannot set HttpOnly (browsers refuse). Any token cookie set from
+      // client JS is XSS-readable by construction. Same risk as localStorage.
+      // Also catches js-cookie wrapper: Cookies.set('jwt', ...).
+      if (
+        /document\.cookie\s*=\s*['"`][^'"`]*\b(?:token|jwt|auth(?:Token)?|session(?:Id)?|access_?token|refresh_?token|bearer)\s*=/i.test(
+          maskedLine
+        ) ||
+        /document\.cookie\s*=\s*`[^`]*\$\{[^}]*\b(?:token|jwt|auth(?:Token)?|session(?:Id)?|bearer)\b/i.test(
+          maskedLine
+        ) ||
+        /\bCookies\.set\s*\(\s*['"`][^'"`]*\b(?:token|jwt|auth(?:Token)?|session(?:Id)?|access_?token|refresh_?token|bearer)\b/i.test(
+          maskedLine
+        )
+      ) {
+        findings.push({
+          id: `auth-clientcookie-${file.path}-${i}`,
+          probe: 'Client Auth Storage',
+          title: 'Auth cookie set from client JS (HttpOnly impossible)',
+          severity: 'high',
+          category: 'Auth & Access',
+          cwe: 'CWE-1004',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'Cookies set via document.cookie from client JS CANNOT be HttpOnly — browsers reject the flag. The cookie is XSS-readable by definition. Set the cookie server-side with Set-Cookie: ...; HttpOnly; Secure; SameSite=Strict.',
+        });
+      }
+      // window.* / globalThis.* token globals: window.authToken = ...,
+      // window.__JWT__ = ... (underscore-wrapped). Persisted in JS scope,
+      // XSS-readable.
+      if (
+        /(?:window|globalThis|self)\s*\.\s*_*\b(?:token|jwt|auth(?:Token)?|session(?:Id)?|access_?token|refresh_?token|bearer)\b_*\s*=/i.test(
+          maskedLine
+        )
+      ) {
+        findings.push({
+          id: `auth-windowglobal-${file.path}-${i}`,
+          probe: 'Client Auth Storage',
+          title: 'Auth token stored on window / globalThis',
+          severity: 'high',
+          category: 'Auth & Access',
+          cwe: 'CWE-922',
+          file: file.path,
+          line: i + 1,
+          evidence: realLine.trim().slice(0, 200),
+          remediation:
+            'Window-scoped globals are reachable by any script on the page — including third-party tags, browser extensions in some contexts, and any XSS payload. Hold tokens in closure-scoped variables; for persistence use httpOnly cookies.',
+        });
+      }
     });
+    // Multi-line / library patterns where the regex needs to see ACROSS lines.
+    // Redux/Zustand/Jotai persist middleware: persist({ name: 'auth-store', ... })
+    // commonly defaults to localStorage. Match the construct on the masked
+    // whole content to allow newlines between persist( and the name field.
+    {
+      const masked = maskedContent;
+      // persist({ name: 'auth' }) or persist(<state>, { name: 'auth' }). Also
+      // catches redux-persist's `key:` form: persistReducer({ key: 'auth', ... }).
+      const persistRe =
+        /(?:persist|persistReducer)\s*\(([\s\S]{0,400}?)\b(?:name|key)\s*:\s*['"][^'"]*(?:auth|jwt|token|session|user)/i;
+      const pm = masked.match(persistRe);
+      if (pm) {
+        // Locate the line in the original
+        const idx = masked.indexOf(pm[0]);
+        const ln = idx >= 0 ? masked.slice(0, idx).split('\n').length : 1;
+        findings.push({
+          id: `auth-reduxpersist-${file.path}-${ln}`,
+          probe: 'Client Auth Storage',
+          title: 'State store persisted with auth-named slice (likely localStorage)',
+          severity: 'medium',
+          category: 'Auth & Access',
+          cwe: 'CWE-922',
+          file: file.path,
+          line: ln,
+          evidence: (originalLines[ln - 1] || '').trim().slice(0, 200),
+          remediation:
+            'Redux/Zustand/Jotai `persist` middleware defaults to localStorage. Auth-named slices written there are XSS-readable. Exclude the auth slice from persistence (zustand `partialize`, redux-persist `whitelist`/`blacklist`) and hold tokens in httpOnly cookies.',
+        });
+      }
+      // jotai atomWithStorage('jwt', ...) — same persistence default.
+      const atomRe = /atomWithStorage\s*\(\s*['"][^'"]*\b(?:token|jwt|auth|session)\b/i;
+      const am = masked.match(atomRe);
+      if (am) {
+        const idx = masked.indexOf(am[0]);
+        const ln = idx >= 0 ? masked.slice(0, idx).split('\n').length : 1;
+        findings.push({
+          id: `auth-atomstorage-${file.path}-${ln}`,
+          probe: 'Client Auth Storage',
+          title: 'jotai atomWithStorage holds an auth-named value',
+          severity: 'medium',
+          category: 'Auth & Access',
+          cwe: 'CWE-922',
+          file: file.path,
+          line: ln,
+          evidence: (originalLines[ln - 1] || '').trim().slice(0, 200),
+          remediation:
+            'atomWithStorage defaults to localStorage. Auth-named atoms are XSS-readable. Use a server-side session for tokens.',
+        });
+      }
+    }
   });
   return findings;
 }
@@ -1346,20 +1836,120 @@ export function probeCookieFlags(files) {
 // --- API Route Auth ---
 export function probeAPIRouteAuth(files) {
   const findings = [];
+  // Corpus-level signal: a Next.js middleware.ts/.js at the project root (or
+  // src/) that matches /api/* paths is the canonical place to enforce auth
+  // across many routes. When present, per-route findings would be
+  // false positives — the route IS gated, just from a sibling file. We can't
+  // verify the matcher actually covers each route without parsing config, so
+  // this is a corpus-aware downgrade: if a middleware file exists and contains
+  // an auth-shaped call, every route is treated as having auth at the corpus
+  // level.
+  const hasCorpusMiddleware = files.some((mf) => {
+    if (!/(^|\/)(src\/)?middleware\.[jt]sx?$/.test(mf.path)) return false;
+    if (typeof mf.content !== 'string') return false;
+    // In a middleware file the call site is intentional auth, so accept
+    // `auth(` with arguments (e.g. `export default auth((req) => ...)` is the
+    // canonical NextAuth v5 / Auth.js v5 wrapper shape).
+    return /(clerkMiddleware|withAuth|getServerSession|getUser|currentUser|requireAuth|\bauth\s*\(|verifyToken|jwt\.verify\s*\([^,)]+,)/i.test(
+      mf.content
+    );
+  });
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
-    if (!/(?:\/api\/.*route\.[jt]sx?$|pages\/api\/)/.test(file.path)) return;
+    if (!/\.[jt]sx?$/.test(file.path)) return;
+    if (hasCorpusMiddleware) return; // gated at the middleware layer
     const c = file.content;
     // jwt.verify alone is NOT proof of valid auth — it must be called with a secret/key as a 2nd arg.
-    // Match jwt.verify(token, secret...) explicitly. Lone jwt.verify(token) doesn't count.
     const hasJwtVerifyWithSecret = /jwt\.verify\s*\(\s*[^,)]+,\s*[^)]+\)/.test(c);
+    // Generic auth signals applicable across frameworks. Add SvelteKit/Hono/
+    // CF Worker / Astro / Fastify / Express hook shapes.
     const hasAuth =
       /(getServerSession|requireAuth|getUser|currentUser|withAuth|createServerClient)/i.test(c) ||
-      /(?<!\w)auth\s*\(\s*\)/.test(c) || // bare auth() call (Clerk, NextAuth)
+      /(?<!\w)auth\s*\(\s*\)/.test(c) ||
       /verifyToken\s*\(/.test(c) ||
-      hasJwtVerifyWithSecret;
-    const isSensitive = /(admin|internal|delete|update|create|user)/i.test(file.path);
-    if (isSensitive && !hasAuth) {
+      hasJwtVerifyWithSecret ||
+      // Common framework auth signals:
+      /\blocals\.(?:user|session|auth)\b/.test(c) || // SvelteKit / Astro locals
+      /c\.get\s*\(\s*['"](?:user|session|auth|jwt)['"]/i.test(c) || // Hono context
+      /\bclerkClient\b|\bauthenticatedFetch\b/i.test(c) ||
+      /\brequireUser\s*\(|\brequireRole\s*\(/.test(c) ||
+      /\bensureAuthenticated\b|\bisAuthenticated\b/.test(c) ||
+      /passport\.authenticate\s*\(/.test(c) ||
+      /supabase\.auth\.getUser\s*\(/.test(c) ||
+      // Express middleware ordering: route declared with auth middleware arg
+      /\.(?:get|post|put|patch|delete|all)\s*\(\s*['"`][^'"`]+['"`]\s*,\s*(?:authenticate|authMiddleware|requireAuth|isAuthenticated|verifyJWT|verifyToken|protect|guard|cors\s*\([^)]*\),\s*auth)/i.test(
+        c
+      ) ||
+      // Fastify route options: { preHandler: authHook } or onRequest: authHook
+      /(?:preHandler|onRequest)\s*:\s*(?:\[?\s*)?(?:authenticate|authMiddleware|requireAuth|verifyJWT|verifyToken|protect|isAuthenticated|authHook)/i.test(
+        c
+      ) ||
+      /\b(?:fastify|app)\.register\s*\(\s*(?:fastifyAuth|fastifyJwt|fastifyJWT|fastifyBearerAuth)/i.test(
+        c
+      ) ||
+      // Webhook signature verification IS the auth (Stripe, GitHub, Slack)
+      /(?:stripe\.webhooks\.constructEvent|x-hub-signature|x-slack-signature|wh\.verify|webhookCallback)/i.test(
+        c
+      ) ||
+      // GraphQL: resolver context.user check
+      /\bcontext(?:\.\w+)?\.(?:user|userId|currentUser|session)\b/.test(c) ||
+      // The route is itself an OAuth callback or public auth endpoint
+      /\/(?:auth\/callback|auth\/signin|auth\/login|sign-in|sign-up|register|forgot-password)\//.test(
+        file.path
+      );
+
+    // Route-shape detection across frameworks. We classify by the file
+    // content shape, not the path alone, so backend-only Express apps with
+    // no `pages/api` are covered.
+    const isNextRoute = /(?:\/api\/.*route\.[jt]sx?$|pages\/api\/)/.test(file.path);
+    const isSvelteKitEndpoint = /(?:\/routes\/.*\/\+server\.[jt]sx?$)/.test(file.path);
+    const isAstroEndpoint =
+      /(?:\/pages\/api\/.*\.[jt]sx?$|\/src\/pages\/.*\.[jt]sx?$)/.test(file.path) &&
+      /\bexport\s+(?:async\s+)?(?:const|function)\s+(?:GET|POST|PUT|PATCH|DELETE|ALL)\b/.test(c);
+    const isExpressLike =
+      /\b(?:app|router|express\(\))\s*\.\s*(?:get|post|put|patch|delete|use|all)\s*\(/.test(c) &&
+      /\b(?:express|fastify|hono|koa)\b|require\s*\(\s*['"]express['"]/.test(c);
+    const isFastify =
+      /\bfastify\s*\.\s*(?:get|post|put|patch|delete|register|route)\s*\(/i.test(c) ||
+      /\brequire\s*\(\s*['"]fastify['"]/.test(c) ||
+      /\bimport\s+[^;]*\bfastify\b/i.test(c);
+    const isHono =
+      /\bnew\s+Hono\s*\(/.test(c) ||
+      /import\s+[^;]*\bHono\b\s+from\s+['"]hono/.test(c) ||
+      /\bapp\.(?:get|post|put|patch|delete)\s*\(\s*['"`][^'"`]+['"`]\s*,\s*\(?\s*c\s*[:,)]/i.test(
+        c
+      );
+    const isCFWorker =
+      /\baddEventListener\s*\(\s*['"]fetch['"]/.test(c) ||
+      /export\s+default\s*\{[\s\S]{0,60}?\bfetch\s*\(/i.test(c);
+    const isGraphQLResolver =
+      /Mutation\s*:\s*\{[\s\S]{0,1000}?(?:delete|update|create|remove|set|change)\w*\s*:/i.test(
+        c
+      ) && /\b(?:resolvers|makeExecutableSchema|gql|graphql)\b/i.test(c);
+
+    const isAnyRoute =
+      isNextRoute ||
+      isSvelteKitEndpoint ||
+      isAstroEndpoint ||
+      isExpressLike ||
+      isFastify ||
+      isHono ||
+      isCFWorker ||
+      isGraphQLResolver;
+    if (!isAnyRoute) return;
+
+    // Sensitivity heuristics. Path patterns first (admin / users / payments /
+    // checkout / billing / dashboard / internal). Then verbs.
+    const isSensitivePath =
+      /(admin|internal|delete|update|create|user|payment|checkout|billing|dashboard|invoice)/i.test(
+        file.path
+      );
+    const hasDestructiveVerb =
+      /export\s+(?:async\s+)?(?:function|const)\s+(?:DELETE|PUT|PATCH)/.test(c) ||
+      /\b(?:app|router|fastify|hono?)\s*\.\s*(?:delete|put|patch)\s*\(/i.test(c) ||
+      /\.(?:delete|update|create|remove)\w*\s*\(/.test(c); // ORM/DB call signal
+
+    if (isSensitivePath && !hasAuth) {
       findings.push({
         id: `api-noauth-${file.path}`,
         probe: 'API Route Auth',
@@ -1371,10 +1961,10 @@ export function probeAPIRouteAuth(files) {
         line: 1,
         evidence: `Path matches sensitive pattern, no auth function call detected`,
         remediation:
-          'API routes are reachable by direct fetch from anywhere. Verify auth at the top of the handler: const session = await getServerSession(authOptions); if (!session) return Response.json({error}, {status: 401}); Then check role and resource ownership. Manual review recommended (auth may be in middleware).',
+          'API routes are reachable by direct fetch from anywhere. Verify auth at the top of the handler: getServerSession (Next), locals.user (SvelteKit), c.get("user") (Hono), passport.authenticate (Express). Then check role and resource ownership. Manual review recommended if auth lives in middleware not visible here.',
       });
     }
-    if (/export\s+async\s+function\s+(DELETE|PUT|PATCH)/.test(c) && !hasAuth) {
+    if (hasDestructiveVerb && !hasAuth) {
       findings.push({
         id: `api-destructive-${file.path}`,
         probe: 'API Route Auth',
@@ -1384,7 +1974,7 @@ export function probeAPIRouteAuth(files) {
         cwe: 'CWE-306',
         file: file.path,
         line: 1,
-        evidence: 'DELETE/PUT/PATCH export found, no auth call in same file',
+        evidence: 'Destructive handler / mutation export found, no auth call in same file',
         remediation:
           'Mutation endpoints must verify the caller is authenticated AND authorized for the specific resource. Otherwise an unauthenticated curl can delete or modify any record. The May 2025 Lovable BOLA incident (CVE-2025-48757) is an instance of this class.',
       });

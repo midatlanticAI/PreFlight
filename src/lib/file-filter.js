@@ -13,7 +13,8 @@
 export function isTestFile(path) {
   if (!path) return false;
   if (/\.(test|spec)\.[jt]sx?$/i.test(path)) return true;
-  if (/(^|\/)(test|tests|__tests__|fixtures)\//i.test(path)) return true;
+  if (/(^|\/)(test|tests|__tests__|fixtures|cypress|e2e|playwright|mocks?)\//i.test(path))
+    return true;
   return false;
 }
 
