@@ -10,6 +10,8 @@ import {
   clearGitHubPAT,
   scanTargetRank,
   MAX_GITHUB_TARGETS,
+  MAX_GITHUB_BLOB_BYTES,
+  TIER1_BYTE_PROMOTION_THRESHOLD,
 } from '../lib/github.js';
 
 describe('fetchGitHubRepo Authorization header', () => {
@@ -308,12 +310,43 @@ describe('scanTargetRank — fetch the files that matter most', () => {
     expect(picked[0]).toBe('config/.env');
   });
 
-  it('the cap is 100 (sequential CDN fetch; latency-bounded, not API-bounded)', () => {
-    expect(MAX_GITHUB_TARGETS).toBe(100);
+  it('the cap is 500 (raised from 100 after the dogfood blind on 158-file repos)', () => {
+    expect(MAX_GITHUB_TARGETS).toBe(500);
+  });
+
+  it('per-file blob cap matches Folder-upload at 500_000 bytes', () => {
+    // Pre-2026-06 this was 200_000, asymmetric with App.jsx#handleFiles
+    // which already accepted 500_000. The asymmetry silently dropped vendor
+    // bundles and large source files from GitHub URL mode but not folder
+    // mode. Symmetric now.
+    expect(MAX_GITHUB_BLOB_BYTES).toBe(500_000);
+  });
+
+  it('TIER1_BYTE_PROMOTION_THRESHOLD is 50 KB (large source = structural risk)', () => {
+    expect(TIER1_BYTE_PROMOTION_THRESHOLD).toBe(50_000);
+  });
+
+  it('promotes a large tier-3 source file to tier 1 when size is passed', () => {
+    // 164 KB JS file with NO security keyword in its path (the canonical
+    // dogfood-blind case: probes/builtin.js).
+    expect(scanTargetRank('src/lib/probes/builtin.js')).toBe(3);
+    expect(scanTargetRank('src/lib/probes/builtin.js', 164_000)).toBe(1);
+  });
+
+  it('does NOT promote a small tier-3 source file', () => {
+    expect(scanTargetRank('src/lib/probes/builtin.js', 10_000)).toBe(3);
+  });
+
+  it('size promotion does not affect tier 0/1/2 files (they already rank high)', () => {
+    expect(scanTargetRank('package.json', 200_000)).toBe(0); // still tier 0
+    expect(scanTargetRank('src/auth/session.js', 200_000)).toBe(1); // still tier 1
+    expect(scanTargetRank('src/server.js', 200_000)).toBe(2); // still tier 2
   });
 
   it('does not crash on falsy / odd input', () => {
     expect(scanTargetRank(undefined)).toBe(4);
     expect(scanTargetRank('')).toBe(4);
+    expect(scanTargetRank('src/foo.js', undefined)).toBe(3);
+    expect(scanTargetRank('src/foo.js', 0)).toBe(3);
   });
 });

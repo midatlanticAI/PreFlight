@@ -727,6 +727,12 @@ export default function App() {
         scannedAt: new Date(),
         filesScanned: scanFiles.length,
         source: effectiveMode === 'github' ? targetUrl : `${scanFiles.length} local files`,
+        // Scan-coverage details for the UI banner. GitHub-mode caps total
+        // file count and per-file size; pre-2026-06 that capping was
+        // silent. coverage is attached to the array by fetchGitHubRepo
+        // when in GitHub mode; for folder/file mode it is undefined and
+        // the banner doesn't render.
+        coverage: scanFiles.coverage || null,
       };
       safeSetResults(finalResults);
       safeSetHistory((prev) =>

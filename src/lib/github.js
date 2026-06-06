@@ -21,16 +21,37 @@ import { shouldScanFile } from './probes.js';
 // (tier 3), everything else shouldScanFile allowed (tier 4). Lower = fetched
 // first. Pure + exported so it is unit-testable.
 //
-// Cap = 100. The unauthenticated 60/hr GitHub API limit applies only to the
+// Cap = 500. The unauthenticated 60/hr GitHub API limit applies only to the
 // ~2 metadata/tree calls, NOT the file fetches (those come from the
 // raw.githubusercontent.com CDN, which is not API-rate-limited). The blob
 // loop is fully SEQUENTIAL, so there is no burst/abuse-throttle risk; the
 // only cost of a higher cap is wall-clock (~one CDN round-trip per file).
-// 100 vs 80 is ~25% more time (a few seconds) for meaningfully more tail
-// coverage now that the top of the list is security-ranked. Beyond ~100 the
-// latency starts to break the "scan finishes in seconds" UX; that is the
-// real ceiling, and a large repo's escape hatch is Files / Folder upload.
-export const MAX_GITHUB_TARGETS = 100;
+// History: started at 80, bumped to 100, raised to 500 after PreFlight's
+// OWN repo (158 scannable JS/TS files) hit the silent cap and dropped a
+// 3500-line monolith from the scan entirely. A real production app
+// regularly carries 200-500 scannable files; 100 was too tight for that.
+// Above 500 the latency genuinely starts to break the "scan finishes in
+// seconds" UX, and the escape hatch for ginormous repos is still Files /
+// Folder upload (no count cap, only per-file size).
+export const MAX_GITHUB_TARGETS = 500;
+
+// Per-file byte cap on GitHub-URL mode. Folder-upload mode caps at 500_000
+// (App.jsx#handleFiles). There is no good reason for the GitHub path to
+// drop more aggressively than folder-upload — both are user-initiated and
+// browser-rendered. Pre-2026-06 this was 200_000 (200 KB), which silently
+// dropped the same kind of file the cap fix above just exposed: PreFlight's
+// own dist/ bundle and any project's vendor chunks. Matched to 500_000
+// so the two paths agree.
+export const MAX_GITHUB_BLOB_BYTES = 500_000;
+
+// Tier-3 (general source) files this large are promoted into tier 1. Rationale:
+// a 50 KB+ source file is statistically far more likely to harbour
+// mixed-responsibility logic, monolithic-spa shape, or hidden security paths
+// than a small file with no security keyword in its path. The path-keyword
+// rank was the only signal; size is a structural risk signal in its own
+// right and should compete on equal footing. Without this, PreFlight's own
+// 164 KB probes/builtin.js sat in tier 3 and got sliced by the cap.
+export const TIER1_BYTE_PROMOTION_THRESHOLD = 50_000;
 
 const CONFIG_RE =
   /(^|\/)(\.env(\.|$)|.*\.config\.(js|ts|mjs|cjs)$|next\.config\.|vite\.config\.|nuxt\.config\.|svelte\.config\.|astro\.config\.|wrangler\.toml$|netlify\.toml$|vercel\.json$|dockerfile$|docker-compose|\.npmrc$|package\.json$|requirements\.txt$|pyproject\.toml$|pipfile$|go\.mod$|cargo\.toml$|composer\.json$|gemfile$|pom\.xml$|build\.gradle|mix\.exs$|pubspec\.yaml$|.*\.csproj$|.*\.tf$|firebase\.json$|firestore\.rules$|storage\.rules$|\.github\/workflows\/)/i;
@@ -46,15 +67,28 @@ const SCANNED_LANG_RE =
 
 /**
  * Security-relevance tier for a repo path. Lower fetches first.
+ *
+ * The `size` argument is optional. When provided, a tier-3 file at or above
+ * TIER1_BYTE_PROMOTION_THRESHOLD bytes is promoted to tier 1. This catches
+ * monolithic-spa files (the canonical "single source file > 50 KB" signal)
+ * that have no security keyword in their path and would otherwise be
+ * silently sliced off the bottom of the rank by the count cap. PreFlight's
+ * own probes/builtin.js was the trigger case (164 KB, no auth/admin/security
+ * substring, tier 3 → dropped from scan → silent dogfood blind).
+ *
  * @param {string} path
+ * @param {number} [size] optional byte size from the git-tree entry
  * @returns {0|1|2|3|4}
  */
-export function scanTargetRank(path) {
+export function scanTargetRank(path, size) {
   const p = String(path || '');
   if (CONFIG_RE.test(p) || MIGRATION_OR_SQL_RE.test(p)) return 0;
   if (SECURITY_PATH_RE.test(p)) return 1;
   if (ENTRYPOINT_RE.test(p)) return 2;
-  if (SCANNED_LANG_RE.test(p)) return 3;
+  if (SCANNED_LANG_RE.test(p)) {
+    if (typeof size === 'number' && size >= TIER1_BYTE_PROMOTION_THRESHOLD) return 1;
+    return 3;
+  }
   return 4;
 }
 
@@ -233,16 +267,34 @@ export async function fetchGitHubRepo(url, onProgress) {
     ghLog.warn('Tree was truncated by GitHub (large repo)', { entryCount: treeData.tree?.length });
   }
 
-  const targets = (treeData.tree || [])
-    .filter(
-      (node) => node.type === 'blob' && shouldScanFile(node.path) && (node.size || 0) < 200000
-    )
+  // Two-phase rank-and-cap. Phase 1: every blob that passes shouldScanFile +
+  // per-file size cap is a candidate. Phase 2: rank candidates and take the
+  // top N. We track BOTH counts so the user gets a real banner when the cap
+  // slices files off the bottom (pre-2026-06 this was silent).
+  const allMatched = (treeData.tree || []).filter(
+    (node) =>
+      node.type === 'blob' &&
+      shouldScanFile(node.path) &&
+      (node.size || 0) < MAX_GITHUB_BLOB_BYTES
+  );
+  const ranked = allMatched
     // Rank by security relevance, then take the top N. Stable within a tier
     // (original tree order breaks ties) so the selection is deterministic.
-    .map((node, i) => ({ node, i, rank: scanTargetRank(node.path) }))
-    .sort((a, b) => a.rank - b.rank || a.i - b.i)
-    .slice(0, MAX_GITHUB_TARGETS)
-    .map((x) => x.node);
+    // Pass node.size so tier-3 files at or above TIER1_BYTE_PROMOTION_THRESHOLD
+    // get promoted to tier 1 (closes the silent-slice blind on large source
+    // files that have no security keyword in their path).
+    .map((node, i) => ({ node, i, rank: scanTargetRank(node.path, node.size) }))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i);
+  const targets = ranked.slice(0, MAX_GITHUB_TARGETS).map((x) => x.node);
+  const droppedByCap = Math.max(0, ranked.length - targets.length);
+  // Oversized blobs were rejected by the per-file size filter — also
+  // user-facing so a 600 KB file silently skipped doesn't look like a bug.
+  const oversized = (treeData.tree || []).filter(
+    (node) =>
+      node.type === 'blob' &&
+      shouldScanFile(node.path) &&
+      (node.size || 0) >= MAX_GITHUB_BLOB_BYTES
+  );
   ghLog.info('Targets selected', {
     totalEntries: treeData.tree?.length,
     targetCount: targets.length,
@@ -334,5 +386,20 @@ export async function fetchGitHubRepo(url, onProgress) {
         : `All ${targets.length} blob fetches failed.${detail} Both raw.githubusercontent.com and api.github.com/contents were unreachable from this browser. On mobile this is often a carrier-level block, a strict-privacy browser shield (Brave / DuckDuckGo / Firefox Focus), or a cached failed CORS preflight. Try switching between WiFi and cellular, disabling the privacy shield for this site, or use the Files / Folder tab.`
     );
   }
+  // Attach scan-coverage metadata to the returned array so the caller (and the
+  // UI) can render a "scanned X of Y matching files" banner when the count
+  // cap or per-file size cap silently dropped files. Storing on the array
+  // instead of changing the return shape keeps the existing call sites
+  // (App.jsx#handleScan) working unchanged; new consumers can read
+  // out.coverage. Pre-2026-06 this was silent — PreFlight's own 158-file
+  // repo lost 58 files to the count cap with no UI signal at all.
+  out.coverage = {
+    scanned: out.length,
+    capacityCap: MAX_GITHUB_TARGETS,
+    matched: allMatched.length,
+    droppedByCap,
+    oversizedDropped: oversized.length,
+    oversizedSample: oversized.slice(0, 5).map((n) => ({ path: n.path, size: n.size })),
+  };
   return out;
 }

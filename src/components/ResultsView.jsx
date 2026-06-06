@@ -98,6 +98,41 @@ export function ResultsView({
         </span>
       </div>
 
+      {/* SCAN COVERAGE BANNER — fires when GitHub-URL mode sliced files off the
+          bottom of the rank by the count cap, or skipped oversized blobs.
+          Pre-2026-06 this was silent: a 158-file repo could lose 58 files to
+          the cap with no UI signal. Folder/Files upload mode has no count
+          cap, so coverage is null and the banner does not render. */}
+      {results.coverage && (results.coverage.droppedByCap > 0 || results.coverage.oversizedDropped > 0) && (
+        <div
+          className="ap-card"
+          style={{
+            padding: 12,
+            marginBottom: 16,
+            borderLeft: `3px solid ${T.sev.medium.fg}`,
+          }}
+        >
+          <div className="ap-eyebrow" style={{ marginBottom: 6 }}>
+            SCAN COVERAGE
+          </div>
+          <div className="ap-mono" style={{ fontSize: 13, color: T.textDim, lineHeight: 1.5 }}>
+            Scanned {results.coverage.scanned} of {results.coverage.matched} matching files in this
+            repo. {results.coverage.droppedByCap > 0 && (
+              <>
+                {results.coverage.droppedByCap} were sliced off the bottom of the rank by the
+                per-scan cap of {results.coverage.capacityCap}.{' '}
+              </>
+            )}
+            {results.coverage.oversizedDropped > 0 && (
+              <>
+                {results.coverage.oversizedDropped} were skipped as oversized.{' '}
+              </>
+            )}
+            For complete coverage on a repo this size, use Files / Folder upload (no count cap).
+          </div>
+        </div>
+      )}
+
       {/* BASELINE DIFF — only when there is a prior scan of the same source */}
       {diff && (
         <div className="ap-card" style={{ padding: 16, marginBottom: 16 }}>
