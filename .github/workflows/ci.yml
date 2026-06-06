@@ -27,11 +27,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # Pinned to SHA, not tag. A maintainer (or attacker) can move v4 to point
+        # at a different commit; a SHA cannot be repointed. Update by replacing
+        # the SHA AND the trailing version comment together. Last verified:
+        # actions/checkout v4.3.1.
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         timeout-minutes: 2
 
       - name: Setup Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v4
+        # Pinned to SHA. Last verified: actions/setup-node v4.4.0.
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node }}
           cache: 'npm'
@@ -66,7 +71,8 @@ jobs:
 
       - name: Upload built artifact
         if: success() && matrix.node == '22'
-        uses: actions/upload-artifact@v4
+        # Pinned to SHA. Last verified: actions/upload-artifact v4.6.2.
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dist
           path: dist/
