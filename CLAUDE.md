@@ -85,7 +85,7 @@ Wired today: Sam SNIPPET is the system prompt for `formatAgentPrompt` (Copy Agen
 ```bash
 npm install            # install dependencies
 npm run dev            # vite dev server on :5173
-npm test               # vitest run (921 tests across 52 files on main)
+npm test               # vitest run (2660+ tests across 74 files on main)
 npm run lint           # eslint
 npm run lint:fix       # eslint --fix
 npm run format         # prettier write
@@ -112,7 +112,7 @@ Architecturally enforced, not promised. If you ever build a backend, you break t
 - 16 OWASP categories covered (A01-A10 + LLM01/02/04/06/07/08)
 - 54 published Learn patterns, 4 published field reports, 15 published architecture shapes (no drafts)
 - 9 BYOK providers
-- 921 tests across 52 files on `main`, lint clean, dogfood 6/6
+- 2660+ tests across 74 files on `main`, lint clean, dogfood 6/6
 - Breakers v1 hardening suite merged into `main`
 
 ## How to ship a change

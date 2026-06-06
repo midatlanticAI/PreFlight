@@ -152,7 +152,7 @@ Any feature that would weaken this requires deliberately breaking the manifesto,
 ```bash
 npm ci
 npm run dev               # vite dev server on :5173
-npm test                  # vitest run (921 tests across 52 files)
+npm test                  # vitest run (2660+ tests across 74 files)
 npm run test:self-audit   # dogfood: PreFlight scans its own dist/
 npm run build             # production build → dist/
 npm run preview           # preview the built dist
@@ -178,7 +178,7 @@ If PreFlight doesn't pass its own audit, CI fails. Dogfooding is non-negotiable.
 
 ## Test coverage
 
-921 tests across 52 files, ~3s full run:
+2660+ tests across 74 files, full run in seconds:
 
 | Layer                        | Coverage                                                                                                                        |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -253,7 +253,7 @@ src/
 │   ├── patterns/*.md
 │   ├── incidents/*.md
 │   └── shapes/*.md
-└── test/                   ← 921 tests across 52 files (vitest + jsdom)
+└── test/                   ← 2660+ tests across 74 files (vitest + jsdom)
 
 public/
 ├── maai-logo.svg

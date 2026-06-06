@@ -227,7 +227,7 @@ Most probes are regex + structural inspection. Two are different:
 - `BIDI_CONTROL_RE`: detects the Unicode bidi characters used in Trojan Source attacks.
 - `URL_PLACEHOLDER_HOSTS / URL_PLACEHOLDER_IP_RE / URL_SAFE_HOSTS / URL_SUSPICIOUS_TLD_RE / URL_RAW_IP_RE / URL_SHORTENERS`: classification sets for URL Reputation.
 - `AI_CRAWLER_BOTS`: list used by GEO Hygiene to verify robots.txt allowlist coverage (GPTBot, ClaudeBot, PerplexityBot, etc.).
-- `FILE_SIZE_WARN_LINES`, `FILE_SIZE_FAIL_LINES`: thresholds for Code Quality file-size detection.
+- `FILE_SIZE_WARN_LINES`, `FILE_SIZE_MED_LINES`, `FILE_SIZE_HIGH_LINES`, `FILE_SIZE_CRIT_LINES`: four-band severity ladder for Code Quality file-size detection (1500/2000/3000/5000 -> low/medium/high/critical). The HIGH band gates the dogfood scan. `FILE_SIZE_FAIL_LINES` is kept as a back-compat alias for HIGH.
 
 Manifest license: CC-BY-4.0 (see `LICENSE-DATA`). Code license: MIT (`LICENSE`). The split is deliberate: the threat-intel data is the value others should be able to integrate freely (with attribution) into their own scanners.
 
