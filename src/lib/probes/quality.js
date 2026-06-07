@@ -4,7 +4,12 @@
 // monolithic SPA / modular SPA / monorepo / SSR / unknown) and probeArchitecture which emits
 // the classification finding + type-specific teaching findings.
 
-import { FILE_SIZE_WARN_LINES, FILE_SIZE_FAIL_LINES } from '../threat-intel.js';
+import {
+  FILE_SIZE_WARN_LINES,
+  FILE_SIZE_MED_LINES,
+  FILE_SIZE_HIGH_LINES,
+  FILE_SIZE_CRIT_LINES,
+} from '../threat-intel.js';
 import { isScannerSelfSource } from '../file-filter.js';
 
 export function probeCodeQuality(files) {
@@ -55,27 +60,62 @@ export function probeCodeQuality(files) {
       });
     }
 
-    // --- file size warnings
-    if (lines.length >= FILE_SIZE_FAIL_LINES) {
+    // --- file size ladder (four bands, post 2026-06 dogfood-blind fix)
+    // The old two-band ladder topped out at MEDIUM, so PreFlight's own oversized
+    // files never gated its dogfood scan. The HIGH band at FILE_SIZE_HIGH_LINES
+    // now does. Bands, largest first:
+    //   >= 5000  CRITICAL  "emergency split"
+    //   >= 3000  HIGH      "split required"     (gates the dogfood scan)
+    //   >= 2000  MEDIUM    "architectural smell"
+    //   >= 1500  LOW       "watch this"
+    if (lines.length >= FILE_SIZE_CRIT_LINES) {
       findings.push({
-        id: `cq-file-huge-${file.path}`,
+        id: `cq-file-crit-${file.path}`,
         probe: 'Code Quality',
-        title: `File is ${lines.length} lines (extremely large)`,
+        title: `File is ${lines.length} lines (emergency split)`,
+        severity: 'critical',
+        category: 'Misconfiguration',
+        cwe: 'CWE-1041',
+        file: file.path,
+        line: 1,
+        evidence: `${lines.length} lines exceeds ${FILE_SIZE_CRIT_LINES} critical threshold`,
+        remediation:
+          'A file this large is unreviewable and untestable in isolation. Split it now into modules organized by responsibility before adding any more code.',
+      });
+    } else if (lines.length >= FILE_SIZE_HIGH_LINES) {
+      findings.push({
+        id: `cq-file-high-${file.path}`,
+        probe: 'Code Quality',
+        title: `File is ${lines.length} lines (split required)`,
+        severity: 'high',
+        category: 'Misconfiguration',
+        cwe: 'CWE-1041',
+        file: file.path,
+        line: 1,
+        evidence: `${lines.length} lines exceeds ${FILE_SIZE_HIGH_LINES} threshold`,
+        remediation:
+          'Files this large hurt onboarding, code review, and test isolation. Split into modules organized by responsibility (probes, formatters, history, UI components).',
+      });
+    } else if (lines.length >= FILE_SIZE_MED_LINES) {
+      findings.push({
+        id: `cq-file-med-${file.path}`,
+        probe: 'Code Quality',
+        title: `File is ${lines.length} lines (architectural smell)`,
         severity: 'medium',
         category: 'Misconfiguration',
         cwe: 'CWE-1041',
         file: file.path,
         line: 1,
-        evidence: `${lines.length} lines exceeds ${FILE_SIZE_FAIL_LINES} threshold`,
+        evidence: `${lines.length} lines exceeds ${FILE_SIZE_MED_LINES} threshold`,
         remediation:
-          'Files this large hurt onboarding, code review, and test isolation. Split into modules organized by responsibility (probes, formatters, history, UI components).',
+          'A file growing past 2000 lines is accreting unrelated responsibilities. Plan a split along its natural seams during the next refactor.',
       });
     } else if (lines.length >= FILE_SIZE_WARN_LINES) {
       findings.push({
         id: `cq-file-large-${file.path}`,
         probe: 'Code Quality',
-        title: `File is ${lines.length} lines (consider splitting)`,
-        severity: 'info',
+        title: `File is ${lines.length} lines (watch this)`,
+        severity: 'low',
         category: 'Misconfiguration',
         cwe: 'CWE-1041',
         file: file.path,

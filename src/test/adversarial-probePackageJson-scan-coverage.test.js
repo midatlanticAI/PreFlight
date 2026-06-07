@@ -21,7 +21,10 @@ const f = (path, content) => ({ path, content });
 describe('emailassist gap — package.json entry not in scan set', () => {
   it('canonical emailassist shape: scripts.start = node server.js, server.js absent -> fires', () => {
     const findings = probePackageJson([
-      f('package.json', JSON.stringify({ name: 'emailassist', scripts: { start: 'node server.js' } })),
+      f(
+        'package.json',
+        JSON.stringify({ name: 'emailassist', scripts: { start: 'node server.js' } })
+      ),
       f('index.html', '<!doctype html><html></html>'),
       f('app.js', 'console.log("client")'),
       f('sw.js', 'self.addEventListener("install", () => {});'),

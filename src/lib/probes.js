@@ -35,6 +35,9 @@ export {
   isHostInSafeList,
   AI_CRAWLER_BOTS,
   FILE_SIZE_WARN_LINES,
+  FILE_SIZE_MED_LINES,
+  FILE_SIZE_HIGH_LINES,
+  FILE_SIZE_CRIT_LINES,
   FILE_SIZE_FAIL_LINES,
 } from './threat-intel.js';
 export {

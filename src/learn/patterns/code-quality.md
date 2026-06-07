@@ -64,7 +64,11 @@ The console.log finding is slightly different. Leaving `console.log(userToken)` 
 PreFlight scans for:
 
 - `console.log`, `console.debug`, `console.info`, `console.warn`, `console.error`, `console.trace` in production-source files (not in `src/test/`, not in scripts excluded by the project's preflight-config).
-- Source files over `FILE_SIZE_WARN_LINES` (1500) and `FILE_SIZE_FAIL_LINES` (5000) thresholds.
+- Source files past the four-band size ladder. The bands map to PreFlight's severity scale and the HIGH band gates the dogfood scan, so the tool catches its own monoliths the same way it teaches users to catch theirs.
+  - 1500 LOC (`FILE_SIZE_WARN_LINES`) -> low ("watch this; one more responsibility and split")
+  - 2000 LOC (`FILE_SIZE_MED_LINES`) -> medium ("architectural smell; plan a split")
+  - 3000 LOC (`FILE_SIZE_HIGH_LINES`) -> high ("split required; this gates the dogfood scan")
+  - 5000 LOC (`FILE_SIZE_CRIT_LINES`) -> critical ("emergency split; the file is hiding security logic in noise")
 - Promise chains without trailing `.catch()`.
 - `async` functions whose body lacks any `try` block when the body contains `await` calls.
 

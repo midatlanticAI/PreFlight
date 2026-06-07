@@ -1368,12 +1368,34 @@ describe('probeCodeQuality', () => {
     expect(probeCodeQuality([file('src/foo.js', `// console.log('debug')`)])).toEqual([]);
   });
 
-  it('flags huge files (>= 5000 lines) as medium', () => {
+  // Four-band file-size ladder (post 2026-06 dogfood-blind fix).
+  it('1500-1999 LOC files fire LOW ("watch this")', () => {
+    const big = Array.from({ length: 1700 }, () => 'const x = 1;').join('\n');
+    const f = probeCodeQuality([file('src/big.js', big)]);
+    const hit = f.find((x) => x.title.includes('watch this'));
+    expect(hit).toBeDefined();
+    expect(hit.severity).toBe('low');
+  });
+  it('2000-2999 LOC files fire MEDIUM ("architectural smell")', () => {
+    const big = Array.from({ length: 2400 }, () => 'const x = 1;').join('\n');
+    const f = probeCodeQuality([file('src/big.js', big)]);
+    const hit = f.find((x) => x.title.includes('architectural smell'));
+    expect(hit).toBeDefined();
+    expect(hit.severity).toBe('medium');
+  });
+  it('3000-4999 LOC files fire HIGH ("split required") and gate the dogfood scan', () => {
+    const huge = Array.from({ length: 3500 }, () => 'const x = 1;').join('\n');
+    const f = probeCodeQuality([file('src/big.js', huge)]);
+    const hit = f.find((x) => x.title.includes('split required'));
+    expect(hit).toBeDefined();
+    expect(hit.severity).toBe('high');
+  });
+  it('5000+ LOC files fire CRITICAL ("emergency split")', () => {
     const huge = Array.from({ length: 5100 }, () => 'const x = 1;').join('\n');
     const f = probeCodeQuality([file('src/big.js', huge)]);
-    expect(
-      f.find((x) => x.severity === 'medium' && x.title.includes('extremely large'))
-    ).toBeDefined();
+    const hit = f.find((x) => x.title.includes('emergency split'));
+    expect(hit).toBeDefined();
+    expect(hit.severity).toBe('critical');
   });
 
   it('flags .then() without .catch()', () => {

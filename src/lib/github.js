@@ -273,9 +273,7 @@ export async function fetchGitHubRepo(url, onProgress) {
   // slices files off the bottom (pre-2026-06 this was silent).
   const allMatched = (treeData.tree || []).filter(
     (node) =>
-      node.type === 'blob' &&
-      shouldScanFile(node.path) &&
-      (node.size || 0) < MAX_GITHUB_BLOB_BYTES
+      node.type === 'blob' && shouldScanFile(node.path) && (node.size || 0) < MAX_GITHUB_BLOB_BYTES
   );
   const ranked = allMatched
     // Rank by security relevance, then take the top N. Stable within a tier
@@ -291,9 +289,7 @@ export async function fetchGitHubRepo(url, onProgress) {
   // user-facing so a 600 KB file silently skipped doesn't look like a bug.
   const oversized = (treeData.tree || []).filter(
     (node) =>
-      node.type === 'blob' &&
-      shouldScanFile(node.path) &&
-      (node.size || 0) >= MAX_GITHUB_BLOB_BYTES
+      node.type === 'blob' && shouldScanFile(node.path) && (node.size || 0) >= MAX_GITHUB_BLOB_BYTES
   );
   ghLog.info('Targets selected', {
     totalEntries: treeData.tree?.length,

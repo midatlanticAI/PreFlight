@@ -93,8 +93,7 @@ export const JS_AUTH_001 = {
         // the next ~400 chars to allow multi-line options objects.
         if (/jwt\.sign\s*\(/.test(line)) {
           const startIdx = file.content.indexOf(rawLine);
-          const around =
-            startIdx >= 0 ? file.content.slice(startIdx, startIdx + 400) : line;
+          const around = startIdx >= 0 ? file.content.slice(startIdx, startIdx + 400) : line;
           if (!/expiresIn\s*:|\bexp\s*:/.test(around)) {
             findings.push({
               id: `auth-noexpiry-${file.path}-${i}`,

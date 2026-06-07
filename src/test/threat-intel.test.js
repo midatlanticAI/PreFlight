@@ -21,6 +21,9 @@ import {
   isHostInSafeList,
   AI_CRAWLER_BOTS,
   FILE_SIZE_WARN_LINES,
+  FILE_SIZE_MED_LINES,
+  FILE_SIZE_HIGH_LINES,
+  FILE_SIZE_CRIT_LINES,
   FILE_SIZE_FAIL_LINES,
 } from '../lib/threat-intel.js';
 
@@ -176,8 +179,19 @@ describe('AI_CRAWLER_BOTS', () => {
 });
 
 describe('FILE_SIZE thresholds', () => {
-  it('warn threshold is below fail threshold', () => {
-    expect(FILE_SIZE_WARN_LINES).toBeLessThan(FILE_SIZE_FAIL_LINES);
+  it('the four-band ladder is monotonic and non-zero', () => {
     expect(FILE_SIZE_WARN_LINES).toBeGreaterThan(0);
+    expect(FILE_SIZE_WARN_LINES).toBeLessThan(FILE_SIZE_MED_LINES);
+    expect(FILE_SIZE_MED_LINES).toBeLessThan(FILE_SIZE_HIGH_LINES);
+    expect(FILE_SIZE_HIGH_LINES).toBeLessThan(FILE_SIZE_CRIT_LINES);
+  });
+  it('FILE_SIZE_FAIL_LINES is aliased to HIGH (gating threshold)', () => {
+    expect(FILE_SIZE_FAIL_LINES).toBe(FILE_SIZE_HIGH_LINES);
+  });
+  it('HIGH band catches the 3000-3500 monolith range (the prior blind)', () => {
+    // Pre-2026-06 the gate fired only at 5000+ LOC, so a 3554-line
+    // builtin.js capped at "info" and slipped past the dogfood gate.
+    // This regression guard fixes the band boundary in place.
+    expect(FILE_SIZE_HIGH_LINES).toBeLessThanOrEqual(3000);
   });
 });

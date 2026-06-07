@@ -383,5 +383,20 @@ export const AI_CRAWLER_BOTS = [
   'CCBot',
 ];
 
-export const FILE_SIZE_WARN_LINES = 1500;
-export const FILE_SIZE_FAIL_LINES = 5000;
+// File-size severity ladder. Four bands map directly to PreFlight's four
+// severity levels. The dogfood gate fails on critical+high, so the HIGH band
+// is what actually enforces "split this monolith now" — that's why the
+// thresholds are tighter than the prior two-band info/info layout, which
+// silently capped a 4,999-line file at "consider splitting" with no gate
+// engagement. The 3,000-line HIGH bar lines up with the empirical point
+// where single-file modules stop being one responsibility, hurt code
+// review, and start hiding security-relevant logic in noise. The 5,000
+// CRITICAL bar matches PreFlight's own past dogfood failure on the
+// pre-split probes.js. Names kept for back-compat (App.jsx + tests).
+export const FILE_SIZE_WARN_LINES = 1500; // -> severity: low
+export const FILE_SIZE_MED_LINES = 2000; // -> severity: medium
+export const FILE_SIZE_HIGH_LINES = 3000; // -> severity: high (gates dogfood)
+export const FILE_SIZE_CRIT_LINES = 5000; // -> severity: critical
+// Kept under the original name so existing callers compile; semantics now =
+// the gating HIGH threshold. Any new code should prefer FILE_SIZE_HIGH_LINES.
+export const FILE_SIZE_FAIL_LINES = FILE_SIZE_HIGH_LINES;

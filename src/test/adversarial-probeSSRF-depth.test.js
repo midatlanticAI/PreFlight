@@ -51,9 +51,7 @@ describe('probeSSRFOpenRedirect — input-source idioms', () => {
   });
 
   it('Koa ctx.url -> fetch fires', () => {
-    const findings = probeSSRFOpenRedirect([
-      file('src/koa.js', 'const r = await fetch(ctx.url);'),
-    ]);
+    const findings = probeSSRFOpenRedirect([file('src/koa.js', 'const r = await fetch(ctx.url);')]);
     expect(findings.length).toBeGreaterThan(0);
   });
 
@@ -146,9 +144,7 @@ describe('probeSSRFOpenRedirect — HTTP client family', () => {
 
 describe('probeSSRFOpenRedirect — open redirect, framework redirects', () => {
   it('res.redirect(req.url) fires', () => {
-    const findings = probeSSRFOpenRedirect([
-      file('src/server.js', 'res.redirect(req.url);'),
-    ]);
+    const findings = probeSSRFOpenRedirect([file('src/server.js', 'res.redirect(req.url);')]);
     expect(findings.length).toBeGreaterThan(0);
   });
 
@@ -197,9 +193,7 @@ describe('probeSSRFOpenRedirect — negatives, must NOT fire', () => {
   });
 
   it('res.redirect with a literal path does not fire', () => {
-    const findings = probeSSRFOpenRedirect([
-      file('src/server.js', 'res.redirect("/login");'),
-    ]);
+    const findings = probeSSRFOpenRedirect([file('src/server.js', 'res.redirect("/login");')]);
     expect(findings.filter((f) => f.probe === 'Open Redirect').length).toBe(0);
   });
 
