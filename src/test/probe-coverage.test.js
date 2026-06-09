@@ -37,6 +37,10 @@ const EXEMPT = new Map([
     'Architecture',
     'Architecture is a classifier emitting shape-aware informational findings. The natural Learn destination is the matching /learn/shapes/ page rather than a single pattern slug.',
   ],
+  [
+    'Agent Config Backdoor',
+    'Behavioral detector for agent/editor auto-run persistence (.claude SessionStart hooks, .vscode runOn:folderOpen) from the 2026 Miasma / Shai-Hulud npm worms. Shipped ahead of its Learn pattern during the active campaign; the field report and pattern page are the follow-up content task.',
+  ],
 ]);
 
 describe('probe coverage', () => {

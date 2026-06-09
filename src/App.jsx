@@ -114,6 +114,7 @@ export {
   probeTrojanSource,
   probeAIRulesFiles,
   probeMaliciousArtifacts,
+  probeAgentConfigBackdoor,
   probeAICodeSmells,
   probeNpmrcHygiene,
   probeExternalURLs,

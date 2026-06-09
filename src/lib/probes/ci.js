@@ -274,6 +274,43 @@ export function probeGitHubActions(files) {
           'GitHub explicitly recommends never using self-hosted runners on public repos with pull_request triggers — attackers can submit a PR whose code runs on your runner. Switch to ephemeral runners (Actions Runner Controller), GitHub-hosted runners, or restrict the workflow to a non-PR trigger.',
       });
     }
+    // Credential exfiltration in a run: step. Two high-precision shapes, so a
+    // legitimate `curl -H "Authorization: Bearer ${{ secrets.X }}" https://api`
+    // (auth header to a known API) does NOT fire:
+    //   (A) an env / printenv dump piped straight into a network command, or
+    //   (B) a curl/wget that POSTs a secret as request DATA (-d/--data/-F/...).
+    // This is the Miasma (June 2026) workflow vector: the worm injects a
+    // workflow, often a fake codeql.yml, that ships ${{ secrets.* }} off-runner.
+    [...c.matchAll(/^.*\b(?:curl|wget|nc|printenv|env)\b.*$/gim)].forEach((m) => {
+      const stepLine = m[0];
+      const envDumpToNet = /\b(?:printenv|env)\b\s*\|\s*(?:curl|wget|nc)\b/i.test(stepLine);
+      // Anchor flags on whitespace, not \b: \b never matches before a dash
+      // (a dash is a non-word char, so \b-d\b cannot match "-d").
+      const dataFlag =
+        /\b(?:curl|wget)\b.*\s(?:-d|-F|--data(?:-binary|-raw)?|--form|--upload-file)(?=\s|=|"|')/i.test(
+          stepLine
+        );
+      const secretRef =
+        /\$\{\{\s*secrets\./i.test(stepLine) ||
+        /\$\{?GITHUB_TOKEN\}?/.test(stepLine) ||
+        /\b[A-Z][A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|APIKEY|API_KEY)\b/.test(stepLine) ||
+        /\$\([^)]+\)|`[^`]+`/.test(stepLine); // command substitution as the payload
+      if (!envDumpToNet && !(dataFlag && secretRef)) return;
+      const ln = c.slice(0, m.index).split('\n').length;
+      findings.push({
+        id: `gha-secret-exfil-${file.path}-${m.index}`,
+        probe: 'GitHub Actions',
+        title: 'Workflow step sends secrets or credentials to an external host',
+        severity: 'critical',
+        category: 'Supply Chain',
+        cwe: 'CWE-200',
+        file: file.path,
+        line: ln,
+        evidence: stepLine.trim().slice(0, 200),
+        remediation:
+          'A run step that dumps the environment or POSTs ${{ secrets.* }} / $GITHUB_TOKEN as request data to curl / wget / nc is credential exfiltration. This is the injection shape used by the 2026 Miasma npm worm, often committed as a fake codeql.yml. Remove the step, rotate every secret the workflow can read, and review recent workflow runs for exfiltration. Secrets should never leave the runner.',
+      });
+    });
   });
   return findings;
 }

@@ -124,6 +124,10 @@ import { MANIFEST_LIVE_PROBES } from './probes/v05/manifest.js';
 // v0.6 taint engine — intra-procedural dataflow analyzer.
 import { probeTaintFlow } from './probes/taint-engine.js';
 
+// 2026: agent/editor auto-execution backdoors (.claude hooks, .vscode runOn:
+// folderOpen) — the Miasma / Shai-Hulud persistence vector.
+import { probeAgentConfigBackdoor } from './probes/agent-backdoor.js';
+
 import {
   probeExternalURLs,
   probeHTML,
@@ -169,6 +173,7 @@ export {
   probeVectorEmbeddingWeaknesses,
 };
 export { probeTaintFlow } from './probes/taint-engine.js';
+export { probeAgentConfigBackdoor } from './probes/agent-backdoor.js';
 export const PROBES = [
   { name: 'Architecture', fn: probeArchitecture },
   { name: 'Secret Scanner', fn: probeSecrets },
@@ -194,6 +199,7 @@ export const PROBES = [
   { name: 'Trojan Source', fn: probeTrojanSource },
   { name: 'AI Rules Files', fn: probeAIRulesFiles },
   { name: 'Malicious Artifacts', fn: probeMaliciousArtifacts },
+  { name: 'Agent Config Backdoor', fn: probeAgentConfigBackdoor },
   { name: 'AI Code Smells', fn: probeAICodeSmells },
   { name: 'URL Reputation', fn: probeExternalURLs },
   { name: 'HTML Hygiene', fn: probeHTML },

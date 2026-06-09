@@ -340,6 +340,15 @@ export const PROBE_META = {
     autofix: 'review-needed',
     learn_more_slug: 'auth-weakness',
   },
+
+  // 2026: agent/editor auto-execution backdoors. Behavioral detection of
+  // .claude SessionStart hooks and .vscode runOn:folderOpen tasks — the
+  // Miasma / Shai-Hulud npm-worm persistence vector. High confidence: a
+  // committed config that auto-runs a shell command is unambiguous.
+  'Agent Config Backdoor': {
+    confidence: 'high',
+    autofix: 'manual',
+  },
 };
 
 // OWASP category mapping per probe. Grouped by category so a reader can scan
@@ -384,6 +393,7 @@ const HAND_CODED_OWASP_MAP = {
     'Trojan Source',
     'AI Rules Files',
     'Malicious Artifacts',
+    'Agent Config Backdoor',
     'Subresource Integrity',
     'Package.json',
     'GitHub Actions',
