@@ -1,0 +1,25 @@
+#!/bin/sh
+# PreFlight pre-push gate.
+#
+# Runs the two fast, high-signal CI checks locally so a lint or formatting slip
+# never reaches the pipeline. This exists because of the 2026-06 incident: a
+# malformed-markdown CHANGELOG failed CI's `format:check` step, landed on main
+# anyway, and went unnoticed for several commits because the eye goes to the
+# test results, not the format step.
+#
+# Deliberately fast (seconds, not minutes). The full suite, production build,
+# and the self-audit dogfood gate run in CI across the Node 20/22 matrix
+# (.github/workflows/ci.yml) — a pre-push hook that ran all of that would take
+# minutes and get bypassed, which is worse than not having one. Keep it cheap so
+# it stays trusted.
+#
+# Bypass for a genuine emergency with:  git push --no-verify
+set -e
+
+echo "[pre-push] lint (eslint, no warnings)..."
+npm run lint -- --max-warnings 0
+
+echo "[pre-push] format:check (prettier)..."
+npm run format:check
+
+echo "[pre-push] fast gates green. Full suite + build + self-audit run in CI."
