@@ -78,3 +78,53 @@ jobs:
           path: dist/
           retention-days: 14
         timeout-minutes: 2
+
+  # Deploy to Cloudflare Pages, gated on the full test matrix passing. Because
+  # `needs: test` waits for both Node legs (build + full suite + dogfood
+  # self-audit), a red pipeline can never ship. This job is the SINGLE deploy
+  # path: the Pages dashboard Git integration must be disconnected, or every
+  # push deploys twice. Requires one repo secret: CLOUDFLARE_API_TOKEN
+  # (a Cloudflare token with the "Cloudflare Pages: Edit" permission).
+  deploy:
+    name: Deploy to Cloudflare Pages (production)
+    needs: test
+    # Only real pushes to main deploy. PRs and other branches build + test but never ship.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        # Pinned to SHA. Last verified: actions/checkout v4.3.1.
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        timeout-minutes: 2
+
+      - name: Setup Node.js 22
+        # Pinned to SHA. Last verified: actions/setup-node v4.4.0.
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Install dependencies
+        run: npm ci
+        timeout-minutes: 3
+
+      # Rebuild in this job rather than reusing the test job's artifact: the build
+      # is deterministic from the commit, and `needs: test` already proved this
+      # exact tree builds and passes the dogfood self-audit.
+      - name: Production build
+        run: npm run build
+        timeout-minutes: 5
+
+      - name: Deploy to Cloudflare Pages
+        # Pinned to SHA (mutable action tags are a dogfood finding — see src/lib/probes/ci.js).
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: d703d3a762ca67d67d2f8f8e8412d99e
+          command: pages deploy dist --project-name=preflight --branch=main
+        timeout-minutes: 5
