@@ -4,7 +4,12 @@
 // monolithic SPA / modular SPA / monorepo / SSR / unknown) and probeArchitecture which emits
 // the classification finding + type-specific teaching findings.
 
-import { FILE_SIZE_WARN_LINES, FILE_SIZE_FAIL_LINES } from '../threat-intel.js';
+import {
+  FILE_SIZE_WARN_LINES,
+  FILE_SIZE_MED_LINES,
+  FILE_SIZE_HIGH_LINES,
+  FILE_SIZE_CRIT_LINES,
+} from '../threat-intel.js';
 import { isScannerSelfSource } from '../file-filter.js';
 
 export function probeCodeQuality(files) {
@@ -55,34 +60,71 @@ export function probeCodeQuality(files) {
       });
     }
 
-    // --- file size warnings
-    if (lines.length >= FILE_SIZE_FAIL_LINES) {
+    // --- file size ladder (four bands, mapped to PreFlight's severity scale)
+    //
+    // Why four bands and not two: the previous ladder topped out at
+    // medium on the rare 5,000-line file and dropped a 3,500-line file
+    // straight to "info" — invisible to the dogfood gate, which filters
+    // critical+high. A monolith could grow to nearly the FAIL threshold
+    // and never trip CI. Real dogfood failure (probes.js, 1,500+ LOC
+    // pre-split) confirmed the gap. The new ladder makes 3,000 LOC the
+    // gating bar so the tool catches its own monoliths the same way it
+    // teaches users to catch theirs. See learn/patterns/code-quality.md.
+    if (lines.length >= FILE_SIZE_CRIT_LINES) {
+      findings.push({
+        id: `cq-file-crit-${file.path}`,
+        probe: 'Code Quality',
+        title: `File is ${lines.length} lines (emergency split)`,
+        severity: 'critical',
+        category: 'Misconfiguration',
+        cwe: 'CWE-1041',
+        file: file.path,
+        line: 1,
+        evidence: `${lines.length} lines exceeds ${FILE_SIZE_CRIT_LINES} critical threshold`,
+        remediation:
+          'Files past 5000 lines stop being one module and start being a folder pretending to be a file. Review quality drops, test isolation breaks, and security-relevant logic hides in unrelated code. Split now along the strongest seam (responsibility boundaries, not arbitrary line counts).',
+      });
+    } else if (lines.length >= FILE_SIZE_HIGH_LINES) {
       findings.push({
         id: `cq-file-huge-${file.path}`,
         probe: 'Code Quality',
-        title: `File is ${lines.length} lines (extremely large)`,
+        title: `File is ${lines.length} lines (split required)`,
+        severity: 'high',
+        category: 'Misconfiguration',
+        cwe: 'CWE-1041',
+        file: file.path,
+        line: 1,
+        evidence: `${lines.length} lines exceeds ${FILE_SIZE_HIGH_LINES} high-severity threshold`,
+        remediation:
+          'A single source file past 3000 lines almost always hides multiple responsibilities. Identify the natural seams (probe families, route boundaries, format/parse pairs) and extract. This finding gates the dogfood scan; the tool will not pass its own audit until the file is split.',
+      });
+    } else if (lines.length >= FILE_SIZE_MED_LINES) {
+      findings.push({
+        id: `cq-file-large-${file.path}`,
+        probe: 'Code Quality',
+        title: `File is ${lines.length} lines (architectural smell)`,
         severity: 'medium',
         category: 'Misconfiguration',
         cwe: 'CWE-1041',
         file: file.path,
         line: 1,
-        evidence: `${lines.length} lines exceeds ${FILE_SIZE_FAIL_LINES} threshold`,
+        evidence: `${lines.length} lines exceeds ${FILE_SIZE_MED_LINES} medium-severity threshold`,
         remediation:
-          'Files this large hurt onboarding, code review, and test isolation. Split into modules organized by responsibility (probes, formatters, history, UI components).',
+          'File is in the size range where unrelated responsibilities tend to accrete. Plan a split during the next refactor — pick the responsibility seam now while the boundaries are still clear in memory.',
       });
     } else if (lines.length >= FILE_SIZE_WARN_LINES) {
       findings.push({
-        id: `cq-file-large-${file.path}`,
+        id: `cq-file-warn-${file.path}`,
         probe: 'Code Quality',
-        title: `File is ${lines.length} lines (consider splitting)`,
-        severity: 'info',
+        title: `File is ${lines.length} lines (watch this)`,
+        severity: 'low',
         category: 'Misconfiguration',
         cwe: 'CWE-1041',
         file: file.path,
         line: 1,
-        evidence: `${lines.length} lines exceeds ${FILE_SIZE_WARN_LINES} warning threshold`,
+        evidence: `${lines.length} lines exceeds ${FILE_SIZE_WARN_LINES} watch threshold`,
         remediation:
-          'Not a bug, but consider splitting on the next major refactor. Files over 1500 lines tend to accrete unrelated responsibilities and become harder to test in isolation.',
+          'Not yet a problem, but past 1500 lines files start accreting responsibilities. Take a look at what the file does today; if it does more than one thing, the next addition is the right moment to split.',
       });
     }
 
