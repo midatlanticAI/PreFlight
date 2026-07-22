@@ -187,7 +187,12 @@ export function probeGitHubActions(files) {
       }
     }
     [...c.matchAll(/uses:\s*([^@\s]+)@(\S+)/g)].forEach((m) => {
-      const [, action, ref] = m;
+      // Strip surrounding YAML quotes. `uses: 'actions/checkout@<40-char-sha>'` captures a
+      // leading quote onto the action and a trailing quote onto the ref, so a secure SHA pin
+      // failed the isSha test and got misreported as a mutable ref. SHA-pinning is the form
+      // this probe is telling people to use — it must not flag it. (waylou: 176 FPs.)
+      const action = m[1].replace(/^['"]/, '');
+      const ref = m[2].replace(/['"]$/, '');
       if (action.startsWith('./') || action.includes('docker://')) return;
       const isSha = /^[a-f0-9]{40}$/.test(ref);
       const isVer = /^v?\d+(\.\d+)*$/.test(ref);

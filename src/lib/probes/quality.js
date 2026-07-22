@@ -10,16 +10,19 @@ import {
   FILE_SIZE_HIGH_LINES,
   FILE_SIZE_CRIT_LINES,
 } from '../threat-intel.js';
-import { isScannerSelfSource } from '../file-filter.js';
+import { isTestFile, isScannerSelfSource } from '../file-filter.js';
 
 export function probeCodeQuality(files) {
   const findings = [];
   files.forEach((file) => {
     // Skip test files, lib/logger.js (a logger IS the right place for console mirroring),
     // generated bundles, and config files. We're judging *production source*.
-    if (/(^|\/)(test|tests|__tests__|spec)\//i.test(file.path)) return;
+    // Use the shared isTestFile predicate: the old inline regex missed foo.test.ts
+    // (its `.test.` branch only matched a path segment that STARTS with .test.) and
+    // had no coverage for evals/, fixtures/ or mocks/ — the bulk of the false-positive
+    // flood on test-heavy repos.
+    if (isTestFile(file.path)) return;
     if (/(^|\/)dist\//i.test(file.path)) return;
-    if (/(^|\/)\.test\.|\.spec\./i.test(file.path)) return;
     if (/(^|\/)logger\.[jt]sx?$/i.test(file.path)) return;
     if (/(^|\/)vite\.config\./i.test(file.path)) return;
     if (/(^|\/)vitest\.config\./i.test(file.path)) return;

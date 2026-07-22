@@ -10,10 +10,18 @@
 // is real either way).
 
 // Structural probes (file size, missing .npmrc, architecture) should still see test files.
+// Covers *.test.* / *.spec.* / *.eval.* files and the conventional test/fixture/eval/
+// benchmark/snapshot directories. Eval + benchmark fixtures are test material: a coding
+// assistant's evals/*.eval.ts (see the waylou case) is not production source, and pattern
+// probes flooding those files is the same false-positive class as flagging a .test.ts.
 export function isTestFile(path) {
   if (!path) return false;
-  if (/\.(test|spec)\.[jt]sx?$/i.test(path)) return true;
-  if (/(^|\/)(test|tests|__tests__|fixtures|cypress|e2e|playwright|mocks?)\//i.test(path))
+  if (/\.(test|spec|eval)\.[jt]sx?$/i.test(path)) return true;
+  if (
+    /(^|\/)(test|tests|__tests__|__mocks__|__snapshots__|fixtures?|evals?|benchmarks?|cypress|e2e|playwright|mocks?)\//i.test(
+      path
+    )
+  )
     return true;
   return false;
 }

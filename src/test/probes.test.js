@@ -661,6 +661,28 @@ jobs:
     const f = probeGitHubActions([file('.github/workflows/ci.yml', yml)]);
     expect(f.find((x) => x.title.includes('mutable ref'))).toBeDefined();
   });
+
+  it('does NOT flag a quoted SHA-pinned action (the secure form the probe recommends)', () => {
+    // Single- and double-quoted whole values: the trailing quote used to land on the
+    // captured ref and make a valid 40-char SHA fail the isSha test (waylou: 176 FPs).
+    const single = `jobs:\n  a:\n    steps:\n      - uses: 'actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5'`;
+    const double = `jobs:\n  a:\n    steps:\n      - uses: "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"`;
+    for (const yml of [single, double]) {
+      const f = probeGitHubActions([file('.github/workflows/ci.yml', yml)]);
+      expect(
+        f.find((x) => x.probe === 'GitHub Actions' && /mutable/.test(x.title))
+      ).toBeUndefined();
+    }
+  });
+
+  it('still flags a quoted mutable tag and strips quotes from the reported action name', () => {
+    const yml = `jobs:\n  a:\n    steps:\n      - uses: "actions/checkout@v4"`;
+    const f = probeGitHubActions([file('.github/workflows/ci.yml', yml)]);
+    const hit = f.find((x) => x.title.includes('mutable tag'));
+    expect(hit).toBeDefined();
+    // Clean action + ref in the title (no stray captured quote → no `""actions/checkout`).
+    expect(hit.title).toBe('Action "actions/checkout" pinned to mutable tag "v4"');
+  });
 });
 
 describe('probeClientAuthStorage', () => {
@@ -1461,6 +1483,19 @@ describe('probeCodeQuality', () => {
   it('skips test files', () => {
     expect(probeCodeQuality([file('src/test/foo.test.js', `console.log('hi');`)])).toEqual([]);
     expect(probeCodeQuality([file('src/foo.spec.js', `console.log('hi');`)])).toEqual([]);
+  });
+
+  it('skips test/eval/fixture files the old inline regex missed', () => {
+    // `foo.test.ts` (segment does not START with .test.) slipped through the old regex.
+    expect(probeCodeQuality([file('src/foo.test.ts', `console.log('hi');`)])).toEqual([]);
+    // eval + fixture + mock material (the bulk of the false-positive flood on test-heavy repos).
+    expect(probeCodeQuality([file('evals/answer.eval.ts', `console.log('hi');`)])).toEqual([]);
+    expect(probeCodeQuality([file('packages/core/evals/x.ts', `console.log('hi');`)])).toEqual([]);
+    expect(probeCodeQuality([file('src/fixtures/sample.ts', `console.log('hi');`)])).toEqual([]);
+    expect(probeCodeQuality([file('src/__mocks__/fs.ts', `console.log('hi');`)])).toEqual([]);
+    // an oversized test file must not trip the file-size ladder either.
+    const bigTest = Array.from({ length: 5100 }, () => 'const x = 1;').join('\n');
+    expect(probeCodeQuality([file('src/huge.test.ts', bigTest)])).toEqual([]);
   });
 
   it('skips lib/logger.js (the logger module legitimately uses console)', () => {
