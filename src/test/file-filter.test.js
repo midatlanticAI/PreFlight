@@ -59,6 +59,24 @@ describe('isTestFile', () => {
     expect(isTestFile('src/feature/tests/inside.js')).toBe(true);
   });
 
+  it('matches *.eval.* files and eval/fixture/mock/snapshot/benchmark dirs', () => {
+    expect(isTestFile('evals/answer.eval.ts')).toBe(true);
+    expect(isTestFile('packages/core/evals/x.ts')).toBe(true);
+    expect(isTestFile('src/eval/case.ts')).toBe(true);
+    expect(isTestFile('src/fixtures/sample.ts')).toBe(true);
+    expect(isTestFile('src/fixture/sample.ts')).toBe(true);
+    expect(isTestFile('src/__mocks__/fs.ts')).toBe(true);
+    expect(isTestFile('src/mock/fs.ts')).toBe(true);
+    expect(isTestFile('src/__snapshots__/a.snap')).toBe(true);
+    expect(isTestFile('benchmark/run.ts')).toBe(true);
+    expect(isTestFile('benchmarks/run.ts')).toBe(true);
+  });
+
+  it('does NOT over-match legit dirs that merely start with eval/bench', () => {
+    expect(isTestFile('src/evaluation/score.ts')).toBe(false);
+    expect(isTestFile('src/benchmarking-lib/index.ts')).toBe(false);
+  });
+
   it('does NOT match production source paths', () => {
     expect(isTestFile('src/App.jsx')).toBe(false);
     expect(isTestFile('src/lib/probes.js')).toBe(false);
