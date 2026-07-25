@@ -20,14 +20,15 @@ Real numbers from the loop run against `probeSecrets` + `probeAICodeSmells`: 24 
 The agent must NOT read any of:
 
 - `src/lib/probes.js`
-- `src/lib/probes/builtin.js`
-- `src/lib/probes/quality.js`
-- `src/lib/probes/web.js`
-- `src/lib/probes/code-correctness.js`
-- `src/lib/probes/v05/**` (any subdirectory)
+- `src/lib/probes/**` (every family file after the 2026-06 split: builtin,
+  quality, web, code-correctness, supply-chain, auth, ci, llm, transport,
+  database, secrets-config, code-hygiene, agent-backdoor, taint-engine,
+  v05/**, v05b, v2/**, \_internal/\*\*, and any file added later)
 - `src/lib/threat-intel.js`
+- `src/data/compromised-packages.js`
 - `src/lib/stable-id.js`
 - `src/lib/file-filter.js`
+- `src/lib/sandbox/**`
 - Any existing file under `src/test/`
 - Any fixture under `src/lib/probes/v05/fixtures/`
 
