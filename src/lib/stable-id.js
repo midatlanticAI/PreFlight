@@ -323,6 +323,9 @@ export const PROBE_META = {
   // pages under /learn/shapes/ are the natural destination but those don't map
   // 1:1 to a single slug.
   Architecture: { confidence: 'heuristic', autofix: 'manual' },
+  // v2 F0: host-detection classifier. Info-only inventory finding; the
+  // detected host routes downstream copy, nothing to fix.
+  'Host Detection': { confidence: 'heuristic', autofix: 'manual' },
 
   // Package.json catch-all + supply-chain-related aliases.
   'Package.json': {

@@ -123,6 +123,7 @@ import { MANIFEST_LIVE_PROBES } from './probes/v05/manifest.js';
 
 // v0.6 taint engine — intra-procedural dataflow analyzer.
 import { probeTaintFlow } from './probes/taint-engine.js';
+import { probeHostDetection } from './probes/v2/context.js';
 
 // 2026: agent/editor auto-execution backdoors (.claude hooks, .vscode runOn:
 // folderOpen) — the Miasma / Shai-Hulud persistence vector.
@@ -174,6 +175,17 @@ export {
 };
 export { probeTaintFlow } from './probes/taint-engine.js';
 export { probeAgentConfigBackdoor } from './probes/agent-backdoor.js';
+// v2 F0: cross-cutting context detectors (framework / host / hook-context /
+// async-context) that route the v2 probe families. See docs/preflight-v2-spec.md §1.10.
+export {
+  detectFrameworks,
+  detectHost,
+  getHookContextRanges,
+  hookContextAt,
+  getAsyncContextRanges,
+  parseModule,
+  probeHostDetection,
+} from './probes/v2/context.js';
 export const PROBES = [
   { name: 'Architecture', fn: probeArchitecture },
   { name: 'Secret Scanner', fn: probeSecrets },
@@ -227,6 +239,8 @@ export const PROBES = [
   // the regex-list probes by catching multi-line flows the literal regexes
   // miss (e.g. `const x = req.body.path; ... ; fs.readFile(x)`).
   { name: 'Taint Flow', fn: probeTaintFlow },
+  // v2 F0: host detection surfaced as an inspectable info finding.
+  { name: 'Host Detection', fn: probeHostDetection },
   // v0.5: the live (shadow:false, net-new) language-agnostic adapters,
   // projected from PROBE_MANIFEST_V05. Migration adapters are held out
   // until the v0.4 cutover (see isLiveAdapter).

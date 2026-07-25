@@ -41,6 +41,10 @@ const EXEMPT = new Map([
     'Agent Config Backdoor',
     'Behavioral detector for agent/editor auto-run persistence (.claude SessionStart hooks, .vscode runOn:folderOpen) from the 2026 Miasma / Shai-Hulud npm worms. Shipped ahead of its Learn pattern during the active campaign; the field report and pattern page are the follow-up content task.',
   ],
+  [
+    'Host Detection',
+    'v2 F0 classifier emitting a single info finding naming the AI build tool PreFlight detected (Lovable/Bolt/Cursor/...). Like Architecture, it is inventory rather than a security pattern; its purpose is routing downstream copy and making the detection inspectable.',
+  ],
 ]);
 
 describe('probe coverage', () => {
@@ -156,6 +160,7 @@ describe('OWASP coverage mapping', () => {
       'GEO Hygiene',
       'A11y Landmarks',
       'Architecture',
+      'Host Detection',
     ]);
     const unmapped = PROBES.filter((p) => {
       if (NON_OWASP_PROBES.has(p.name)) return false;
