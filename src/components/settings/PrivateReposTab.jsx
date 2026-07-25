@@ -12,7 +12,13 @@ import { useState, useEffect } from 'react';
 import { Check, Eye, EyeOff, Trash2, ExternalLink, Wifi } from 'lucide-react';
 import { T, fontMono } from '../../lib/theme.js';
 import { track } from '../../lib/analytics.js';
-import { loadGitHubPAT, saveGitHubPAT, clearGitHubPAT, testGitHubToken } from '../../lib/github.js';
+import {
+  loadGitHubPAT,
+  saveGitHubPAT,
+  clearGitHubPAT,
+  testGitHubToken,
+  classifyGitHubToken,
+} from '../../lib/github.js';
 
 const COPY = `PreFlight scans public GitHub repos using unauthenticated API access (60 requests per hour, plenty for most scans). To scan a private repo, paste a GitHub Personal Access Token below. Same rules as the AI key: stored only in your browser, never sent to our server, deletable at any time.
 
@@ -26,6 +32,7 @@ export function PrivateReposTab() {
   const [reveal, setReveal] = useState(false);
   const [status, setStatus] = useState(null);
   const [testing, setTesting] = useState(false);
+  const tokenKind = classifyGitHubToken(pat);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -162,6 +169,31 @@ export function PrivateReposTab() {
           </button>
         </div>
 
+        {tokenKind.kind !== 'empty' && (
+          <div
+            role="status"
+            style={{
+              marginBottom: 12,
+              padding: '10px 12px',
+              fontSize: 13,
+              lineHeight: 1.6,
+              color: T.textDim,
+              background: T.panel,
+              borderLeft: `3px solid ${tokenKind.tone === 'warn' ? T.sev.medium.fg : T.accentAlt}`,
+            }}
+          >
+            <strong style={{ color: T.text }}>
+              {tokenKind.kind === 'fine-grained'
+                ? 'Fine-grained token'
+                : tokenKind.kind === 'classic'
+                  ? 'Classic token'
+                  : 'Unrecognized prefix'}
+            </strong>
+            {'. '}
+            {tokenKind.advice}
+          </div>
+        )}
+
         <a
           href={PAT_DOCS_URL}
           target="_blank"
@@ -179,6 +211,51 @@ export function PrivateReposTab() {
           How to create a GitHub Personal Access Token
           <ExternalLink size={10} aria-hidden="true" />
         </a>
+
+        <div
+          style={{
+            marginBottom: 14,
+            padding: '12px 14px',
+            fontSize: 13,
+            lineHeight: 1.7,
+            color: T.textDim,
+            background: T.bg,
+            border: `1px solid ${T.border}`,
+          }}
+        >
+          <div className="ap-eyebrow" style={{ marginBottom: 6, color: T.textMuted, fontSize: 11 }}>
+            PICKING A TOKEN
+          </div>
+          <p style={{ margin: '0 0 8px' }}>
+            The size of a token is decided when you create it, not when you paste it here. These
+            four choices do more for you than anything this page can do afterwards:
+          </p>
+          <ul style={{ margin: '0 0 8px', paddingLeft: 18 }}>
+            <li>
+              Choose <strong style={{ color: T.text }}>fine-grained</strong>, not classic.
+            </li>
+            <li>
+              Select <strong style={{ color: T.text }}>only the repositories</strong> you intend to
+              scan.
+            </li>
+            <li>
+              Set <strong style={{ color: T.text }}>Contents: read-only</strong>. PreFlight only
+              ever reads files, so nothing else is needed.
+            </li>
+            <li>
+              Give it a <strong style={{ color: T.text }}>short expiry</strong>. Thirty days is
+              plenty, and it fails closed if you forget about it.
+            </li>
+          </ul>
+          <p style={{ margin: 0 }}>
+            Stored tokens live in this browser&apos;s localStorage, which no web app can genuinely
+            encrypt: any key able to decrypt it would have to sit where the same JavaScript can read
+            it. What protects it here is that PreFlight loads no third-party scripts and its
+            content-security policy only permits connections to GitHub and the AI providers you opt
+            into, so the token has nowhere else to go. Clear it below when you are done, and revoke
+            it on GitHub if a machine is ever out of your hands.
+          </p>
+        </div>
 
         {status && (
           <div
