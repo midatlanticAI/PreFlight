@@ -18,6 +18,18 @@ import { isTestFile, isScannerSelfSource, isMetaDocFile } from '../file-filter.j
 
 export function probePackageJson(files) {
   const findings = [];
+  // Monorepo signal: any scanned package.json declaring workspaces. In a
+  // workspaces monorepo, `file:../sibling` deps are how packages link to each
+  // other; they never touch a registry and carry none of the non-registry
+  // risk the finding describes. FP triage 2026-07 (gemini-cli-fork scan).
+  const isWorkspacesMonorepo = files.some((f) => {
+    if (!/package\.json$/.test(f.path)) return false;
+    try {
+      return Boolean(JSON.parse(f.content).workspaces);
+    } catch {
+      return false;
+    }
+  });
   files.forEach((file) => {
     if (!/package\.json$/.test(file.path)) return;
     let pkg;
@@ -48,6 +60,10 @@ export function probePackageJson(files) {
     const filePaths = new Set(files.map((x) => x.path));
     for (const ref of entryRefs) {
       const stripped = ref.replace(/^\.\//, '');
+      // Build-output refs (dist/, build/, out/) point at generated artifacts
+      // that are correctly absent from a source scan; their absence is not a
+      // coverage gap. The source that produces them is what gets scanned.
+      if (/^(?:dist|build|out|\.next|\.output)\//.test(stripped)) continue;
       const candidates = [
         stripped,
         baseDir + stripped,
@@ -90,6 +106,9 @@ export function probePackageJson(files) {
     }
     const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
     Object.entries(deps).forEach(([name, version]) => {
+      if (isWorkspacesMonorepo && typeof version === 'string' && /^file:\.\.?\//.test(version)) {
+        return; // workspace-internal link, not a registry bypass
+      }
       if (typeof version === 'string' && /^(?:git\+|http:|https:|file:)/.test(version)) {
         findings.push({
           id: `pkg-nonregistry-${file.path}-${name}`,

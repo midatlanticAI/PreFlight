@@ -406,6 +406,9 @@ export function probeSEOHygiene(files) {
   // worker — that's a strong enough signal we won't FP on real public sites.
   if (isPrivatePWAContext(files)) return findings;
   files.forEach((file) => {
+    // Test-fixture HTML is not a public page; SEO hygiene doesn't apply.
+    // FP triage 2026-07 (gemini-cli-fork scan).
+    if (isTestFile(file.path)) return;
     // index.html (or any *.html that looks like a SPA entry — has <head>)
     if (/\.html?$/i.test(file.path)) {
       const c = file.content || '';
@@ -592,10 +595,15 @@ export function probeGEOHygiene(files) {
   if (isPrivatePWAContext(files)) return findings;
   const hasLlms = files.some((f) => /(^|\/)llms\.txt$/i.test(f.path));
   const robotsFile = files.find((f) => /(^|\/)robots\.txt$/i.test(f.path));
+  // Fixture HTML under test dirs is not site content; a repo whose only HTML
+  // is test fixtures has no AI-search surface to optimize. FP triage 2026-07.
   const htmlFile = files.find(
-    (f) => /\.html?$/i.test(f.path) && /<div\s+id=["'](root|app)["']/i.test(f.content || '')
+    (f) =>
+      /\.html?$/i.test(f.path) &&
+      !isTestFile(f.path) &&
+      /<div\s+id=["'](root|app)["']/i.test(f.content || '')
   );
-  const hasAnyHtml = files.some((f) => /\.html?$/i.test(f.path));
+  const hasAnyHtml = files.some((f) => /\.html?$/i.test(f.path) && !isTestFile(f.path));
 
   if (hasAnyHtml && !hasLlms) {
     findings.push({

@@ -276,6 +276,13 @@ const HANDLER_RE =
 const LOGGER_CALL_RE =
   /\b(?:log|logger|console|audit|track|telemetry|metrics|trail|record|emit|capture|monitor)\.(?:info|warn|error|debug|log|event|capture|audit|track|emit|count|increment)\b|\bSentry\.captureException\b|\bdatadog(?:Logs|Metrics)?\.\w+\b/;
 const DELETE_HANDLER_RE = /\b(?:export\s+async\s+function\s+DELETE\b|app\.delete\s*\()/;
+// Audit logging (CWE-778) is a server-side control: the expectation only
+// applies where requests are actually handled. A CLI's auth config or a
+// client login form matching the path heuristic is not a missing-audit-log
+// finding. FP triage 2026-07 (gemini-cli-fork scan): 19 medium findings on
+// CLI config files named auth/oauth with no server in sight.
+const SERVER_CONTEXT_RE =
+  /\b(?:express|fastify|koa|hapi)\b|\bapp\.(?:get|post|put|delete|patch|use)\s*\(|\brouter\.(?:get|post|put|delete|patch)\s*\(|\bcreateServer\s*\(|\bNextRequest\b|\bNextResponse\b|export\s+async\s+function\s+(?:GET|POST|PUT|DELETE|PATCH)\b|\bres\.(?:status|json|send)\s*\(/;
 
 export function probeSecurityLogging(files) {
   const findings = [];
@@ -288,6 +295,9 @@ export function probeSecurityLogging(files) {
     const pathIsSecurity = SECURITY_HANDLER_PATHS_RE.test(file.path);
     const hasDeleteHandler = DELETE_HANDLER_RE.test(file.content);
     if (!pathIsSecurity && !hasDeleteHandler) return;
+    // Path match alone is not enough: require server-handler evidence in the
+    // file itself (a DELETE handler is server evidence by definition).
+    if (!hasDeleteHandler && !SERVER_CONTEXT_RE.test(file.content)) return;
 
     // The file is in a security-relevant location. Check whether any logging
     // call appears in the file at all. If not, that's the finding.

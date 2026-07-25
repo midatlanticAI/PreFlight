@@ -9,11 +9,22 @@
 // test-file matches; file-size / structural probes still see those files (the LOC count
 // is real either way).
 
-// Structural probes (file size, missing .npmrc, architecture) should still see test files.
+// Structural probes that count whole-project facts (missing .npmrc, architecture
+// classification) still see test files; per-file code-shape probes (including the
+// Code Quality cluster) skip them.
 export function isTestFile(path) {
   if (!path) return false;
-  if (/\.(test|spec)\.[jt]sx?$/i.test(path)) return true;
-  if (/(^|\/)(test|tests|__tests__|fixtures|cypress|e2e|playwright|mocks?)\//i.test(path))
+  if (/\.(test|spec|eval)\.[jt]sx?$/i.test(path)) return true;
+  // Directory names: exact test/fixture/mock dirs plus hyphen/underscore
+  // compounds (integration-tests/, memory-tests/, test-fixtures/, evals/).
+  // FP triage 2026-07 (gemini-cli-fork scan): the literal alternation missed
+  // every compound form, so eval fixtures and integration-test HTML fired
+  // LLM Security / SEO / A11y findings.
+  if (
+    /(^|\/)((?:[\w.]+[-_])?tests?|__tests__|(?:[\w.]+[-_])?fixtures?|testdata|cypress|e2e|playwright|__mocks__|mocks?|evals?)\//i.test(
+      path
+    )
+  )
     return true;
   return false;
 }

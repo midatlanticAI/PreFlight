@@ -186,7 +186,10 @@ export function probeGitHubActions(files) {
         });
       }
     }
-    [...c.matchAll(/uses:\s*([^@\s]+)@(\S+)/g)].forEach((m) => {
+    // The uses: value may be single- or double-quoted (YAML allows both);
+    // exclude quotes from the captures or a quoted 40-char SHA pin fails the
+    // hex test below and gets misreported as a mutable ref.
+    [...c.matchAll(/uses:\s*['"]?([^@\s'"]+)@([^\s'"]+)/g)].forEach((m) => {
       const [, action, ref] = m;
       if (action.startsWith('./') || action.includes('docker://')) return;
       const isSha = /^[a-f0-9]{40}$/.test(ref);

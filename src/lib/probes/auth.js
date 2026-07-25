@@ -207,8 +207,13 @@ export function probeAuthWeakness(files) {
       // `password` (case-insensitive). Real auth uses bcrypt.compare or
       // argon2.verify, which look completely different.
       if (
-        /(?:\b\w*(?:password|passwd|pwd)\b)\s*(?:===|==)\s*\w+(?:\.\w+)*\b/i.test(line) ||
-        /\w+(?:\.\w+)*\s*(?:===|==)\s*\b\w*(?:password|passwd|pwd)\b/i.test(line)
+        (/(?:\b\w*(?:password|passwd|pwd)\b)\s*(?:===|==)\s*\w+(?:\.\w+)*\b/i.test(line) ||
+          /\w+(?:\.\w+)*\s*(?:===|==)\s*\b\w*(?:password|passwd|pwd)\b/i.test(line)) &&
+        // Self-test / fixture values: `retrieved === testPassword` in a
+        // keychain round-trip check is not an auth path. FP triage 2026-07.
+        !/\b(?:test|dummy|mock|sample|expected|fake|placeholder)_?(?:password|passwd|pwd)\b/i.test(
+          line
+        )
       ) {
         findings.push({
           id: `auth-plainpasswordcompare-${file.path}-${i}`,
@@ -373,11 +378,16 @@ export function probeAuthWeakness(files) {
       }
       // Basic auth header: `Authorization: 'Basic ' + Buffer.from('user:pass')`,
       // `const AUTH = 'Basic <base64>'`. Both are hardcoded creds in HTTP headers.
+      // A single title-case word after "Basic" is prose ('Basic Controls',
+      // 'Basic Authentication'), not a base64 credential — base64 of any
+      // user:pass starts lowercase or mixes in digits/+/=. FP triage 2026-07.
+      const basicTok = realLine.match(/['"]Basic\s+([A-Za-z0-9+/=]{8,})['"]/);
+      const basicIsProse = basicTok !== null && /^[A-Z][a-z]+$/.test(basicTok[1]);
       if (
         /Buffer\.from\s*\(\s*['"][^'"\n]+:[^'"\n]+['"]\s*\)\s*\.\s*toString\s*\(\s*['"]base64/i.test(
           realLine
         ) ||
-        /['"]Basic\s+[A-Za-z0-9+/=]{8,}['"]/.test(realLine)
+        (basicTok !== null && !basicIsProse)
       ) {
         findings.push({
           id: `auth-basicheader-${file.path}-${i}`,

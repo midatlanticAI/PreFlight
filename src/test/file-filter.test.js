@@ -59,10 +59,25 @@ describe('isTestFile', () => {
     expect(isTestFile('src/feature/tests/inside.js')).toBe(true);
   });
 
+  // FP triage 2026-07 (gemini-cli-fork scan): compound test-dir names and
+  // eval fixtures were invisible to the literal alternation.
+  it('matches compound test/fixture dirs and eval files', () => {
+    expect(isTestFile('integration-tests/hooks-system.test.ts')).toBe(true);
+    expect(isTestFile('integration-tests/test-fixtures/dynamic.html')).toBe(true);
+    expect(isTestFile('memory-tests/case.ts')).toBe(true);
+    expect(isTestFile('perf-tests/bench.ts')).toBe(true);
+    expect(isTestFile('evals/calendar-all-day.eval.ts')).toBe(true);
+    expect(isTestFile('src/foo/fixtures/sample.html')).toBe(true);
+    expect(isTestFile('src/__mocks__/api.js')).toBe(true);
+  });
+
   it('does NOT match production source paths', () => {
     expect(isTestFile('src/App.jsx')).toBe(false);
     expect(isTestFile('src/lib/probes.js')).toBe(false);
     expect(isTestFile('package.json')).toBe(false);
+    // "contests" is not "tests"; compound match requires a -_ separator
+    expect(isTestFile('src/contests/leaderboard.js')).toBe(false);
+    expect(isTestFile('src/attests/verify.js')).toBe(false);
   });
 
   it('returns false on null / empty', () => {

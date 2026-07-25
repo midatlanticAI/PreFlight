@@ -314,6 +314,56 @@ describe('probePackageJson', () => {
   });
 });
 
+describe('probePackageJson monorepo handling', () => {
+  const wsRoot = () =>
+    file('package.json', JSON.stringify({ name: 'mono', workspaces: ['packages/*'] }));
+
+  it('does NOT flag file:../sibling deps in a workspaces monorepo', () => {
+    const pkg = file(
+      'packages/a/package.json',
+      JSON.stringify({ name: 'a', dependencies: { '@mono/core': 'file:../core' } })
+    );
+    const f = probePackageJson([wsRoot(), pkg]);
+    expect(f.find((x) => x.title.includes('Non-registry'))).toBeUndefined();
+  });
+
+  it('still flags file: deps when there is no workspaces root', () => {
+    const pkg = file(
+      'package.json',
+      JSON.stringify({ name: 'app', dependencies: { thing: 'file:../somewhere' } })
+    );
+    const f = probePackageJson([pkg]);
+    expect(f.find((x) => x.title.includes('Non-registry'))).toBeDefined();
+  });
+
+  it('still flags git+/http deps in a workspaces monorepo', () => {
+    const pkg = file(
+      'packages/a/package.json',
+      JSON.stringify({ name: 'a', dependencies: { thing: 'git+https://x.example/repo.git' } })
+    );
+    const f = probePackageJson([wsRoot(), pkg]);
+    expect(f.find((x) => x.title.includes('Non-registry'))).toBeDefined();
+  });
+
+  it('does NOT flag entry points under build-output dirs as missing from scan', () => {
+    const pkg = file(
+      'packages/a/package.json',
+      JSON.stringify({ name: 'a', main: 'dist/index.js', scripts: { start: 'node dist/index.js' } })
+    );
+    const f = probePackageJson([pkg]);
+    expect(f.find((x) => x.title.includes('not in the scan set'))).toBeUndefined();
+  });
+
+  it('still flags a source entry point missing from the scan set', () => {
+    const pkg = file(
+      'package.json',
+      JSON.stringify({ name: 'app', scripts: { start: 'node server.js' } })
+    );
+    const f = probePackageJson([pkg]);
+    expect(f.find((x) => x.title.includes('not in the scan set'))).toBeDefined();
+  });
+});
+
 describe('probeEnvFiles', () => {
   it('flags real .env files', () => {
     const f = probeEnvFiles([file('.env', 'X=1')]);
@@ -408,6 +458,34 @@ describe('probeAuthWeakness', () => {
   it('REGRESSION: catches unquoted algorithm: none', () => {
     const f = probeAuthWeakness([file('a.js', `jwt.verify(token, key, { algorithm: none })`)]);
     expect(f.find((x) => x.title.includes('algorithm "none"'))).toBeDefined();
+  });
+
+  // FP triage 2026-07 (gemini-cli-fork scan): 'Basic Controls' (a UI category
+  // title) matched the Basic-auth-header regex because "Controls" is valid
+  // base64 charset. Prose after "Basic" is a single title-case word; base64
+  // of user:pass never is.
+  it("does NOT flag prose like 'Basic Controls' as a Basic auth header", () => {
+    const f = probeAuthWeakness([file('a.js', `const cat = { title: 'Basic Controls' };`)]);
+    expect(f.find((x) => x.title.includes('Basic auth'))).toBeUndefined();
+  });
+
+  it('still flags a real hardcoded Basic auth header', () => {
+    const f = probeAuthWeakness([file('a.js', `headers['Authorization'] = 'Basic dXNlcjpwYXNz';`)]);
+    expect(f.find((x) => x.title.includes('Basic auth'))).toBeDefined();
+  });
+
+  it('does NOT flag comparison against a test/self-check password value', () => {
+    const f = probeAuthWeakness([
+      file('keychain.ts', `return deleted && retrieved === testPassword;`),
+    ]);
+    expect(f.find((x) => x.title.includes('Plaintext password comparison'))).toBeUndefined();
+  });
+
+  it('still flags a real plaintext password comparison', () => {
+    const f = probeAuthWeakness([
+      file('login.js', `if (req.body.password === user.password) { grant(); }`),
+    ]);
+    expect(f.find((x) => x.title.includes('Plaintext password comparison'))).toBeDefined();
   });
 });
 
@@ -660,6 +738,31 @@ jobs:
     const yml = `jobs:\n  a:\n    steps:\n      - uses: actions/checkout@main`;
     const f = probeGitHubActions([file('.github/workflows/ci.yml', yml)]);
     expect(f.find((x) => x.title.includes('mutable ref'))).toBeDefined();
+  });
+
+  // FP triage 2026-07: YAML allows the uses: value to be quoted. A quoted
+  // 40-char SHA pin was failing the hex test (the quote rode along in the
+  // capture) and got misreported as a mutable ref — flagging users for
+  // doing exactly what the remediation tells them to do.
+  it('does NOT flag a single-quoted 40-char SHA pin', () => {
+    const yml = `jobs:\n  a:\n    steps:\n      - uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8'`;
+    const f = probeGitHubActions([file('.github/workflows/ci.yml', yml)]);
+    expect(f.find((x) => x.title.includes('mutable'))).toBeUndefined();
+  });
+
+  it('does NOT flag a double-quoted 40-char SHA pin', () => {
+    const yml = `jobs:\n  a:\n    steps:\n      - uses: "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"`;
+    const f = probeGitHubActions([file('.github/workflows/ci.yml', yml)]);
+    expect(f.find((x) => x.title.includes('mutable'))).toBeUndefined();
+  });
+
+  it('still flags a quoted mutable tag, with clean action/ref names', () => {
+    const yml = `jobs:\n  a:\n    steps:\n      - uses: 'actions/checkout@v4'`;
+    const f = probeGitHubActions([file('.github/workflows/ci.yml', yml)]);
+    const hit = f.find((x) => x.title.includes('mutable tag'));
+    expect(hit).toBeDefined();
+    expect(hit.title).toContain('"actions/checkout"');
+    expect(hit.title).toContain('"v4"');
   });
 });
 
@@ -1617,16 +1720,81 @@ describe('probeCodeQuality', () => {
     expect(f.find((x) => x.title.includes('.then()'))).toBeUndefined();
   });
 
-  it('flags async function with await but no try', () => {
+  // FP triage 2026-07: plain async declarations are no longer flagged — the
+  // caller may correctly handle the rejection. Only fire-and-forget positions
+  // (event listeners, timers, JSX handlers, bare statement calls) fire.
+  it('does NOT flag a plain async function declaration without try/catch', () => {
     const code = `async function go(req) { const x = await fetch('/x'); return x; }`;
     const f = probeCodeQuality([file('src/foo.js', code)]);
-    expect(f.find((x) => x.title.includes('no try'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('try/catch'))).toBeUndefined();
   });
 
-  it('does NOT flag async function with try around await', () => {
-    const code = `async function go(req) { try { const x = await fetch('/x'); return x; } catch (e) { return null; } }`;
+  it('flags an async event-listener callback without try/catch', () => {
+    const code = `window.addEventListener('click', async () => { await save(); });`;
     const f = probeCodeQuality([file('src/foo.js', code)]);
-    expect(f.find((x) => x.title.includes('no try'))).toBeUndefined();
+    expect(f.find((x) => x.title.includes('fire-and-forget position'))).toBeDefined();
+  });
+
+  it('does NOT flag an async event-listener callback that has try/catch', () => {
+    const code = `window.addEventListener('click', async () => { try { await save(); } catch (e) { toast(e); } });`;
+    const f = probeCodeQuality([file('src/foo.js', code)]);
+    expect(f.find((x) => x.title.includes('fire-and-forget position'))).toBeUndefined();
+  });
+
+  it('flags an async setTimeout callback without try/catch', () => {
+    const code = `setTimeout(async () => { await poll(); }, 500);`;
+    const f = probeCodeQuality([file('src/foo.js', code)]);
+    expect(f.find((x) => x.title.includes('fire-and-forget position'))).toBeDefined();
+  });
+
+  it('flags a JSX async on* handler without try/catch', () => {
+    const code = `<button onClick={ async () => { await submitForm(); } }>Go</button>`;
+    const f = probeCodeQuality([file('src/Form.jsx', code)]);
+    expect(f.find((x) => x.title.includes('fire-and-forget position'))).toBeDefined();
+  });
+
+  it('flags a bare statement-position call to a same-file async function', () => {
+    const code = `async function main() { await run(); }\nmain();\n`;
+    const f = probeCodeQuality([file('src/cli.js', code)]);
+    expect(f.find((x) => x.title.includes('fire-and-forget call'))).toBeDefined();
+  });
+
+  it('does NOT flag main().catch(...) or await main()', () => {
+    const code = `async function main() { await run(); }\nmain().catch(console.error);\n`;
+    const f = probeCodeQuality([file('src/cli.js', code)]);
+    expect(f.find((x) => x.title.includes('fire-and-forget call'))).toBeUndefined();
+    const code2 = `async function main() { await run(); }\nawait main();\n`;
+    const f2 = probeCodeQuality([file('src/cli.js', code2)]);
+    expect(f2.find((x) => x.title.includes('fire-and-forget call'))).toBeUndefined();
+  });
+
+  // FP triage 2026-07: CLI/tooling contexts where console output is the
+  // interface, not a leftover.
+  it('does NOT flag console.* in build config files', () => {
+    expect(probeCodeQuality([file('esbuild.config.js', `console.log('built');`)])).toEqual([]);
+  });
+
+  it('does NOT flag console.* in scripts/ or tools/ dirs', () => {
+    expect(probeCodeQuality([file('scripts/release.js', `console.log('x');`)])).toEqual([]);
+    expect(probeCodeQuality([file('tools/gen/emit.js', `console.log('x');`)])).toEqual([]);
+  });
+
+  it('does NOT flag console.* in a shebang script', () => {
+    const code = `#!/usr/bin/env node\nconsole.log('usage: thing');`;
+    expect(probeCodeQuality([file('local_telemetry.js', code)])).toEqual([]);
+  });
+
+  it('does NOT flag console.* in agent-skill script dirs', () => {
+    expect(
+      probeCodeQuality([file('.gemini/skills/pr-triage/scripts/fetch.js', `console.log('x');`)])
+    ).toEqual([]);
+  });
+
+  it('skips compound test dirs entirely (integration-tests/, evals/)', () => {
+    expect(
+      probeCodeQuality([file('integration-tests/hooks.test.ts', `console.log('x');`)])
+    ).toEqual([]);
+    expect(probeCodeQuality([file('evals/calendar.eval.ts', `console.log('x');`)])).toEqual([]);
   });
 });
 

@@ -10,23 +10,29 @@ import {
   FILE_SIZE_HIGH_LINES,
   FILE_SIZE_CRIT_LINES,
 } from '../threat-intel.js';
-import { isScannerSelfSource } from '../file-filter.js';
+import { isScannerSelfSource, isTestFile } from '../file-filter.js';
 
 export function probeCodeQuality(files) {
   const findings = [];
   files.forEach((file) => {
     // Skip test files, lib/logger.js (a logger IS the right place for console mirroring),
     // generated bundles, and config files. We're judging *production source*.
-    if (/(^|\/)(test|tests|__tests__|spec)\//i.test(file.path)) return;
+    if (isTestFile(file.path)) return;
     if (/(^|\/)dist\//i.test(file.path)) return;
-    if (/(^|\/)\.test\.|\.spec\./i.test(file.path)) return;
     if (/(^|\/)logger\.[jt]sx?$/i.test(file.path)) return;
-    if (/(^|\/)vite\.config\./i.test(file.path)) return;
-    if (/(^|\/)vitest\.config\./i.test(file.path)) return;
+    // Build/tool config files and tooling directories: console output there is
+    // normal (build logs, script progress), not shipped production source.
+    // FP triage 2026-07 (gemini-cli-fork scan).
+    if (/\.config\.[mc]?[jt]sx?$/i.test(file.path)) return;
+    if (/(^|\/)(scripts?|tools?|bin)\//i.test(file.path)) return;
+    // Agent-skill script dirs (.gemini/skills/, .claude/commands/, etc.).
+    if (/(^|\/)\.[\w-]+\/(skills?|commands?|hooks?|agents?)\//i.test(file.path)) return;
     if (/(^|\/)setup\.[jt]sx?$/i.test(file.path)) return;
     if (!/\.[jt]sx?$/i.test(file.path)) return;
 
     const content = file.content || '';
+    // Shebang: an executable script. Console output is its interface.
+    if (/^#!/.test(content)) return;
     const lines = content.split('\n');
     // Scanner self-source (breakers.js, threat-intel.js, probes/*, ...)
     // embeds attack/example code as DATA strings by design. The code-shape
@@ -193,15 +199,33 @@ export function probeCodeQuality(files) {
         });
       });
 
-    // --- async function with await but no try/catch wrapping (heuristic — top-level await only)
-    // Find each `async (...) =>` or `async function ...` body; check whether it contains `await`
-    // but no `try {` before the await. Balanced brace scan SKIPS string and regex literals so a
-    // `const x = "}"` or `/\}/` inside the body doesn't terminate parsing early (adversarial finding).
+    // --- unhandled async rejection (fire-and-forget contexts only)
+    // FP triage 2026-07 (gemini-cli-fork scan): the previous version flagged EVERY
+    // async body containing await without try/catch — 9,938 findings on one
+    // 2,273-file monorepo, nearly all wrong, because a helper whose caller wraps
+    // the call in try/catch is correct code. The probe now fires only where a
+    // rejection provably has no handler:
+    //   1. an async callback handed to a fire-and-forget sink (event listener,
+    //      timer, JSX on* handler) whose body lacks try/catch — nothing awaits
+    //      these, so a rejection is unhandled by construction;
+    //   2. a same-file async function invoked bare in statement position with no
+    //      await/void/.catch — the classic `main()` at the bottom of a script.
+    // Balanced brace scan SKIPS string and regex literals so a `const x = "}"`
+    // or `/\}/` inside the body doesn't terminate parsing early (adversarial finding).
     const asyncBodies = [
       ...content.matchAll(/async\s+(?:function\s+\w+\s*\([^)]*\)|\([^)]*\)\s*=>)\s*\{/g),
     ];
     if (!selfSource)
       asyncBodies.forEach((m) => {
+        // Only async callbacks in fire-and-forget position. A plain async
+        // function declaration is NOT flagged: its caller may (correctly)
+        // handle the rejection.
+        const pre = content.slice(Math.max(0, m.index - 80), m.index);
+        const fireAndForget =
+          /(?:addEventListener\s*\(\s*['"][\w:-]+['"]\s*,\s*|setTimeout\s*\(\s*|setInterval\s*\(\s*|setImmediate\s*\(\s*|on[A-Z]\w*\s*=\s*\{\s*)$/.test(
+            pre
+          );
+        if (!fireAndForget) return;
         let depth = 1;
         let i = m.index + m[0].length;
         let inSingle = false,
@@ -272,7 +296,7 @@ export function probeCodeQuality(files) {
           findings.push({
             id: `cq-async-no-try-${file.path}-${m.index}`,
             probe: 'Code Quality',
-            title: 'async function uses await with no try/catch in body',
+            title: 'async callback in fire-and-forget position with no try/catch',
             severity: 'low',
             category: 'Misconfiguration',
             cwe: 'CWE-755',
@@ -280,10 +304,39 @@ export function probeCodeQuality(files) {
             line: ln,
             evidence: m[0].slice(0, 120),
             remediation:
-              'Wrap your awaits in try/catch and decide whether to surface errors to the UI, log them, or rethrow with context. A naked await that rejects becomes an unhandled rejection in the browser console and the calling code gets a Promise<rejected> instead of a value.',
+              'Nothing awaits an async callback passed to an event listener, timer, or JSX handler, so a rejection inside it has no handler: it surfaces as an unhandled rejection in the console (and can kill a Node process). Wrap the body in try/catch and decide whether to surface the error to the UI, log it, or retry.',
           });
         }
       });
+
+    // Same-file async function invoked bare in statement position — `main();`
+    // with no await/void/.catch. try/catch around the call site does NOT help:
+    // a synchronous try cannot catch an un-awaited promise rejection.
+    if (!selfSource) {
+      const asyncNames = new Set();
+      for (const dm of content.matchAll(/\basync\s+function\s+(\w+)/g)) asyncNames.add(dm[1]);
+      for (const dm of content.matchAll(/\b(?:const|let|var)\s+(\w+)\s*=\s*async\b/g))
+        asyncNames.add(dm[1]);
+      if (asyncNames.size) {
+        content.split('\n').forEach((lineText, idx) => {
+          if (/^\s*(?:\/\/|\*|\/\*)/.test(lineText)) return; // comment line
+          const call = lineText.match(/^\s*(\w+)\s*\([^)]*\)\s*;?\s*$/);
+          if (!call || !asyncNames.has(call[1])) return;
+          findings.push({
+            id: `cq-async-fire-forget-${file.path}-${idx + 1}`,
+            probe: 'Code Quality',
+            title: `fire-and-forget call to async function "${call[1]}" — rejection unhandled`,
+            severity: 'low',
+            category: 'Misconfiguration',
+            cwe: 'CWE-755',
+            file: file.path,
+            line: idx + 1,
+            evidence: lineText.trim().slice(0, 120),
+            remediation: `${call[1]}() is async but nothing consumes its promise. If it rejects, the error is unhandled (newer Node versions crash the process). Append .catch() to the call, await it inside an async context, or mark the intent explicit with void ${call[1]}() plus internal error handling.`,
+          });
+        });
+      }
+    }
   });
   return findings;
 }

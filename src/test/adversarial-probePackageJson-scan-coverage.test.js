@@ -52,12 +52,26 @@ describe('emailassist gap — package.json entry not in scan set', () => {
 
   it('main field referenced + file absent -> fires', () => {
     const findings = probePackageJson([
-      f('package.json', JSON.stringify({ name: 'lib', main: 'dist/index.js' })),
+      f('package.json', JSON.stringify({ name: 'lib', main: 'src/index.js' })),
     ]);
     const coverageFinding = findings.find((x) =>
       /Entry point referenced in package\.json/.test(x.title)
     );
     expect(coverageFinding).toBeTruthy();
+  });
+
+  // FP triage 2026-07 (gemini-cli-fork scan): build-output refs (dist/,
+  // build/, out/) point at generated artifacts that are correctly absent
+  // from a source scan. Their absence is not a coverage gap — the compiled
+  // TS monorepo pattern is `"main": "dist/index.js"` in every package.
+  it('main field pointing at build output (dist/) -> does NOT fire', () => {
+    const findings = probePackageJson([
+      f('package.json', JSON.stringify({ name: 'lib', main: 'dist/index.js' })),
+    ]);
+    const coverageFinding = findings.find((x) =>
+      /Entry point referenced in package\.json/.test(x.title)
+    );
+    expect(coverageFinding).toBeFalsy();
   });
 
   it('TypeScript entry via ts-node -> fires', () => {

@@ -126,6 +126,24 @@ describe('probeSecurityLogging', () => {
     expect(f).toEqual([]);
   });
 
+  // FP triage 2026-07: audit logging is a server-side control. A CLI's auth
+  // config matching the path heuristic is not a missing-audit-log finding.
+  it('does NOT flag an auth-named file with no server handler in it', () => {
+    const f = probeSecurityLogging([
+      file(
+        'packages/cli/src/config/auth.ts',
+        `
+        export const AUTH_MODES = ['oauth', 'api-key'];
+        export function resolveAuthMode(settings) {
+          if (settings.apiKey) return 'api-key';
+          return 'oauth';
+        }
+      `
+      ),
+    ]);
+    expect(f).toEqual([]);
+  });
+
   it('flags a DELETE handler with no logging even outside auth paths', () => {
     const f = probeSecurityLogging([
       file(
