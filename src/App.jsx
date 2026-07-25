@@ -244,6 +244,7 @@ function lazyNamed(loader, name) {
       })
   );
 }
+const SandboxView = lazyNamed(() => import('./components/sandbox/SandboxView.jsx'), 'SandboxView');
 const LearnPage = lazyNamed(() => import('./components/learn/LearnPage.jsx'), 'LearnPage');
 const ManifestoView = lazyNamed(
   () => import('./components/learn/ManifestoView.jsx'),
@@ -1000,6 +1001,7 @@ export default function App() {
               <Route path="diagnostics" element={<DiagnosticsTab />} />
               <Route path="about" element={<AboutTab />} />
             </Route>
+            <Route path="/sandbox" element={<SandboxView />} />
             <Route path="/privacy" element={<PrivacyView />} />
             <Route path="/terms" element={<TermsView />} />
             <Route path="*" element={<NotFoundView />} />

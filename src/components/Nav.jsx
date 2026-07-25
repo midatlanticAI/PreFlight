@@ -11,11 +11,12 @@
 //     padding tightens but labels never disappear (mystery-meat icon nav fails 3.2.3).
 
 import { NavLink } from 'react-router-dom';
-import { ShieldCheck, BookOpen, Settings as SettingsIcon } from 'lucide-react';
+import { ShieldCheck, Code, BookOpen, Settings as SettingsIcon } from 'lucide-react';
 import { T, fontUI } from '../lib/theme.js';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Audit', icon: ShieldCheck, end: true },
+  { to: '/sandbox', label: 'Sandbox', icon: Code, end: false },
   { to: '/learn', label: 'Learn', icon: BookOpen, end: false },
   { to: '/settings', label: 'Settings', icon: SettingsIcon, end: false },
 ];
