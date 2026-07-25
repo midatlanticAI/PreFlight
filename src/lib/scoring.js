@@ -29,9 +29,34 @@ export const SEV_BAND_CAP = {
   info: 5,
 };
 
+// Categories that describe code health rather than security exposure. These
+// are reported, and they are not scored.
+//
+// Real-scan finding 2026-07: a private cockpit with zero critical and zero
+// high findings scored 53 and read as MODERATE RISK. 47 of its 78 mediums
+// were cyclomatic-complexity opinions from the AI Codegen Bloat family, which
+// is already exempt from OWASP mapping precisely because it is maintainability
+// rather than security. A security score dragged to its floor by opinions
+// about function shape is measuring the wrong thing, and it tells someone who
+// has fixed every real defect that they are still at moderate risk.
+//
+// The honest split: security findings move the score, maintainability findings
+// are advisory. isAdvisoryFinding is exported so the UI can show the count
+// separately instead of silently dropping it.
+const ADVISORY_CATEGORIES = new Set(['Maintainability']);
+
+export function isAdvisoryFinding(finding) {
+  return ADVISORY_CATEGORIES.has(finding?.category);
+}
+
+export function countAdvisoryFindings(findings) {
+  return (findings || []).filter(isAdvisoryFinding).length;
+}
+
 export function computeScore(findings) {
   const perBand = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-  findings.forEach((f) => {
+  (findings || []).forEach((f) => {
+    if (isAdvisoryFinding(f)) return;
     const w = SEV_WEIGHT[f.severity];
     if (w) perBand[f.severity] += w;
   });
