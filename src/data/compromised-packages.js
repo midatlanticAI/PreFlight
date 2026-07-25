@@ -7,12 +7,12 @@
 // `with { type: "json" }` attribute that not all toolchains parse yet.
 //
 // Schema: { [package-name]: { versions: string[], note: string } }
-//  array entries match exactly, by prefix, or use "*" for any version.
+//  array entries match exact resolved versions, or use "*" for any version.
 
 export default {
   _schema: 'preflight/compromised-packages/v1',
   _note:
-    "Threat-intel manifest. Each key is an npm package name. `versions` is an array of malicious version strings (exact match, prefix match, or '*' = any). `note` cites the campaign / source. Update when new incidents are published.",
+    "Threat-intel manifest. Each key is an npm package name. `versions` is an array of malicious version strings (exact match or '*' = any). `note` cites the campaign / source. Update when new incidents are published.",
   _lastReviewed: '2026-05-12',
 
   axios: {
@@ -35,11 +35,11 @@ export default {
   },
   '@cap-js/sqlite': {
     versions: ['*'],
-    note: 'SAP CAP toolchain; Mini Shai-Hulud — review version against Socket advisory',
+    note: 'SAP CAP toolchain; Mini Shai-Hulud — flagged by independent tracking; treat all versions as suspect',
   },
   '@cap-js/db-service': {
     versions: ['*'],
-    note: 'SAP CAP toolchain; Mini Shai-Hulud — review version against Socket advisory',
+    note: 'SAP CAP toolchain; Mini Shai-Hulud — flagged by independent tracking; treat all versions as suspect',
   },
 
   lightning: {

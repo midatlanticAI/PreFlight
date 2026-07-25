@@ -123,43 +123,320 @@ export function probePackageJson(files) {
   return findings;
 }
 
+// --- 2026: Known compromised package versions ---
+//
+// Depth round 5 (latent bug fix per reviewer): the old probe had two latent
+// bugs that silenced real npm worm threats:
+//
+//   1. LOCKFILE BLIND SPOT. The probe only read direct dependencies in
+//      package.json. Modern npm worms (the May 2026 Mini Shai-Hulud
+//      TanStack wave, the May 2025 Sapphire Sleet axios wave) ALWAYS ship
+//      through the lockfile — a clean package.json pinning "axios": "^1.0.0"
+//      resolves through package-lock.json to axios@1.14.1 (the compromised
+//      version). The probe missed every transitive hit.
+//   2. INVERTED SEMVER. The check was
+//        versionStr.replace(/^[\^~>=<]+/, '').startsWith(v)
+//      which asks "does the input start with the bad version" — backward.
+//      "^1.14" became "1.14", which starts with "1.14.1"? Nope, false. So
+//      ranges silently passed even when they contained the bad version.
+//
+// Both fixed below. Lockfile parsers for npm v7+, yarn, pnpm v9, and
+// bun.lock (text). SemVer-aware comparison that handles ^/~/range/x.
+//
+// Helper: SemVer comparison. Minimal — handles the cases real lockfiles
+// produce. Returns true if `spec` (a SemVer range string) intersects `bad`
+// (a concrete version).
+function semverRangeIncludes(spec, bad) {
+  if (!spec || !bad) return false;
+  spec = String(spec).trim();
+  if (spec === '*' || spec === '') return true; // unbounded
+  if (spec === 'latest' || spec === 'next') return true; // dist-tag, could resolve to bad
+  // Exact match.
+  if (spec === bad) return true;
+  // Caret: ^1.14.0 means >=1.14.0 <2.0.0 (for x>=1) or >=0.14.0 <0.15.0 (for x=0).
+  if (spec.startsWith('^')) {
+    const base = spec.slice(1);
+    return _withinCaret(base, bad);
+  }
+  // Tilde: ~1.14.0 means >=1.14.0 <1.15.0.
+  if (spec.startsWith('~')) {
+    const base = spec.slice(1);
+    return _withinTilde(base, bad);
+  }
+  // x.x.x / 1.x / 1.14.x — wildcard at any position.
+  if (/[xX*]/.test(spec)) {
+    const re = new RegExp(
+      '^' +
+        spec
+          .split('.')
+          .map((p) => (/[xX*]/.test(p) ? '\\d+' : p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+          .join('\\.') +
+        '($|[.\\-])'
+    );
+    return re.test(bad);
+  }
+  // Bounded range "a b" / "a || b" / ">=a <b".
+  if (/\s/.test(spec) || spec.includes('||')) {
+    // Split on || first.
+    for (const clause of spec.split('||')) {
+      const comparators = clause.trim().split(/\s+/);
+      let inAll = true;
+      for (const cmp of comparators) {
+        if (!_satisfies(cmp, bad)) {
+          inAll = false;
+          break;
+        }
+      }
+      if (inAll) return true;
+    }
+    return false;
+  }
+  // Single comparator (e.g. >=1.14.0).
+  return _satisfies(spec, bad);
+}
+
+function _parseVer(v) {
+  const clean = String(v).replace(/^v/, '').split('-')[0].split('+')[0];
+  const [maj = 0, min = 0, pat = 0] = clean.split('.').map((n) => parseInt(n, 10) || 0);
+  return [maj, min, pat];
+}
+function _cmp(a, b) {
+  const [aM, am, ap] = _parseVer(a);
+  const [bM, bm, bp] = _parseVer(b);
+  if (aM !== bM) return aM - bM;
+  if (am !== bm) return am - bm;
+  return ap - bp;
+}
+function _withinCaret(base, bad) {
+  const [bM, bm] = _parseVer(base);
+  const [vM, vm] = _parseVer(bad);
+  if (_cmp(bad, base) < 0) return false;
+  if (bM === 0 && bm === 0) return vM === 0 && vm === 0;
+  if (bM === 0) return vM === 0 && vm === bm;
+  return vM === bM;
+}
+function _withinTilde(base, bad) {
+  const [bM, bm] = _parseVer(base);
+  const [vM, vm] = _parseVer(bad);
+  if (_cmp(bad, base) < 0) return false;
+  return vM === bM && vm === bm;
+}
+function _satisfies(comparator, bad) {
+  const m = comparator.match(/^([<>]=?|=)\s*(\S+)$/);
+  if (!m) return comparator === bad;
+  const [, op, ver] = m;
+  const c = _cmp(bad, ver);
+  if (op === '=') return c === 0;
+  if (op === '<') return c < 0;
+  if (op === '<=') return c <= 0;
+  if (op === '>') return c > 0;
+  if (op === '>=') return c >= 0;
+  return false;
+}
+
+// True if a known-compromised entry matches a concrete resolved version.
+function _isCompromisedVersion(known, version) {
+  if (!known) return false;
+  if (known.versions.includes('*')) return true;
+  return known.versions.some((v) => v === version || _cmp(v, version) === 0);
+}
+
+// Parse package-lock.json (npm v7+). Returns iterable of {name, version, chain}.
+function* _walkNpmLock(content) {
+  let pkg;
+  try {
+    pkg = JSON.parse(content);
+  } catch {
+    return;
+  }
+  if (pkg.packages) {
+    // npm v7+ format: keys like "node_modules/axios" or
+    // "node_modules/foo/node_modules/axios".
+    for (const [key, entry] of Object.entries(pkg.packages)) {
+      if (!key.startsWith('node_modules/')) continue;
+      const segments = key.split('node_modules/').filter(Boolean);
+      const name = segments[segments.length - 1].replace(/\/$/, '');
+      const chain =
+        segments
+          .slice(0, -1)
+          .map((s) => s.replace(/\/$/, ''))
+          .join(' > ') || 'root';
+      yield { name, version: entry.version, chain };
+    }
+  } else if (pkg.dependencies) {
+    // Legacy v1/v2 — recursive walker (named generator so `yield` is legal).
+    function* walk(deps, parents) {
+      for (const [name, entry] of Object.entries(deps)) {
+        yield { name, version: entry.version, chain: parents.join(' > ') || 'root' };
+        if (entry.dependencies) yield* walk(entry.dependencies, [...parents, name]);
+      }
+    }
+    yield* walk(pkg.dependencies, []);
+  }
+}
+
+// Parse yarn.lock (v1 + v2 berry). Returns iterable of {name, version}.
+function* _walkYarnLock(content) {
+  // yarn.lock entries look like:
+  //   "@scope/pkg@^1.0.0", "@scope/pkg@^1.1.0":
+  //     version "1.2.3"
+  // The keys are comma-separated, the version line follows.
+  const lines = content.split('\n');
+  let currentKeys = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^[^\s#]/.test(line) && line.includes('@')) {
+      // Header line.
+      currentKeys = line
+        .trim()
+        .replace(/:$/, '')
+        .split(/,\s*/)
+        .map((k) => k.replace(/^["']|["']$/g, ''));
+    } else if (currentKeys.length && /^\s+version\b/.test(line)) {
+      const m = line.match(/version\s+["']?([^"']+)["']?/);
+      if (m) {
+        for (const key of currentKeys) {
+          // Extract name from key like "@scope/pkg@^1.0.0" or "pkg@^1.0.0".
+          const atIdx = key.lastIndexOf('@');
+          if (atIdx <= 0) continue;
+          const name = key.slice(0, atIdx);
+          yield { name, version: m[1], chain: 'lockfile' };
+        }
+        currentKeys = [];
+      }
+    }
+  }
+}
+
+// Parse pnpm-lock.yaml (v9+). Keys like "/@scope/pkg@1.2.3(react@18.2.0)" or
+// "/pkg@1.2.3".
+function* _walkPnpmLock(content) {
+  const lines = content.split('\n');
+  for (const line of lines) {
+    // Look for keys at any indent that match a pnpm pkg path.
+    const m = line.match(/^\s+(['"]?)(\/@?[\w\-./]+@[^()\s'"]+)\1\s*:/);
+    if (!m) continue;
+    const key = m[2];
+    const slash = key.startsWith('/') ? key.slice(1) : key;
+    const atIdx = slash.lastIndexOf('@');
+    if (atIdx <= 0) continue;
+    const name = slash.slice(0, atIdx);
+    const version = slash.slice(atIdx + 1);
+    yield { name, version, chain: 'lockfile' };
+  }
+}
+
+// Parse bun.lock (text format, ~yarn-ish).
+function* _walkBunLock(content) {
+  // bun.lock looks similar to yarn.lock for parsing purposes.
+  yield* _walkYarnLock(content);
+}
+
 export function probeCompromisedPackages(files) {
   const findings = [];
+  const seenFindings = new Set();
+  const emit = (name, version, chain, file, isTransitive, spec) => {
+    const known = COMPROMISED_PACKAGES[name];
+    if (!known) return;
+    if (!_isCompromisedVersion(known, version)) return;
+    const key = `${name}@${version}-${file.path}`;
+    if (seenFindings.has(key)) return;
+    seenFindings.add(key);
+    findings.push({
+      id: `compromised-${file.path}-${name}-${version}`,
+      probe: 'Compromised Packages',
+      title: isTransitive
+        ? `Known-compromised package: ${name}@${version} (transitive via ${chain})`
+        : `Known-compromised package: ${name}@${version}`,
+      severity: 'critical',
+      category: 'Supply Chain',
+      cwe: 'CWE-506',
+      file: file.path,
+      line: 1,
+      evidence: spec
+        ? `${name}: ${spec} (resolved ${version}) — ${known.note}`
+        : `${name}@${version} — ${known.note}`,
+      remediation: `Confirmed malicious version per public threat intel. Remove or downgrade immediately, then rotate every secret accessible to your build environment (CI tokens, npm tokens, cloud creds). Audit the dependency chain in the lockfile. Review CISA / GHSA / vendor advisories for the specific incident.`,
+    });
+  };
+  // Floating-spec warning: if a direct dep uses `latest`/`*`/`x`/empty range
+  // AND the named package has a known-bad version, flag at HIGH (could
+  // resolve to compromised).
+  const emitFloating = (name, version, file) => {
+    const known = COMPROMISED_PACKAGES[name];
+    if (!known) return;
+    findings.push({
+      id: `compromised-floating-${file.path}-${name}`,
+      probe: 'Compromised Packages',
+      title: `Floating version spec on package with known-compromised release: ${name}: "${version}"`,
+      severity: 'high',
+      category: 'Supply Chain',
+      cwe: 'CWE-1357',
+      file: file.path,
+      line: 1,
+      evidence: `"${name}": "${version}" — package has a known-compromised version on the wire; floating specs could resolve to it on any install`,
+      remediation: `Pin to a specific safe version of ${name} (avoid 'latest', '*', empty range, or x-wildcards). Also commit a lockfile to prevent silent resolution to the compromised version.`,
+    });
+  };
+
   files.forEach((file) => {
-    if (!/package\.json$/.test(file.path)) return;
-    let pkg;
-    try {
-      pkg = JSON.parse(file.content);
-    } catch {
+    // 1) Direct deps from package.json with SemVer-aware comparison.
+    if (/package\.json$/.test(file.path)) {
+      let pkg;
+      try {
+        pkg = JSON.parse(file.content);
+      } catch {
+        return;
+      }
+      const deps = {
+        ...(pkg.dependencies || {}),
+        ...(pkg.devDependencies || {}),
+        ...(pkg.peerDependencies || {}),
+        ...(pkg.optionalDependencies || {}),
+        ...(pkg.bundleDependencies || {}),
+        ...(pkg.bundledDependencies || {}),
+        ...(pkg.overrides || {}),
+        ...(pkg.resolutions || {}),
+      };
+      Object.entries(deps).forEach(([name, version]) => {
+        const known = COMPROMISED_PACKAGES[name];
+        if (!known) return;
+        const versionStr = String(version);
+        // Entries marked versions: ['*'] are compromised at every version;
+        // any spec, pinned or floating, resolves to a bad release. Emit
+        // critical directly (the floating downgrade below is for packages
+        // where only SOME versions are bad).
+        if (known.versions.includes('*')) {
+          emit(name, versionStr || '*', 'root (direct)', file, false, null);
+          return;
+        }
+        // Floating spec: warn even without a concrete bad version match.
+        if (/^(?:latest|next|\*|)$/.test(versionStr.trim())) {
+          emitFloating(name, versionStr, file);
+          return;
+        }
+        // SemVer-aware: does the spec's range include any known bad version?
+        const hit = known.versions.find((bad) => semverRangeIncludes(versionStr, bad));
+        if (hit) emit(name, hit, 'root (direct)', file, false, versionStr);
+      });
       return;
     }
-    const deps = {
-      ...(pkg.dependencies || {}),
-      ...(pkg.devDependencies || {}),
-      ...(pkg.peerDependencies || {}),
-    };
-    Object.entries(deps).forEach(([name, version]) => {
-      const known = COMPROMISED_PACKAGES[name];
-      if (!known) return;
-      const versionStr = String(version).replace(/^[\^~>=<]+/, '');
-      const matches =
-        known.versions.includes('*') ||
-        known.versions.some((v) => versionStr === v || versionStr.startsWith(v));
-      if (matches) {
-        findings.push({
-          id: `compromised-${file.path}-${name}`,
-          probe: 'Compromised Packages',
-          title: `Known-compromised package: ${name}@${versionStr}`,
-          severity: 'critical',
-          category: 'Supply Chain',
-          cwe: 'CWE-506',
-          file: file.path,
-          line: 1,
-          evidence: `"${name}": "${version}"  — ${known.note}`,
-          remediation: `Confirmed malicious version per public threat intel (May 2026). Remove or downgrade immediately, then rotate every secret accessible to your build environment (CI tokens, npm tokens, cloud creds). Audit lockfile for the dependency chain. Review CISA / Socket / Wiz advisories for the specific incident.`,
-        });
-      }
-    });
+    // 2) Lockfile walkers — resolve transitive hits.
+    let walker = null;
+    if (
+      /(^|\/)package-lock\.json$/.test(file.path) ||
+      /(^|\/)npm-shrinkwrap\.json$/.test(file.path)
+    )
+      walker = _walkNpmLock;
+    else if (/(^|\/)yarn\.lock$/.test(file.path)) walker = _walkYarnLock;
+    else if (/(^|\/)pnpm-lock\.yaml$/.test(file.path)) walker = _walkPnpmLock;
+    else if (/(^|\/)bun\.lock$/.test(file.path)) walker = _walkBunLock;
+    if (!walker) return;
+    for (const entry of walker(file.content)) {
+      if (!entry?.name || !entry?.version) continue;
+      const isTransitive = entry.chain !== 'root';
+      emit(entry.name, entry.version, entry.chain, file, isTransitive, null);
+    }
   });
   return findings;
 }
