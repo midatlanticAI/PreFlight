@@ -2,10 +2,12 @@
 // indirectly, but explicit tests guard against regressions where the predicates silently
 // stop covering paths we expect them to skip.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   isTestFile,
   isScannerSelfSource,
+  setSelfScanMode,
+  isSelfScanMode,
   isMetaDocFile,
   isEnvTemplateFile,
   shouldScanFile,
@@ -87,7 +89,14 @@ describe('isTestFile', () => {
   });
 });
 
-describe('isScannerSelfSource', () => {
+// The scanner-self-source exclusions are identity-based as of 2026-07: they
+// apply only when a scan declares itself to be PreFlight scanning PreFlight.
+// The block below asserts the exclusion list; the block after it asserts the
+// default, which is the part that protects users.
+describe('isScannerSelfSource (self-scan mode ON)', () => {
+  beforeEach(() => setSelfScanMode(true));
+  afterEach(() => setSelfScanMode(false));
+
   it('matches the main probes.js entry', () => {
     expect(isScannerSelfSource('src/lib/probes.js')).toBe(true);
     expect(isScannerSelfSource('src/lib/probes.jsx')).toBe(true);
@@ -213,5 +222,40 @@ describe('FILE_INCLUDE / FILE_EXCLUDE shapes', () => {
 
   it('FILE_INCLUDE is non-empty (probes need targets)', () => {
     expect(FILE_INCLUDE.length).toBeGreaterThan(10);
+  });
+});
+
+// --- The user-facing guarantee this refactor exists to create ---------------
+//
+// Before 2026-07 the exclusions were applied on path alone, to every scan. A
+// user whose project happened to contain src/components/settings/, src/learn/,
+// src/lib/probes/ or a built dist/ had those files silently skipped by every
+// pattern-matching probe, including the Secret Scanner and Auth Weakness. A
+// settings directory is where API keys and auth config live, so this was a
+// false negative in one of the highest-value places in a typical app.
+describe('isScannerSelfSource defaults OFF so user scans are never blinded', () => {
+  it('does not skip any scanner-shaped path when self-scan mode is off', () => {
+    for (const p of [
+      'src/lib/probes.js',
+      'src/lib/probes/supply-chain.js',
+      'src/lib/threat-intel.js',
+      'src/lib/file-filter.js',
+      'src/lib/stable-id.js',
+      'src/lib/breakers.js',
+      'src/learn/onboarding.js',
+      'src/components/learn/Course.jsx',
+      'src/components/settings/Account.jsx',
+      'dist/app.js',
+    ]) {
+      expect(isScannerSelfSource(p)).toBe(false);
+    }
+  });
+
+  it('reports its own mode', () => {
+    expect(isSelfScanMode()).toBe(false);
+    setSelfScanMode(true);
+    expect(isSelfScanMode()).toBe(true);
+    setSelfScanMode(false);
+    expect(isSelfScanMode()).toBe(false);
   });
 });

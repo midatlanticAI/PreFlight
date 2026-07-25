@@ -21,7 +21,7 @@
 // in a webapp is the exact failure mode XSS / injection prevention exists
 // to defeat. PreFlight's founding principle: dogfood-as-CI-gate.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -30,7 +30,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import { BREAKERS } from '../lib/breakers.js';
 import { BreakersPanel } from '../components/BreakersPanel.jsx';
-import { isScannerSelfSource } from '../lib/file-filter.js';
+import { isScannerSelfSource, setSelfScanMode } from '../lib/file-filter.js';
 import { PROBES } from '../lib/probes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -47,6 +47,11 @@ const BREAKERS_PANEL_SOURCE = readFileSync(BREAKERS_PANEL_PATH, 'utf8');
 // must skip the catalogue file via isScannerSelfSource.
 
 describe('Breakers dogfood coverage', () => {
+  // The catalogue is excluded only during a self-scan; that is what the
+  // dogfood run declares. See file-filter.js.
+  beforeEach(() => setSelfScanMode(true));
+  afterEach(() => setSelfScanMode(false));
+
   it('src/lib/breakers.js is excluded by isScannerSelfSource', () => {
     expect(isScannerSelfSource('src/lib/breakers.js')).toBe(true);
   });

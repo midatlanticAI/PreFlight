@@ -6,12 +6,20 @@ import { join, relative } from 'node:path';
 // Import probes from the pure module rather than through the React tree, so this
 // node-fs test doesn't drag jsdom + React loading for no reason (adversarial finding).
 import {
+  PROBES,
   probeSEOHygiene,
   probeGEOHygiene,
   probeA11yLandmarks,
   probeCodeQuality,
   probeSecrets,
 } from '../lib/probes.js';
+import { shouldScanFile, setSelfScanMode } from '../lib/file-filter.js';
+
+// This IS PreFlight scanning PreFlight, so the scanner-self-source exclusions
+// apply. They are off by default now (they used to leak into user scans and
+// silently skip any project with a src/components/settings/ directory), so the
+// dogfood run has to declare itself.
+setSelfScanMode(true);
 
 const ROOT = process.cwd();
 // Scan everything that ships AND the JSX source — schema-visibility check needs to see
@@ -153,5 +161,54 @@ describe('self-audit: our own dist/ should pass our own probes', () => {
       );
     }
     expect(real).toEqual([]);
+  });
+
+  // --- The actual founding-principle gate ---------------------------------
+  //
+  // Until 2026-07 this file imported five probes and the "dogfood 6/6" badge
+  // meant those five passed. The full-probe run lived in dogfood-scan.test.js
+  // and deliberately asserted nothing ("never fail"), so 95 of 100 probes
+  // could have been finding critical issues in our own shipped code and CI
+  // would have stayed green. That is not what "PreFlight has to pass its own
+  // audit" means to anyone reading it.
+  //
+  // This runs every registered probe over our own tree, through the same file
+  // filter the browser uses, and fails on any critical or high finding.
+  it('every registered probe finds nothing critical or high in our own tree', () => {
+    const scanSet = files.filter((f) => shouldScanFile(f.path));
+    expect(scanSet.length).toBeGreaterThan(50);
+
+    const all = [];
+    const crashed = [];
+    for (const probe of PROBES) {
+      try {
+        all.push(...probe.fn(scanSet));
+      } catch (e) {
+        crashed.push(`${probe.name}: ${e?.message}`);
+      }
+    }
+    // A probe that throws is a probe that silently stops protecting anyone.
+    expect(crashed).toEqual([]);
+
+    const blocking = all.filter((f) => f.severity === 'critical' || f.severity === 'high');
+    if (blocking.length > 0) {
+      console.log(
+        'Blocking self-audit findings:',
+        blocking.map((f) => ({
+          probe: f.probe,
+          severity: f.severity,
+          file: f.file,
+          line: f.line,
+          title: f.title,
+        }))
+      );
+    }
+    expect(blocking).toEqual([]);
+  });
+
+  it('runs the whole registry, not a hand-picked subset', () => {
+    // Guards the regression this section was written to close: if someone
+    // narrows the gate back down to a few probes, this fails.
+    expect(PROBES.length).toBeGreaterThanOrEqual(100);
   });
 });

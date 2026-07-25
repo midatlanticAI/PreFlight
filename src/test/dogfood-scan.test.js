@@ -9,6 +9,12 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { PROBES, attachStableIds, attachProbeMeta } from '../lib/probes.js';
+import { setSelfScanMode } from '../lib/file-filter.js';
+
+// PreFlight scanning PreFlight. The self-source exclusions are identity-based
+// now and off by default, so this run declares itself the same way the
+// self-audit gate does.
+setSelfScanMode(true);
 
 const ROOT = process.cwd();
 // Include `.preflight.yml` so the dogfood scan mirrors what the browser sees when it scans this
