@@ -6,6 +6,30 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-07-25 — v2 foundation, precision pass, intel review
+
+**Probes added**
+
+- **v2 F0: cross-cutting context detectors** (`src/lib/probes/v2/context.js`). The routing layer the v2 spec builds every family on: `detectFrameworks` (React/Vue/Svelte/Next/Astro/Solid from dependencies, config files, and source extensions, with meta-frameworks implying and outranking their UI library), `detectHost` (Lovable/Bolt/v0/Replit/Windsurf/Cursor plus the agent CLIs, generator outranking editor when both are present), `getHookContextRanges`/`hookContextAt` (where React hooks rules apply, resolved the way eslint-plugin-react-hooks does it, innermost range winning), and `getAsyncContextRanges` (async bodies plus `forEach(async …)` hazards). Shared `parseModule` helper on the existing acorn stack; the spec's SWC/CodeMirror stack stays deferred until live-typing latency needs it.
+- **Host Detection probe.** One info finding naming the detected build tool with its trigger signals in the evidence, so downstream copy routing is inspectable. Same transparency contract as the Architecture classifier.
+- **v2 F7: AI Codegen Bloat** (`src/lib/probes/v2/bloat.js`), the family the spec calls the novel surface because no existing linter row covers it. Detects backup and variant files left in the tree, runs of commented-out code, assistant narration in comments, functions over 100 lines, cyclomatic complexity over 10, pass-through wrappers, dead imports, over-large import lists, repeated magic strings, unjustified `eslint-disable`, and untracked `TODO`/`FIXME`. Severity ceiling is medium by design: these are not exploits, they mark the spans nobody read. Two roster entries were deliberately not built, and the reasons are in the module header: generic-name pollution is declined by the spec's own false-positive reasoning, and file length plus stray `console` calls already belong to the Code Quality probe.
+- Learn pattern page `ai-codegen-bloat`, and field report `unconfirmed-npm-window-2026-07`.
+
+**Probes hardened**
+
+- **`probeCompromisedPackages` depth pass.** Lockfiles are now walked (npm v7+ and legacy v1, yarn, pnpm v9, bun 1.2+ JSON) so transitive hits are caught, and the lockfile is treated as ground truth: a range that merely contains a bad version no longer fires when a scanned lockfile resolves the package safely, while exact pins of bad versions always fire. Replaced an inverted `startsWith` comparison with real SemVer range matching across caret, tilde, wildcard, comparator and `||` forms. Fixed an all-versions regression found during the port.
+- **Precision pass against a 2,273-file monorepo**, which took that scan from **10,409 findings to 115**. Eight probe-level repairs, no suppressions: the async check was rescoped from "every async body without try/catch" (9,938 wrong findings) to fire-and-forget positions only; the GitHub Actions pinning check was mis-parsing quoted 40-character SHA pins as mutable refs (177 findings scolding correct behaviour); `isTestFile` learned compound directory names (`integration-tests/`, `test-fixtures/`, `evals/`); console checks now skip CLI and tooling contexts; audit-logging findings require server-handler evidence rather than an auth-ish filename; workspace `file:` links and `dist/` entry points are understood; and two Auth Weakness false positives were closed.
+- **Adversarial contextless round.** Six isolation-constrained agents wrote 345 tests against four probes without reading any implementation. Outcome: per-occurrence line-anchored empty-catch findings, comment/string masking on the async checks so quoted trigger shapes cannot fire, sync-shadow suppression, `$`-anchored host marker files, and the lockfile-ground-truth rule above. Six remaining failures were adjudicated as policy calls and are skipped with their reasoning inline.
+
+**Threat intel**
+
+- Manifest review for the 2026-05-12 → 2026-07-25 window. Three entries added, each read off a primary advisory: `echarts-for-react` 3.1.7/3.2.7, `supabase-javascript` 2.98.3, `mcp-server-github` 0.0.1/0.0.2. Review date bumped to 2026-07-25.
+- A researched intel package proposed far more than that and two of its claims were disproved before import: a wave-wide `0.10.1` marker version across the TanStack packages that the authoritative advisory does not list, and a coverage gap that a programmatic diff disproved (42 packages for 42, exact). Full record, including what remains unverified and the reproducible method, is in `docs/threat-intel-review-2026-07.md`.
+
+**Docs**
+
+- `docs/adversarial-test-agent-prompts.md` isolation list refreshed for the post-split probe layout; it predated the family split and the `v2/` directory, so agents could legally have read the implementations they were testing.
+
 ### Added
 
 - Reusable `ScrollableTabs` component (`src/components/ScrollableTabs.jsx`) — horizontal-scroll tab strip with hidden scrollbar, edge-fade gradients that appear/disappear based on actual scroll position, and active-tab auto-scroll-to-centre on route change.

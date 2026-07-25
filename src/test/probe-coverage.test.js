@@ -154,13 +154,16 @@ describe('OWASP coverage mapping', () => {
 
   it('every security-class probe has at least one OWASP mapping (or is in EXEMPT)', () => {
     // Probes that are intentionally not OWASP-mapped: discoverability (SEO,
-    // GEO), accessibility (A11y), or pure classifiers (Architecture).
+    // GEO), accessibility (A11y), maintainability (AI Codegen Bloat — the v2
+    // F7 family reports code-health tells, never exploits), or pure
+    // classifiers (Architecture, Host Detection).
     const NON_OWASP_PROBES = new Set([
       'SEO Hygiene',
       'GEO Hygiene',
       'A11y Landmarks',
       'Architecture',
       'Host Detection',
+      'AI Codegen Bloat',
     ]);
     const unmapped = PROBES.filter((p) => {
       if (NON_OWASP_PROBES.has(p.name)) return false;

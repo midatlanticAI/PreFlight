@@ -124,6 +124,7 @@ import { MANIFEST_LIVE_PROBES } from './probes/v05/manifest.js';
 // v0.6 taint engine — intra-procedural dataflow analyzer.
 import { probeTaintFlow } from './probes/taint-engine.js';
 import { probeHostDetection } from './probes/v2/context.js';
+import { probeAICodegenBloat } from './probes/v2/bloat.js';
 
 // 2026: agent/editor auto-execution backdoors (.claude hooks, .vscode runOn:
 // folderOpen) — the Miasma / Shai-Hulud persistence vector.
@@ -186,6 +187,7 @@ export {
   parseModule,
   probeHostDetection,
 } from './probes/v2/context.js';
+export { probeAICodegenBloat } from './probes/v2/bloat.js';
 export const PROBES = [
   { name: 'Architecture', fn: probeArchitecture },
   { name: 'Secret Scanner', fn: probeSecrets },
@@ -241,6 +243,9 @@ export const PROBES = [
   { name: 'Taint Flow', fn: probeTaintFlow },
   // v2 F0: host detection surfaced as an inspectable info finding.
   { name: 'Host Detection', fn: probeHostDetection },
+  // v2 F7: AI Codegen Bloat — the maintainability tells of unreviewed
+  // generated code. Severity ceiling is medium by design.
+  { name: 'AI Codegen Bloat', fn: probeAICodegenBloat },
   // v0.5: the live (shadow:false, net-new) language-agnostic adapters,
   // projected from PROBE_MANIFEST_V05. Migration adapters are held out
   // until the v0.4 cutover (see isLiveAdapter).

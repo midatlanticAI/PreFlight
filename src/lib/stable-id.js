@@ -326,6 +326,12 @@ export const PROBE_META = {
   // v2 F0: host-detection classifier. Info-only inventory finding; the
   // detected host routes downstream copy, nothing to fix.
   'Host Detection': { confidence: 'heuristic', autofix: 'manual' },
+  // v2 F7: maintainability tells of unreviewed generated code.
+  'AI Codegen Bloat': {
+    confidence: 'medium',
+    autofix: 'manual',
+    learn_more_slug: 'ai-codegen-bloat',
+  },
 
   // Package.json catch-all + supply-chain-related aliases.
   'Package.json': {
