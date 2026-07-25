@@ -25,6 +25,7 @@
 
 import { PROBES, attachStableIds, attachProbeMeta } from './probes.js';
 import { SEV_ORDER, computeScore, computeScores } from './scoring.js';
+import { detectAppShape, applyAppShape } from './probes/v2/app-shape.js';
 import { buildSnippet } from './snippet.js';
 import {
   findPreflightConfigFile,
@@ -78,13 +79,25 @@ export function scan(files, opts = {}) {
     if (!cfg.error) suppressions = configToSuppressions(cfg, findings);
   }
 
+  // 5b) app shape: re-weight exposure-dependent findings for a
+  // single-user local tool rather than dropping them.
+  const appShape = detectAppShape(files);
+  const shaped = applyAppShape(findings, appShape);
+
   // 6) score. `score` is the headline security number; `scores` breaks it out
   // by area (security / health / accessibility / discoverability) so a host
   // can show where the outstanding work actually is.
-  const score = computeScore(findings);
-  const scores = computeScores(findings);
+  const score = computeScore(shaped);
+  const scores = computeScores(shaped);
 
-  return { findings, score, scores, suppressions, probeFailures, filesScanned: files.length };
+  return {
+    findings: shaped,
+    score,
+    scores,
+    suppressions,
+    probeFailures,
+    filesScanned: files.length,
+  };
 }
 
 // Host-friendly engine metadata without importing the React tree.

@@ -41,6 +41,7 @@ import {
   formatAgentPrompt,
 } from './lib/formatters.js';
 import { fetchGitHubRepo } from './lib/github.js';
+import { detectAppShape, applyAppShape } from './lib/probes/v2/app-shape.js';
 export {
   T,
   fontDisplay,
@@ -723,10 +724,15 @@ export default function App() {
         }
       }
 
-      const score = computeScore(allFindings);
-      const scores = computeScores(allFindings);
+      // Re-weight exposure-dependent findings when the project is a
+      // single-user local tool. Findings stay in the report with the
+      // reason attached; only their weight changes.
+      const appShape = detectAppShape(scanFiles);
+      const shapedFindings = applyAppShape(allFindings, appShape);
+      const score = computeScore(shapedFindings);
+      const scores = computeScores(shapedFindings);
       const finalResults = {
-        findings: allFindings,
+        findings: shapedFindings,
         score,
         scores,
         scannedAt: new Date(),
