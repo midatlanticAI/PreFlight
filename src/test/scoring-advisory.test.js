@@ -11,8 +11,15 @@ import { describe, it, expect } from 'vitest';
 import { computeScore, isAdvisoryFinding, countAdvisoryFindings } from '../lib/scoring.js';
 import { riskTier } from '../lib/theme.js';
 
-const finding = (severity, category = 'Injection') => ({ severity, category });
-const bloat = (severity = 'low') => finding(severity, 'Maintainability');
+// The axis discriminator is the PROBE NAME, not the finding category:
+// `Misconfiguration` covers SEO meta, accessibility landmarks and genuine
+// security misconfig alike, so category cannot separate them.
+const finding = (severity, probe = 'Secret Scanner') => ({
+  severity,
+  probe,
+  category: 'Injection',
+});
+const bloat = (severity = 'low') => finding(severity, 'AI Codegen Bloat');
 
 describe('advisory findings do not move the score', () => {
   it('ignores maintainability findings entirely', () => {
