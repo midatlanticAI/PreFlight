@@ -45,7 +45,7 @@ The rest are maintainability. That is not a lesser category. Code nobody can fol
 - **Backup or variant files** in the source tree, matched by name: `.backup.`, `.old.`, `.orig.`, `-copy`, `-v2`, `_final`.
 - **Commented-out code**, ten or more consecutive comment lines that parse as code rather than prose.
 - **Assistant narration** left in comments. Phrases addressed to whoever ran the prompt: "Here's a complete implementation", "I've updated the function", "feel free to adjust", "let me know if".
-- **Functions over 100 lines**, and functions whose cyclomatic complexity passes 10. Complexity 12 means twelve independent paths a test suite would have to cover to actually exercise the function.
+- **Functions over 100 lines**, and functions whose cyclomatic complexity passes 15. Complexity 16 means sixteen independent paths a test suite would have to cover to actually exercise the function. Complexity is reported at low severity on purpose: it is a judgement call about a shape, not a defect, and plenty of complex functions are deliberate.
 - **Pass-through wrappers**, a named function whose entire body forwards its parameters unchanged to another call.
 - **Dead imports**, a binding with no reference anywhere in the file. A binding used only as a JSX component counts as used, and so does `React` in any file containing JSX.
 - **Repeated string literals**, the same value of eight characters or more appearing three or more times in executable positions. Values inside a data structure are skipped: a lookup table or a transition map repeats its own vocabulary by design. So are paths, URLs, JSX attribute values and sentence-shaped display copy.

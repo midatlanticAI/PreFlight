@@ -101,7 +101,10 @@ describe('function size and complexity', () => {
   });
 
   it('flags high cyclomatic complexity', () => {
-    const branches = Array.from({ length: 14 }, (_, i) => `  if (x === ${i}) return ${i};`).join(
+    // Threshold raised to >15 after the 2026-07 cockpit scan, where this check
+    // alone produced 47 mediums and was the largest single contributor to that
+    // band, on code the author considered deliberate.
+    const branches = Array.from({ length: 20 }, (_, i) => `  if (x === ${i}) return ${i};`).join(
       '\n'
     );
     const res = run(f('src/br.js', `function pick(x) {\n${branches}\n  return -1;\n}`));

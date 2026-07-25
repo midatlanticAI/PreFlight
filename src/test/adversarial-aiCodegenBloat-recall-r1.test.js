@@ -288,8 +288,17 @@ describe('function size and cyclomatic complexity', () => {
     expect(one('src/lib/report.ts', content)).toHaveLength(0);
   });
 
-  it('flags a function with fourteen branches (complexity 15)', () => {
-    expect(one('src/lib/score.js', branchyFunction(14)).length).toBeGreaterThan(0);
+  // Threshold raised from >10 to >15 after the 2026-07 cockpit scan: the check
+  // produced 47 mediums there and was the largest contributor to that band, on
+  // code its author considered deliberate. Complexity is a judgement call, and
+  // a judgement call does not belong beside a missing auth check. Now reported
+  // at low severity as well.
+  it('flags a function with twenty branches (complexity 21)', () => {
+    expect(one('src/lib/score.js', branchyFunction(20)).length).toBeGreaterThan(0);
+  });
+
+  it('is silent at fourteen branches (complexity 15, at the bar)', () => {
+    expect(one('src/lib/score.js', branchyFunction(14))).toHaveLength(0);
   });
 
   it('is silent on a function with eight branches (complexity 9)', () => {
@@ -882,15 +891,14 @@ describe('edge cases the spec does not pin down', () => {
     expect(one('src/lib/report.js', content)).toHaveLength(0);
   });
 
-  it('treats cyclomatic complexity of exactly 11 as over the bar', () => {
-    // AMBIGUOUS: "complexity passes 10" reads as strictly greater than 10.
-    // Ten independent if-branches gives McCabe 11.
-    expect(one('src/lib/score.js', branchyFunction(10)).length).toBeGreaterThan(0);
+  it('treats cyclomatic complexity of exactly 16 as over the bar', () => {
+    // "complexity passes 15" reads as strictly greater than 15. Fifteen
+    // independent if-branches gives McCabe 16.
+    expect(one('src/lib/score.js', branchyFunction(15)).length).toBeGreaterThan(0);
   });
 
-  it('treats cyclomatic complexity of exactly 10 as under the bar', () => {
-    // AMBIGUOUS: mirror of the test above. Nine if-branches gives McCabe 10.
-    expect(one('src/lib/score.js', branchyFunction(9))).toHaveLength(0);
+  it('treats cyclomatic complexity of exactly 15 as under the bar', () => {
+    expect(one('src/lib/score.js', branchyFunction(14))).toHaveLength(0);
   });
 
   it('counts a block comment holding twelve code lines as commented-out code', () => {

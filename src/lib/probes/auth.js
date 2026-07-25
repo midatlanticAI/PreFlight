@@ -9,6 +9,7 @@
 // every probe function from its new family file.
 
 import { isTestFile, isScannerSelfSource } from '../file-filter.js';
+import { collectSafeBindings, resolvesToConstant } from './_internal/const-eval.js';
 import {
   SECRET_VALUE_PLACEHOLDER_RE,
   isMatchInPlaceholderNamedAssignment,
@@ -62,14 +63,22 @@ function extractHtmlValue(line, lines, idx) {
 
 // True when the value could carry attacker-controlled HTML. A literal the
 // author typed cannot; anything computed might.
-function isTaintableHtmlValue(value) {
+//
+// `bindings` is the same-file constant map from collectSafeBindings. Real-scan
+// finding 2026-07 (Atlan cockpit): without it, every one of a 22-finding XSS
+// report was a false positive, because the classifier could see that a value
+// was an expression but not that the expression resolves to a constant.
+function isTaintableHtmlValue(value, bindings) {
   if (!value) return false;
-  // Sanitized at the sink.
+  // Sanitized at the sink by a well-known library.
   if (HTML_SANITIZER_RE.test(value)) return false;
   // A plain string literal with no interpolation. Empty string included.
   if (/^'[^']*'$/.test(value) || /^"[^"]*"$/.test(value)) return false;
   // A template literal with no ${} substitution is still a constant.
   if (/^`[^`]*`$/.test(value) && !/\$\{/.test(value)) return false;
+  // Resolves to something the author wrote: a const literal, a numeric value,
+  // the author's own escaper, or a function that only returns literals.
+  if (resolvesToConstant(value, bindings)) return false;
   return true;
 }
 
@@ -126,6 +135,9 @@ export function probeAuthWeakness(files) {
     // literals. Single/double-quoted string content stays visible so the
     // regexes can still see real auth-token-name string literals.
     const maskedContent = maskBlockCommentsAndTemplateLiterals(file.content);
+    // Same-file constants, numeric bindings, local escapers and literal-only
+    // functions, resolved once per file for the HTML sink classifier below.
+    const safeBindings = collectSafeBindings(file.content);
     const maskedLines = maskedContent.split('\n');
     const originalLines = file.content.split('\n');
     maskedLines.forEach((rawLine, i) => {
@@ -187,7 +199,7 @@ export function probeAuthWeakness(files) {
       // fully write is a sink.
       if (/dangerouslySetInnerHTML/.test(line)) {
         const htmlValue = extractHtmlValue(realLine, originalLines, i);
-        if (htmlValue !== null && isTaintableHtmlValue(htmlValue)) {
+        if (htmlValue !== null && isTaintableHtmlValue(htmlValue, safeBindings)) {
           findings.push({
             id: `code-dsih-${file.path}-${i}`,
             probe: 'Code Injection',
@@ -237,7 +249,7 @@ export function probeAuthWeakness(files) {
         const innerHtmlRealMatch = realLine.match(INNER_HTML_ASSIGN);
         const xssInnerHTMLAssignHit =
           innerHtmlAssignMatch !== null &&
-          isTaintableHtmlValue((innerHtmlRealMatch || innerHtmlAssignMatch)[1]);
+          isTaintableHtmlValue((innerHtmlRealMatch || innerHtmlAssignMatch)[1], safeBindings);
         const xssFrameworkRe =
           /\bv-html\s*=\s*["']|\{@html\s+|<\w[^>]*\sinnerHTML\s*=\s*\{|\[\s*innerHTML\s*\]\s*=\s*["']|\.\s*bypassSecurityTrust(?:Html|Script|Style|Url|ResourceUrl)\s*\(|\bng-bind-html\s*=\s*["']|\$sce\s*\.\s*trustAs(?:Html|Js|Css|Url|ResourceUrl)\s*\(|\bunsafe(?:HTML|SVG|Static)\s*\(|\{\{\{[^}]+\}\}\}/;
         const xssJsUrlRe =
