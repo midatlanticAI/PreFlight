@@ -55,8 +55,8 @@ The patterns also explicitly defeat defense-in-depth. An empty catch turns "veri
 
 PreFlight scans for:
 
-- `catch {}` or `catch (e) {}` with no body other than whitespace or a comment.
-- `: any` in TypeScript function parameters, especially handlers, route handlers, and webhook endpoints.
+- `catch {}` or `catch (e) {}` with an empty body. Each one is reported at its own line. A catch whose body is a comment does not fire: the comment is documented intent, and the fix rules below still apply to it.
+- Dense `any` usage in a TypeScript file: five or more `: any` annotations or `as any` casts. Sparse, idiomatic `any` stays quiet. A typed catch clause, a generic helper's internals, an overload implementation signature, or a single boundary cast is normal engineering, not a smell.
 
 Note: the AI Code Smells probe is informational. It surfaces patterns worth a second look, not patterns that are themselves exploits. The expected response is "go look at this code path more carefully" rather than "patch immediately."
 

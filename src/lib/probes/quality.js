@@ -11,6 +11,7 @@ import {
   FILE_SIZE_CRIT_LINES,
 } from '../threat-intel.js';
 import { isScannerSelfSource, isTestFile } from '../file-filter.js';
+import { maskCommentsAndStringsFromContent } from './_internal/masking.js';
 
 export function probeCodeQuality(files) {
   const findings = [];
@@ -212,17 +213,21 @@ export function probeCodeQuality(files) {
     //      await/void/.catch — the classic `main()` at the bottom of a script.
     // Balanced brace scan SKIPS string and regex literals so a `const x = "}"`
     // or `/\}/` inside the body doesn't terminate parsing early (adversarial finding).
+    // Detection runs on MASKED content (comments/string interiors blanked,
+    // newlines preserved) so trigger shapes quoted in comments, strings, and
+    // template literals can't fire (adversarial precision round 2026-07).
+    const maskedContent = maskCommentsAndStringsFromContent(content);
     const asyncBodies = [
-      ...content.matchAll(/async\s+(?:function\s+\w+\s*\([^)]*\)|\([^)]*\)\s*=>)\s*\{/g),
+      ...maskedContent.matchAll(/async\s+(?:function\s+\w+\s*\([^)]*\)|\([^)]*\)\s*=>)\s*\{/g),
     ];
     if (!selfSource)
       asyncBodies.forEach((m) => {
         // Only async callbacks in fire-and-forget position. A plain async
         // function declaration is NOT flagged: its caller may (correctly)
         // handle the rejection.
-        const pre = content.slice(Math.max(0, m.index - 80), m.index);
+        const pre = maskedContent.slice(Math.max(0, m.index - 80), m.index);
         const fireAndForget =
-          /(?:addEventListener\s*\(\s*['"][\w:-]+['"]\s*,\s*|setTimeout\s*\(\s*|setInterval\s*\(\s*|setImmediate\s*\(\s*|on[A-Z]\w*\s*=\s*\{\s*)$/.test(
+          /(?:addEventListener\s*\(\s*['"][^'"]*['"]\s*,\s*|setTimeout\s*\(\s*|setInterval\s*\(\s*|setImmediate\s*\(\s*|on[A-Z]\w*\s*=\s*\{\s*)$/.test(
             pre
           );
         if (!fireAndForget) return;
@@ -234,9 +239,9 @@ export function probeCodeQuality(files) {
           inLineComment = false,
           inBlockComment = false;
         let prev = '';
-        while (i < content.length && depth > 0) {
-          const ch = content[i];
-          const next = content[i + 1];
+        while (i < maskedContent.length && depth > 0) {
+          const ch = maskedContent[i];
+          const next = maskedContent[i + 1];
           if (inLineComment) {
             if (ch === '\n') inLineComment = false;
             i++;
@@ -290,9 +295,11 @@ export function probeCodeQuality(files) {
           i++;
           prev = ch;
         }
-        const body = content.slice(m.index + m[0].length, i - 1);
-        if (/\bawait\b/.test(body) && !/\btry\s*\{/.test(body)) {
-          const ln = content.slice(0, m.index).split('\n').length;
+        const body = maskedContent.slice(m.index + m[0].length, i - 1);
+        // A body whose awaits are individually .catch-chained handles its
+        // rejections without try/catch (adversarial precision round 2026-07).
+        if (/\bawait\b/.test(body) && !/\btry\s*\{/.test(body) && !/\.catch\s*\(/.test(body)) {
+          const ln = maskedContent.slice(0, m.index).split('\n').length;
           findings.push({
             id: `cq-async-no-try-${file.path}-${m.index}`,
             probe: 'Code Quality',
@@ -314,12 +321,23 @@ export function probeCodeQuality(files) {
     // a synchronous try cannot catch an un-awaited promise rejection.
     if (!selfSource) {
       const asyncNames = new Set();
-      for (const dm of content.matchAll(/\basync\s+function\s+(\w+)/g)) asyncNames.add(dm[1]);
-      for (const dm of content.matchAll(/\b(?:const|let|var)\s+(\w+)\s*=\s*async\b/g))
+      for (const dm of maskedContent.matchAll(/\basync\s+function\s+(\w+)/g)) asyncNames.add(dm[1]);
+      for (const dm of maskedContent.matchAll(/\b(?:const|let|var)\s+(\w+)\s*=\s*async\b/g))
         asyncNames.add(dm[1]);
+      // A sync declaration of the same name anywhere in the file (an inner
+      // shadow, an overload) makes bare-call resolution ambiguous — skip the
+      // name entirely (adversarial precision round 2026-07).
+      for (const dm of maskedContent.matchAll(/(\basync\s+)?function\s+(\w+)/g)) {
+        if (!dm[1]) asyncNames.delete(dm[2]);
+      }
+      for (const dm of maskedContent.matchAll(
+        /\b(?:const|let|var)\s+(\w+)\s*=\s*(?!async\b)(?:function\b|\()/g
+      )) {
+        asyncNames.delete(dm[1]);
+      }
       if (asyncNames.size) {
-        content.split('\n').forEach((lineText, idx) => {
-          if (/^\s*(?:\/\/|\*|\/\*)/.test(lineText)) return; // comment line
+        const originalLines = content.split('\n');
+        maskedContent.split('\n').forEach((lineText, idx) => {
           const call = lineText.match(/^\s*(\w+)\s*\([^)]*\)\s*;?\s*$/);
           if (!call || !asyncNames.has(call[1])) return;
           findings.push({
@@ -331,7 +349,7 @@ export function probeCodeQuality(files) {
             cwe: 'CWE-755',
             file: file.path,
             line: idx + 1,
-            evidence: lineText.trim().slice(0, 120),
+            evidence: (originalLines[idx] || lineText).trim().slice(0, 120),
             remediation: `${call[1]}() is async but nothing consumes its promise. If it rejects, the error is unhandled (newer Node versions crash the process). Append .catch() to the call, await it inside an async context, or mark the intent explicit with void ${call[1]}() plus internal error handling.`,
           });
         });

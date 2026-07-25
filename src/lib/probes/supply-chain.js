@@ -260,7 +260,14 @@ function _isCompromisedVersion(known, version) {
   return known.versions.some((v) => v === version || _cmp(v, version) === 0);
 }
 
-// Parse package-lock.json (npm v7+). Returns iterable of {name, version, chain}.
+// Parse package-lock.json (npm v7+ and legacy v1). Returns iterable of
+// {name, version, chain}. chain === 'root' means direct; anything else is
+// the transitive parent's name.
+//
+// Adversarial recall round 2026-07: npm HOISTS transitives to top-level
+// node_modules, so path nesting is not the dependency graph. Transitivity
+// comes from the edges: the root entry's dep sets (v7+) or the `requires`
+// edges (legacy).
 function* _walkNpmLock(content) {
   let pkg;
   try {
@@ -269,86 +276,188 @@ function* _walkNpmLock(content) {
     return;
   }
   if (pkg.packages) {
-    // npm v7+ format: keys like "node_modules/axios" or
-    // "node_modules/foo/node_modules/axios".
+    const rootMeta = pkg.packages[''] || {};
+    const rootDeps = new Set([
+      ...Object.keys(rootMeta.dependencies || {}),
+      ...Object.keys(rootMeta.devDependencies || {}),
+      ...Object.keys(rootMeta.optionalDependencies || {}),
+      ...Object.keys(rootMeta.peerDependencies || {}),
+    ]);
+    const entries = [];
     for (const [key, entry] of Object.entries(pkg.packages)) {
       if (!key.startsWith('node_modules/')) continue;
       const segments = key.split('node_modules/').filter(Boolean);
       const name = segments[segments.length - 1].replace(/\/$/, '');
-      const chain =
-        segments
-          .slice(0, -1)
-          .map((s) => s.replace(/\/$/, ''))
-          .join(' > ') || 'root';
+      const nestedUnder = segments
+        .slice(0, -1)
+        .map((s) => s.replace(/\/$/, ''))
+        .join(' > ');
+      entries.push({ name, entry, nestedUnder });
+    }
+    for (const { name, entry, nestedUnder } of entries) {
+      const parent = entries.find(
+        (e) =>
+          e.name !== name &&
+          e.entry.dependencies &&
+          Object.prototype.hasOwnProperty.call(e.entry.dependencies, name)
+      );
+      // With a root entry, transitivity is "not in the root's dep sets".
+      // Without one (partial lockfiles), fall back to the evidence at hand:
+      // a nested install path or an edge from another package.
+      const transitive =
+        rootDeps.size > 0 ? !rootDeps.has(name) : Boolean(nestedUnder) || Boolean(parent);
+      const chain = !transitive ? 'root' : parent ? parent.name : nestedUnder || 'lockfile';
       yield { name, version: entry.version, chain };
     }
   } else if (pkg.dependencies) {
-    // Legacy v1/v2 — recursive walker (named generator so `yield` is legal).
-    function* walk(deps, parents) {
+    // Legacy v1: everything is flattened at the top with `requires` edges.
+    const flat = [];
+    const collect = (deps, parents) => {
       for (const [name, entry] of Object.entries(deps)) {
-        yield { name, version: entry.version, chain: parents.join(' > ') || 'root' };
-        if (entry.dependencies) yield* walk(entry.dependencies, [...parents, name]);
+        flat.push({ name, entry, parents });
+        if (entry.dependencies) collect(entry.dependencies, [...parents, name]);
       }
+    };
+    collect(pkg.dependencies, []);
+    for (const { name, entry, parents } of flat) {
+      const requiredBy = flat.find(
+        (o) =>
+          o.name !== name &&
+          o.entry.requires &&
+          Object.prototype.hasOwnProperty.call(o.entry.requires, name)
+      );
+      const chain = requiredBy ? requiredBy.name : parents.join(' > ') || 'root';
+      yield { name, version: entry.version, chain };
     }
-    yield* walk(pkg.dependencies, []);
   }
 }
 
-// Parse yarn.lock (v1 + v2 berry). Returns iterable of {name, version}.
+// Parse yarn.lock (v1 + v2 berry). Entries look like:
+//   "@scope/pkg@^1.0.0", "@scope/pkg@^1.1.0":
+//     version "1.2.3"
+//     dependencies:
+//       other-pkg "^2.0.0"
+// The `dependencies:` sub-blocks carry the graph edges used for the
+// transitive chain (adversarial recall round 2026-07).
 function* _walkYarnLock(content) {
-  // yarn.lock entries look like:
-  //   "@scope/pkg@^1.0.0", "@scope/pkg@^1.1.0":
-  //     version "1.2.3"
-  // The keys are comma-separated, the version line follows.
   const lines = content.split('\n');
-  let currentKeys = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  const entries = [];
+  let cur = null;
+  let inDeps = false;
+  for (const line of lines) {
     if (/^[^\s#]/.test(line) && line.includes('@')) {
-      // Header line.
-      currentKeys = line
-        .trim()
-        .replace(/:$/, '')
-        .split(/,\s*/)
-        .map((k) => k.replace(/^["']|["']$/g, ''));
-    } else if (currentKeys.length && /^\s+version\b/.test(line)) {
+      cur = {
+        names: line
+          .trim()
+          .replace(/:$/, '')
+          .split(/,\s*/)
+          .map((k) => k.replace(/^["']|["']$/g, '')),
+        version: null,
+        deps: new Set(),
+      };
+      entries.push(cur);
+      inDeps = false;
+    } else if (cur && /^\s+version\b/.test(line)) {
       const m = line.match(/version\s+["']?([^"']+)["']?/);
-      if (m) {
-        for (const key of currentKeys) {
-          // Extract name from key like "@scope/pkg@^1.0.0" or "pkg@^1.0.0".
-          const atIdx = key.lastIndexOf('@');
-          if (atIdx <= 0) continue;
-          const name = key.slice(0, atIdx);
-          yield { name, version: m[1], chain: 'lockfile' };
-        }
-        currentKeys = [];
-      }
+      if (m) cur.version = m[1];
+      inDeps = false;
+    } else if (cur && /^\s+(?:optionalD|d)ependencies:\s*$/.test(line)) {
+      inDeps = true;
+    } else if (cur && inDeps && /^\s+\S/.test(line)) {
+      const dm = line.trim().match(/^["']?(@?[^\s"'@]+(?:\/[^\s"'@]+)?)["']?\s/);
+      if (dm) cur.deps.add(dm[1]);
+    } else if (!line.trim()) {
+      inDeps = false;
+    }
+  }
+  const nameOf = (e) => {
+    const key = e.names[0] || '';
+    const atIdx = key.lastIndexOf('@');
+    return atIdx > 0 ? key.slice(0, atIdx) : null;
+  };
+  for (const e of entries) {
+    if (!e.version) continue;
+    const seen = new Set();
+    for (const key of e.names) {
+      const atIdx = key.lastIndexOf('@');
+      if (atIdx <= 0) continue;
+      const name = key.slice(0, atIdx);
+      if (seen.has(name)) continue;
+      seen.add(name);
+      const parent = entries.find((o) => o !== e && o.deps.has(name));
+      const chain = parent ? nameOf(parent) || 'lockfile' : 'root';
+      yield { name, version: e.version, chain };
     }
   }
 }
 
-// Parse pnpm-lock.yaml (v9+). Keys like "/@scope/pkg@1.2.3(react@18.2.0)" or
-// "/pkg@1.2.3".
+// Parse pnpm-lock.yaml. v6-8 keys look like "/pkg@1.2.3" (leading slash);
+// v9 dropped the slash: "pkg@1.2.3:" under packages:/snapshots:. Direct
+// deps are listed under importers with a `specifier:` line, which is how
+// transitivity is derived (adversarial recall round 2026-07: the v9
+// no-slash form was invisible to the old slash-required regex).
 function* _walkPnpmLock(content) {
   const lines = content.split('\n');
+  const direct = new Set();
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^\s+(['"]?)([@\w][\w./-]*)\1:\s*$/);
+    if (m && /^\s+specifier:/.test(lines[i + 1] || '')) direct.add(m[2]);
+  }
   for (const line of lines) {
-    // Look for keys at any indent that match a pnpm pkg path.
-    const m = line.match(/^\s+(['"]?)(\/@?[\w\-./]+@[^()\s'"]+)\1\s*:/);
+    const m = line.match(/^\s+(['"]?)\/?((?:@[\w.-]+\/)?[\w.-]+@[^()\s'"]+)\1\s*:/);
     if (!m) continue;
     const key = m[2];
-    const slash = key.startsWith('/') ? key.slice(1) : key;
-    const atIdx = slash.lastIndexOf('@');
+    const atIdx = key.lastIndexOf('@');
     if (atIdx <= 0) continue;
-    const name = slash.slice(0, atIdx);
-    const version = slash.slice(atIdx + 1);
-    yield { name, version, chain: 'lockfile' };
+    const name = key.slice(0, atIdx);
+    const version = key.slice(atIdx + 1);
+    if (!/^\d/.test(version)) continue; // settings keys, protocol specs
+    const chain = direct.size > 0 && !direct.has(name) ? 'lockfile' : 'root';
+    yield { name, version, chain };
   }
 }
 
-// Parse bun.lock (text format, ~yarn-ish).
+// Parse bun.lock. Since bun 1.2 it is JSON(C): workspaces[""] carries the
+// root dep sets; packages maps name -> ["name@version", registry, {deps}, hash].
+// Older text-format files fall back to the yarn-ish parser.
 function* _walkBunLock(content) {
-  // bun.lock looks similar to yarn.lock for parsing purposes.
-  yield* _walkYarnLock(content);
+  let pkg = null;
+  try {
+    // Tolerate JSONC trailing commas, which bun emits.
+    pkg = JSON.parse(content.replace(/,\s*([}\]])/g, '$1'));
+  } catch {
+    yield* _walkYarnLock(content);
+    return;
+  }
+  if (!pkg || typeof pkg !== 'object' || !pkg.packages) return;
+  const rootWs = (pkg.workspaces && pkg.workspaces['']) || {};
+  const rootDeps = new Set([
+    ...Object.keys(rootWs.dependencies || {}),
+    ...Object.keys(rootWs.devDependencies || {}),
+    ...Object.keys(rootWs.optionalDependencies || {}),
+    ...Object.keys(rootWs.peerDependencies || {}),
+  ]);
+  const entries = [];
+  for (const [name, tuple] of Object.entries(pkg.packages)) {
+    if (!Array.isArray(tuple) || typeof tuple[0] !== 'string') continue;
+    const spec = tuple[0];
+    const atIdx = spec.lastIndexOf('@');
+    if (atIdx <= 0) continue;
+    const version = spec.slice(atIdx + 1);
+    const deps = new Set();
+    for (const part of tuple) {
+      if (part && typeof part === 'object' && part.dependencies) {
+        for (const d of Object.keys(part.dependencies)) deps.add(d);
+      }
+    }
+    entries.push({ name, version, deps });
+  }
+  for (const e of entries) {
+    const parent = entries.find((o) => o !== e && o.deps.has(e.name));
+    const transitive = rootDeps.size > 0 ? !rootDeps.has(e.name) : Boolean(parent);
+    const chain = !transitive ? 'root' : parent ? parent.name : 'lockfile';
+    yield { name: e.name, version: e.version, chain };
+  }
 }
 
 export function probeCompromisedPackages(files) {
@@ -373,7 +482,7 @@ export function probeCompromisedPackages(files) {
       file: file.path,
       line: 1,
       evidence: spec
-        ? `${name}: ${spec} (resolved ${version}) — ${known.note}`
+        ? `${name}: ${spec} (range includes ${version}) — ${known.note}`
         : `${name}@${version} — ${known.note}`,
       remediation: `Confirmed malicious version per public threat intel. Remove or downgrade immediately, then rotate every secret accessible to your build environment (CI tokens, npm tokens, cloud creds). Audit the dependency chain in the lockfile. Review CISA / GHSA / vendor advisories for the specific incident.`,
     });
@@ -398,49 +507,11 @@ export function probeCompromisedPackages(files) {
     });
   };
 
+  // Pass 1: lockfile walkers. Emit hits on actually-resolved bad versions
+  // and record every resolution — the lockfile is ground truth for what a
+  // range actually installs.
+  const lockResolutions = new Map(); // name -> Set of resolved version strings
   files.forEach((file) => {
-    // 1) Direct deps from package.json with SemVer-aware comparison.
-    if (/package\.json$/.test(file.path)) {
-      let pkg;
-      try {
-        pkg = JSON.parse(file.content);
-      } catch {
-        return;
-      }
-      const deps = {
-        ...(pkg.dependencies || {}),
-        ...(pkg.devDependencies || {}),
-        ...(pkg.peerDependencies || {}),
-        ...(pkg.optionalDependencies || {}),
-        ...(pkg.bundleDependencies || {}),
-        ...(pkg.bundledDependencies || {}),
-        ...(pkg.overrides || {}),
-        ...(pkg.resolutions || {}),
-      };
-      Object.entries(deps).forEach(([name, version]) => {
-        const known = COMPROMISED_PACKAGES[name];
-        if (!known) return;
-        const versionStr = String(version);
-        // Entries marked versions: ['*'] are compromised at every version;
-        // any spec, pinned or floating, resolves to a bad release. Emit
-        // critical directly (the floating downgrade below is for packages
-        // where only SOME versions are bad).
-        if (known.versions.includes('*')) {
-          emit(name, versionStr || '*', 'root (direct)', file, false, null);
-          return;
-        }
-        // Floating spec: warn even without a concrete bad version match.
-        if (/^(?:latest|next|\*|)$/.test(versionStr.trim())) {
-          emitFloating(name, versionStr, file);
-          return;
-        }
-        // SemVer-aware: does the spec's range include any known bad version?
-        const hit = known.versions.find((bad) => semverRangeIncludes(versionStr, bad));
-        if (hit) emit(name, hit, 'root (direct)', file, false, versionStr);
-      });
-      return;
-    }
-    // 2) Lockfile walkers — resolve transitive hits.
     let walker = null;
     if (
       /(^|\/)package-lock\.json$/.test(file.path) ||
@@ -453,9 +524,70 @@ export function probeCompromisedPackages(files) {
     if (!walker) return;
     for (const entry of walker(file.content)) {
       if (!entry?.name || !entry?.version) continue;
+      if (!lockResolutions.has(entry.name)) lockResolutions.set(entry.name, new Set());
+      lockResolutions.get(entry.name).add(entry.version);
       const isTransitive = entry.chain !== 'root';
       emit(entry.name, entry.version, entry.chain, file, isTransitive, null);
     }
+  });
+  // True when the scan set's lockfiles resolve this package exclusively to
+  // safe versions — in that case a wide range that merely CONTAINS a bad
+  // version (axios "^1.7.0" is on half the internet) is not a finding; the
+  // install state is pinned safe, and pass 1 catches the bad resolutions.
+  const lockfilePinsSafe = (name, known) => {
+    const resolved = lockResolutions.get(name);
+    if (!resolved || resolved.size === 0) return false;
+    return ![...resolved].some((v) => _isCompromisedVersion(known, v));
+  };
+  // Pass 2: direct deps from package.json with SemVer-aware comparison.
+  files.forEach((file) => {
+    if (!/package\.json$/.test(file.path)) return;
+    let pkg;
+    try {
+      pkg = JSON.parse(file.content);
+    } catch {
+      return;
+    }
+    const deps = {
+      ...(pkg.dependencies || {}),
+      ...(pkg.devDependencies || {}),
+      ...(pkg.peerDependencies || {}),
+      ...(pkg.optionalDependencies || {}),
+      ...(pkg.bundleDependencies || {}),
+      ...(pkg.bundledDependencies || {}),
+      ...(pkg.overrides || {}),
+      ...(pkg.resolutions || {}),
+    };
+    Object.entries(deps).forEach(([name, version]) => {
+      const known = COMPROMISED_PACKAGES[name];
+      if (!known) return;
+      const versionStr = String(version);
+      // Entries marked versions: ['*'] are compromised at every version;
+      // any spec, pinned or floating, resolves to a bad release. Emit
+      // critical directly (the floating downgrade below is for packages
+      // where only SOME versions are bad).
+      if (known.versions.includes('*')) {
+        emit(name, versionStr || '*', 'root (direct)', file, false, null);
+        return;
+      }
+      // An exact pin of a known-bad version always flags — the manifest
+      // names the compromised artifact explicitly, lockfile or not.
+      const exact = versionStr.trim().replace(/^=/, '');
+      if (known.versions.includes(exact)) {
+        emit(name, exact, 'root (direct)', file, false, null);
+        return;
+      }
+      // Ranges and floating specs defer to lockfile ground truth.
+      if (lockfilePinsSafe(name, known)) return;
+      // Floating spec: warn even without a concrete bad version match.
+      if (/^(?:latest|next|\*|)$/.test(versionStr.trim())) {
+        emitFloating(name, versionStr, file);
+        return;
+      }
+      // SemVer-aware: does the spec's range include any known bad version?
+      const hit = known.versions.find((bad) => semverRangeIncludes(versionStr, bad));
+      if (hit) emit(name, hit, 'root (direct)', file, false, versionStr);
+    });
   });
   return findings;
 }

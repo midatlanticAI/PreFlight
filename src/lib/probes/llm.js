@@ -309,22 +309,19 @@ export function probeAICodeSmells(files) {
     // the shape. Line numbers stay correct because the masker preserves
     // every `\n`.
     const masked = maskCommentsAndStringsFromContent(file.content);
-    // Empty catch can span lines:  `catch (e) {\n}`. The character class
-    // `\s` matches newlines by default in JS regex, so a content-wide
-    // match handles both same-line and multi-line forms.
-    const emptyCatchMatches = masked.match(/catch\s*(?:\([^)]*\))?\s*\{\s*\}/g) || [];
-    const emptyCatch = emptyCatchMatches.length;
-    // The any-type checks are line-scoped — they don't legitimately span
-    // lines, so per-line keeps false-positives lower.
-    let anyType = 0;
-    masked.split('\n').forEach((line) => {
-      if (/:\s*any\b|as\s+any\b/.test(line)) anyType++;
-    });
-    if (emptyCatch >= 1) {
+    const originalLines = file.content.split('\n');
+    // Empty catch: whitespace-only body. A catch whose body is a COMMENT is
+    // documented intent and stays quiet — that boundary was settled by the
+    // earlier adversarial precision rounds (v3/v5 suites) and the 2026-07
+    // round reconfirmed it; the Pattern page text was corrected to match.
+    // One finding per occurrence, line-anchored (the aggregated line-1 form
+    // failed every structural check in the 2026-07 recall round).
+    for (const m of masked.matchAll(/catch\s*(?:\([^)]*\))?\s*\{\s*\}/g)) {
+      const ln = masked.slice(0, m.index).split('\n').length;
       findings.push({
-        id: `smell-emptycatch-${file.path}`,
+        id: `smell-emptycatch-${file.path}-${m.index}`,
         probe: 'AI Code Smells',
-        title: `${emptyCatch} empty catch block${emptyCatch > 1 ? 's' : ''} silently swallow errors`,
+        title: 'empty catch block silently swallows errors',
         // The Pattern page (ai-code-smells.md) calls this probe "informational":
         // "The expected response is 'go look at this code path more carefully'
         // rather than 'patch immediately'." Severity follows the Pattern page.
@@ -332,12 +329,21 @@ export function probeAICodeSmells(files) {
         category: 'Misconfiguration',
         cwe: 'CWE-390',
         file: file.path,
-        line: 1,
-        evidence: `${emptyCatch} occurrence(s) of catch {} or catch (e) {} pattern`,
+        line: ln,
+        evidence: (originalLines[ln - 1] || m[0]).trim().slice(0, 120),
         remediation:
           'Empty catch blocks are a documented signature of AI-generated code — industry studies show ~45% of AI code samples introduce OWASP Top 10 issues, and silent catches are one of the most common patterns. They mask security errors and operational issues. At minimum log; ideally only catch what you can recover from and let the rest propagate.',
       });
     }
+    // "any" stays DENSITY-based: sparse idiomatic any (a typed catch clause,
+    // a generic helper internal, an overload implementation signature, a
+    // single boundary cast) is normal engineering and was pinned quiet by
+    // the earlier adversarial precision rounds. Five or more occurrences in
+    // one file is the smell.
+    let anyType = 0;
+    masked.split('\n').forEach((line) => {
+      if (/:\s*any\b|as\s+any\b/.test(line)) anyType++;
+    });
     if (anyType >= 5) {
       findings.push({
         id: `smell-anytype-${file.path}`,
