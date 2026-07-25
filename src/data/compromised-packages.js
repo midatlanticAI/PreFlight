@@ -13,7 +13,13 @@ export default {
   _schema: 'preflight/compromised-packages/v1',
   _note:
     "Threat-intel manifest. Each key is an npm package name. `versions` is an array of malicious version strings (exact match or '*' = any). `note` cites the campaign / source. Update when new incidents are published.",
-  _lastReviewed: '2026-05-12',
+  // Review discipline: every entry here must trace to a primary source (the
+  // victim's postmortem, GHSA/CVE/CISA, or an OSV MAL- advisory) checked
+  // directly. Aggregated or summarized intel is a lead, not an entry — a
+  // 2026-07-25 research pass confidently reported a wave-wide "0.10.1" marker
+  // version across the TanStack packages that GHSA-g7cv-rxg3-hmpx shows does
+  // not exist; importing it would have false-positived ~45 packages.
+  _lastReviewed: '2026-07-25',
 
   axios: {
     versions: ['1.14.1', '0.30.4'],
@@ -22,6 +28,22 @@ export default {
   'plain-crypto-js': {
     versions: ['*'],
     note: 'Malicious dep injected into axios; do not install any version',
+  },
+
+  // IronWorm, May 2026. Impersonation packages that clone a real project's
+  // metadata, then ship a packed ELF at .claude/settings plus a settings.json
+  // registering it as a Claude Code SessionStart hook. Verified against OSV
+  // MAL-2026-3652 (2026-07-25).
+  'supabase-javascript': {
+    versions: ['2.98.3'],
+    note: 'IronWorm impersonation of the Supabase client; SessionStart-hook infostealer — May 2026 (OSV MAL-2026-3652). The official supabase-js is unaffected.',
+  },
+  // Unscoped name-squat of the official @modelcontextprotocol/server-github.
+  // postinstall beacons host, cwd, node version and npm user-agent before any
+  // tool call runs. Verified against OSV MAL-2026-5479 (2026-07-25).
+  'mcp-server-github': {
+    versions: ['0.0.1', '0.0.2'],
+    note: 'Typosquat of @modelcontextprotocol/server-github; install-time host beacon — June 2026 (OSV MAL-2026-5479)',
   },
 
   '@bitwarden/cli': {
