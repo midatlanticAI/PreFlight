@@ -17,7 +17,7 @@ import {
   fontMono,
   riskTier,
 } from './lib/theme.js';
-import { SEV_ORDER, SEV_WEIGHT, computeScore } from './lib/scoring.js';
+import { SEV_ORDER, SEV_WEIGHT, computeScore, computeScores } from './lib/scoring.js';
 import { buildSnippet, snippetToText } from './lib/snippet.js';
 import { downloadFile, copyToClipboard, timestampSlug, timeAgo } from './lib/clipboard.js';
 import {
@@ -52,6 +52,7 @@ export {
   SEV_ORDER,
   SEV_WEIGHT,
   computeScore,
+  computeScores,
   buildSnippet,
   snippetToText,
   downloadFile,
@@ -723,9 +724,11 @@ export default function App() {
       }
 
       const score = computeScore(allFindings);
+      const scores = computeScores(allFindings);
       const finalResults = {
         findings: allFindings,
         score,
+        scores,
         scannedAt: new Date(),
         filesScanned: scanFiles.length,
         source: effectiveMode === 'github' ? targetUrl : `${scanFiles.length} local files`,

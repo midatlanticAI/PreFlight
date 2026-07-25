@@ -59,7 +59,7 @@ Every finding carries severity (critical / high / medium / low / info), CWE, fil
 ## Output
 
 - Interactive dashboard: score gauge (0–100), severity distribution, category breakdown, expandable finding cards with ±5-line code snapshots.
-- The score measures security exposure. Code-health, accessibility and discoverability findings are reported in full but do not reduce it: a security number dragged to its floor by opinions about function shape, or by a missing meta tag on a tool that was never meant to be indexed, is answering a question nobody asked.
+- Scores by area beside the gauge: **security, code health, accessibility, discoverability**, each with the count of findings behind it. The gauge itself measures security exposure only. Code-health, accessibility and discoverability findings are reported in full but do not reduce it: a security number dragged to its floor by opinions about function shape, or by a missing meta tag on a tool that was never meant to be indexed, is answering a question nobody asked. An area with nothing found reads "clear" rather than 100, because a perfect score and an area that never applied are different claims.
 - **Five export formats**: JSON (schema `midatlantic-audit/v1`), full Markdown report, GitHub PR-comment Markdown (collapsible `<details>`), agent-ready fix prompt (formatted for Claude / ChatGPT / Cursor through the Persona+ framework, see below), single-snippet copy.
 - Local scan history (10 entries, localStorage-only) with View (load cached findings) and Re-run.
 - Baseline diff vs prior scan of the same source (introduced / fixed / persisted findings, score delta). Keyed on stable IDs so reformats don't show up as regressions.

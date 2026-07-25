@@ -23,7 +23,7 @@ import { T } from '../lib/theme.js';
 import { SEV_ORDER } from '../lib/scoring.js';
 import { timeAgo } from '../lib/clipboard.js';
 import { PROBES } from '../lib/probes.js';
-import { ScoreGauge, CategoryBar } from './ScoreDisplay.jsx';
+import { ScoreGauge, CategoryBar, ScoreAxes } from './ScoreDisplay.jsx';
 import { FindingCard } from './FindingCard.jsx';
 import { ComplianceSummary } from './ComplianceSummary.jsx';
 
@@ -384,6 +384,11 @@ export function ResultsView({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
             <ScoreGauge score={liveScore} />
+            {results?.scores && (
+              <div style={{ width: '100%', maxWidth: 260, marginTop: 4 }}>
+                <ScoreAxes scores={results.scores} />
+              </div>
+            )}
             {partitioned.suppressed.length > 0 && (
               <button
                 onClick={() => setShowSuppressed((v) => !v)}

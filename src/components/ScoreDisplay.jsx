@@ -65,6 +65,81 @@ export function ScoreGauge({ score }) {
   );
 }
 
+// Per-axis scores beside the headline gauge.
+//
+// The gauge answers "is this safe to ship" and only security findings move it.
+// Code health, accessibility and discoverability are real work, and burying
+// them inside one number made a clean-but-opinionated project read as risky
+// while telling nobody which kind of work was outstanding. Each axis carries
+// its own count so "100" is never mistaken for a measurement that did not run.
+const AXIS_LABELS = {
+  security: 'Security',
+  health: 'Code health',
+  accessibility: 'Accessibility',
+  discoverability: 'Discoverability',
+};
+
+function axisColor(score, findings) {
+  if (findings === 0) return T.textMuted;
+  if (score >= 90) return T.good;
+  if (score >= 70) return T.sev.medium.fg;
+  return T.sev.high.fg;
+}
+
+export function ScoreAxes({ scores }) {
+  if (!scores) return null;
+  const axes = Object.keys(AXIS_LABELS).filter((a) => scores[a]);
+  if (axes.length === 0) return null;
+  return (
+    <div>
+      <div className="ap-eyebrow" style={{ fontSize: 11, color: T.textMuted, marginBottom: 10 }}>
+        BY AREA
+      </div>
+      {axes.map((axis) => {
+        const { score, findings } = scores[axis];
+        const clean = findings === 0;
+        return (
+          <div key={axis} style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+              <span className="ap-mono" style={{ fontSize: 13, color: T.text }}>
+                {AXIS_LABELS[axis]}
+              </span>
+              <span
+                className="ap-mono"
+                style={{ fontSize: 13, color: axisColor(score, findings) }}
+                title={
+                  clean
+                    ? 'Nothing found in this area'
+                    : `${findings} finding${findings === 1 ? '' : 's'}`
+                }
+              >
+                {clean ? 'clear' : `${score} / 100`}
+              </span>
+            </div>
+            <div style={{ height: 4, background: T.border, position: 'relative' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: '0 auto 0 0',
+                  width: `${score}%`,
+                  background: axisColor(score, findings),
+                  transition: 'width 0.6s ease-out',
+                }}
+              />
+            </div>
+            {!clean && (
+              <div className="ap-mono" style={{ fontSize: 11, color: T.textMuted, marginTop: 4 }}>
+                {findings} finding{findings === 1 ? '' : 's'}
+                {axis !== 'security' && ' · does not affect the risk score'}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function CategoryBar({ name, count, max, color }) {
   const pct = max > 0 ? (count / max) * 100 : 0;
   return (
