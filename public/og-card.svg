@@ -36,9 +36,9 @@
 
   <!-- Footer row: badges + URL -->
   <g transform="translate(80, 560)">
-    <!-- pill: 96 probes -->
+    <!-- pill: 100 probes -->
     <rect x="0" y="0" width="120" height="32" rx="0" fill="#1b2d52" stroke="#3b6e69"/>
-    <text x="60" y="22" font-size="14" font-weight="600" text-anchor="middle" fill="#9fe5dd" letter-spacing="1">96 PROBES</text>
+    <text x="60" y="22" font-size="14" font-weight="600" text-anchor="middle" fill="#9fe5dd" letter-spacing="1">100 PROBES</text>
     <!-- pill: free / no signup -->
     <rect x="135" y="0" width="180" height="32" rx="0" fill="#1b2d52" stroke="#3b6e69"/>
     <text x="225" y="22" font-size="14" font-weight="600" text-anchor="middle" fill="#9fe5dd" letter-spacing="1">FREE · NO SIGNUP</text>

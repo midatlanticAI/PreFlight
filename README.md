@@ -16,7 +16,7 @@ The full philosophy is at [`src/learn/manifesto.md`](./src/learn/manifesto.md) a
 
 ## What it does
 
-96 probes covering OWASP Top 10 2025, OWASP LLM Top 10 2025, and current threat intel:
+100 probes covering OWASP Top 10 2025, OWASP LLM Top 10 2025, and current threat intel:
 
 Every finding carries the OWASP category code(s) it maps to. The full mapping is at [`/learn/owasp`](https://preflight.midatlantic.ai/learn/owasp) in the deployed app, with the source-of-truth dictionary in [`src/lib/stable-id.js`](./src/lib/stable-id.js).
 
@@ -59,6 +59,7 @@ Every finding carries severity (critical / high / medium / low / info), CWE, fil
 ## Output
 
 - Interactive dashboard: score gauge (0–100), severity distribution, category breakdown, expandable finding cards with ±5-line code snapshots.
+- The score measures security exposure. Code-health, accessibility and discoverability findings are reported in full but do not reduce it: a security number dragged to its floor by opinions about function shape, or by a missing meta tag on a tool that was never meant to be indexed, is answering a question nobody asked.
 - **Five export formats**: JSON (schema `midatlantic-audit/v1`), full Markdown report, GitHub PR-comment Markdown (collapsible `<details>`), agent-ready fix prompt (formatted for Claude / ChatGPT / Cursor through the Persona+ framework, see below), single-snippet copy.
 - Local scan history (10 entries, localStorage-only) with View (load cached findings) and Re-run.
 - Baseline diff vs prior scan of the same source (introduced / fixed / persisted findings, score delta). Keyed on stable IDs so reformats don't show up as regressions.
@@ -116,7 +117,7 @@ See `docs/preflight-architecture-and-v1.1-plan.md` for the full architecture wri
 Under `/learn` in the app, with the full content corpus in `src/learn/`:
 
 - **Manifesto** (`manifesto.md`) — the "Vibe-Aware" positioning document.
-- **Patterns** (`patterns/*.md`) — one per probe. Six-section skeleton (What this is / Why it matters / What the failure looks like / What the fix looks like / Related / Sources). 54 patterns published, no drafts.
+- **Patterns** (`patterns/*.md`) — one per probe. Six-section skeleton (What this is / Why it matters / What the failure looks like / What the fix looks like / Related / Sources). 55 patterns published, no drafts.
 - **Field Reports** (`incidents/*.md`) — incident write-ups with CVE / CVSS / campaign / threat-actor / attack-date metadata. 4 reports published (Shai-Hulud, SAP Mini Shai-Hulud, Bitwarden CLI, TanStack Mini Shai-Hulud), no drafts.
 - **Shapes** (`shapes/*.md`) — architectural pattern explainers per detected project shape. 15 shapes published, no drafts.
 
@@ -152,7 +153,7 @@ Any feature that would weaken this requires deliberately breaking the manifesto,
 ```bash
 npm ci
 npm run dev               # vite dev server on :5173
-npm test                  # vitest run (2660+ tests across 74 files)
+npm test                  # vitest run (3,477 tests across 94 files)
 npm run test:self-audit   # dogfood: PreFlight scans its own dist/
 npm run build             # production build → dist/
 npm run preview           # preview the built dist
@@ -178,24 +179,24 @@ If PreFlight doesn't pass its own audit, CI fails. Dogfooding is non-negotiable.
 
 ## Test coverage
 
-2660+ tests across 74 files, full run in seconds:
+3,477 tests across 94 files, full run in seconds:
 
-| Layer                        | Coverage                                                                                                                        |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Probes — functional          | 144 tests in `probes.test.js` validating each probe fires on a clear hit                                                        |
-| Probes — adversarial         | 111 tests in `adversarial-coverage.test.js` covering bypass attempts, false-positive guards, and `it.fails()`-tagged known gaps |
-| Code Correctness probe       | 24 dedicated AST tests in `code-correctness.test.js`                                                                            |
-| Personas                     | 51 tests in `personas.test.js` enforcing Persona+ invariants + Sam-into-formatAgentPrompt cross-surface                         |
-| Formatters                   | 16 tests covering JSON / Markdown / PR-comment / agent-prompt / history diff                                                    |
-| Scoring + risk tiers         | 32 tests                                                                                                                        |
-| Suppression                  | dedicated test file                                                                                                             |
-| Stable IDs                   | dedicated test file                                                                                                             |
-| `.preflight.yml` config      | dedicated test file                                                                                                             |
-| Learn content frontmatter    | dedicated test file                                                                                                             |
-| Threat-intel manifest        | dedicated test file                                                                                                             |
-| AI providers + dispatcher    | mocked-fetch tests for the provider request shape                                                                               |
-| Logger + analytics + history | privacy-invariant + circular-ref + ring-buffer tests                                                                            |
-| Dogfood                      | `dogfood-scan.test.js` + `self-audit.test.js` require 0 critical/high findings on PreFlight's own dist/                         |
+| Layer                        | Coverage                                                                                                                                                       |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Probes — functional          | 233 tests in `probes.test.js` validating each probe fires on a clear hit                                                                                       |
+| Probes — adversarial         | 700+ tests across the adversarial suites in `adversarial-coverage.test.js` covering bypass attempts, false-positive guards, and `it.fails()`-tagged known gaps |
+| Code Correctness probe       | 24 dedicated AST tests in `code-correctness.test.js`                                                                                                           |
+| Personas                     | 51 tests in `personas.test.js` enforcing Persona+ invariants + Sam-into-formatAgentPrompt cross-surface                                                        |
+| Formatters                   | 16 tests covering JSON / Markdown / PR-comment / agent-prompt / history diff                                                                                   |
+| Scoring + risk tiers         | 53 tests, including the four score axes                                                                                                                        |
+| Suppression                  | dedicated test file                                                                                                                                            |
+| Stable IDs                   | dedicated test file                                                                                                                                            |
+| `.preflight.yml` config      | dedicated test file                                                                                                                                            |
+| Learn content frontmatter    | dedicated test file                                                                                                                                            |
+| Threat-intel manifest        | dedicated test file                                                                                                                                            |
+| AI providers + dispatcher    | mocked-fetch tests for the provider request shape                                                                                                              |
+| Logger + analytics + history | privacy-invariant + circular-ref + ring-buffer tests                                                                                                           |
+| Dogfood                      | `dogfood-scan.test.js` + `self-audit.test.js` require 0 critical/high findings on PreFlight's own dist/                                                        |
 
 Adversarial testing philosophy: known gaps ship as `it.fails()` blocks so the test passes silently while the probe misses the input, and fails loudly the moment a probe improvement starts catching it. Self-cleaning todo list.
 
@@ -219,7 +220,7 @@ src/
 │   ├── learn/              ← LearnPage, IndexView, EntryView, ManifestoView
 │   └── settings/           ← SettingsPage + GeneralTab, ExplainVerifyTab, PrivateReposTab, DiagnosticsTab, AboutTab
 ├── lib/
-│   ├── probes.js           ← probe registry hub (96 probes across v0.4 + v0.5 phase-1/2/3) + threat-intel re-exports
+│   ├── probes.js           ← probe registry hub (100 probes across v0.4 + v0.5 phase-1/2/3) + threat-intel re-exports
 │   ├── probes/
 │   │   ├── code-correctness.js   ← acorn + acorn-jsx AST probe (undeclared identifiers)
 │   │   ├── web.js                ← URL reputation, HTML hygiene, SEO, GEO, A11y landmarks
@@ -253,7 +254,7 @@ src/
 │   ├── patterns/*.md
 │   ├── incidents/*.md
 │   └── shapes/*.md
-└── test/                   ← 2660+ tests across 74 files (vitest + jsdom)
+└── test/                   ← 3,477 tests across 94 files (vitest + jsdom)
 
 public/
 ├── maai-logo.svg
