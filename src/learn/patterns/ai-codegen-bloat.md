@@ -47,12 +47,26 @@ The rest are maintainability. That is not a lesser category. Code nobody can fol
 - **Assistant narration** left in comments. Phrases addressed to whoever ran the prompt: "Here's a complete implementation", "I've updated the function", "feel free to adjust", "let me know if".
 - **Functions over 100 lines**, and functions whose cyclomatic complexity passes 10. Complexity 12 means twelve independent paths a test suite would have to cover to actually exercise the function.
 - **Pass-through wrappers**, a named function whose entire body forwards its parameters unchanged to another call.
-- **Dead imports**, a binding with no reference anywhere in the file, and files carrying more than 20 imported bindings.
-- **Repeated string literals**, the same value appearing three or more times, skipping paths, URLs and sentence-shaped display copy.
+- **Dead imports**, a binding with no reference anywhere in the file. A binding used only as a JSX component counts as used, and so does `React` in any file containing JSX.
+- **Repeated string literals**, the same value of eight characters or more appearing three or more times in executable positions. Values inside a data structure are skipped: a lookup table or a transition map repeats its own vocabulary by design. So are paths, URLs, JSX attribute values and sentence-shaped display copy.
 - **`eslint-disable` with no stated reason** on the same line or the line above.
 - **`TODO` and `FIXME` with no ticket reference**, no `PROJ-123`, no `#456`, no tracker link.
 
-Two things this probe deliberately does not flag. Generic variable names like `data`, `result` and `item` are idiomatic in real code and there is no signal that separates laziness from a documented callback parameter. And file length and stray `console` calls belong to the Code Quality probe, which already reports them.
+## Scope and the things it deliberately ignores
+
+**Language.** The checks that need real code structure (function length, complexity, wrappers, dead imports, repeated literals) run on `.js`, `.jsx`, `.mjs` and `.cjs`. TypeScript files get the text-level checks only. The parser has no TypeScript grammar, and guessing at it produces confident nonsense: `import type { User } from './user'` reads as a plain default import named `type`, which would report an unused import on essentially every TypeScript file ever written. Structural checks wait for a parser that can actually read the language.
+
+**Generated and minified files** are skipped entirely, on `@generated` and `do not edit` banners and on `.min.` names. Every check here asks whether a person read this code, which is the wrong question for codegen output.
+
+**Test files and fixtures** are skipped, as they are across PreFlight. A fixture is supposed to contain the shapes being tested.
+
+Some things are deliberately never flagged:
+
+- **Generic variable names** like `data`, `result` and `item`. They are idiomatic in real code and no signal separates laziness from a documented callback parameter.
+- **File length and stray `console` calls.** The Code Quality probe already reports both; two findings on one line is noise, not thoroughness.
+- **Import counts.** A composition root legitimately imports twenty things and uses every one. Counting bindings measures a file's job, not its health. Dead imports are the version of that signal that survives contact with real code.
+- **Switch arms, when scoring complexity.** Textbook complexity adds one per `case`, which scores a flat eighteen-case dispatch as unreadable. That shape is the opposite of unreadable, and it is what the advice above tells you to move toward.
+- **Anything already explained.** A ticket reference or a stated reason inside a commented-out block, next to an `eslint-disable`, or in a `TODO` suppresses the finding. Documented intent is the fix, so finding the documentation means the fix is already in place.
 
 ## What the fix looks like
 
