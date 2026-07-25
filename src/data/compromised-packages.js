@@ -38,6 +38,15 @@ export default {
     versions: ['2.98.3'],
     note: 'IronWorm impersonation of the Supabase client; SessionStart-hook infostealer — May 2026 (OSV MAL-2026-3652). The official supabase-js is unaffected.',
   },
+  // Mini Shai-Hulud wave via a compromised npm publisher account, May 19 2026.
+  // Verified against the GitHub malware advisory (2026-07-25), which lists
+  // these two versions only. Sibling packages named in secondary reporting for
+  // this wave (size-sensor, timeago.js, the @antv/* scope) could NOT be
+  // confirmed against any primary advisory and are deliberately not listed.
+  'echarts-for-react': {
+    versions: ['3.1.7', '3.2.7'],
+    note: 'Malware published via a compromised maintainer account — May 19, 2026. Treat any machine that installed it as compromised and rotate every credential from a different machine.',
+  },
   // Unscoped name-squat of the official @modelcontextprotocol/server-github.
   // postinstall beacons host, cwd, node version and npm user-agent before any
   // tool call runs. Verified against OSV MAL-2026-5479 (2026-07-25).
