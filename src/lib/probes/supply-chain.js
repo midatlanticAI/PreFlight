@@ -810,30 +810,56 @@ export function probeNpmrcHygiene(files) {
       line: 1,
       evidence: 'No .npmrc in scanned files',
       remediation:
-        'After the Shai-Hulud, Axios, and Mini Shai-Hulud incidents (2025-2026), recommended hardening: add .npmrc with min-release-age=10080 (7 days, blocks installing brand-new versions during the active worm window) and audit-level=high. Better yet, switch from npm CLI to pnpm v11+ which ships consumer-side defenses by default.',
+        'After the Shai-Hulud, Axios, and Mini Shai-Hulud incidents (2025-2026), the highest-value line to add is:\n\n  ignore-scripts=true\n\nInstall-time lifecycle scripts are how every worm in that family spread, and npm runs them by default. Add audit-level=high alongside it.\n\nA note on advice you may have seen elsewhere: min-release-age in .npmrc does nothing under npm. The key is not recognised, and npm echoing unknown keys back makes it look accepted. The rolling cooldown is a pnpm feature, spelled minimumReleaseAge and read from pnpm-workspace.yaml. Under npm the closest equivalent is before=<date>, which pins resolution to packages published before a date you move forward deliberately.',
     });
     return findings;
   }
-  // The control is "do not install a version published minutes ago". npm
-  // spells that `min-release-age`; it is also achievable with `before=`, which
-  // pins resolution to packages published before a fixed date, and pnpm calls
-  // it `minimumReleaseAge`. Real-scan finding 2026-07: a repo that had
-  // hardened its install still got told it had not.
-  const hasReleaseCooldown =
-    /min-release-age|minimum-?release-?age|minimumReleaseAge|^\s*before\s*=/im.test(npmrc.content);
+  // The control is "do not install a version published minutes ago", and which
+  // spelling actually does that depends entirely on the package manager.
+  //
+  // This check used to accept `min-release-age` in .npmrc and recommend it as
+  // the primary fix. Verified against npm 10.9.8 on 2026-07-26: `min-release-age`
+  // is not a recognised npm config key at all. npm echoes unknown .npmrc keys
+  // back from `npm config ls -l`, which is exactly why it looked like it worked.
+  // So the probe was telling npm projects to add an inert line and then
+  // certifying them as hardened for having added it. A closed loop: the tool
+  // taught the failure and then marked it fixed. That is worse than not
+  // shipping the check, and an outside reviewer was right to call it.
+  //
+  // Nor is it the pnpm answer in this file. pnpm's setting is `minimumReleaseAge`
+  // and pnpm 10 reads it from pnpm-workspace.yaml; setting it in .npmrc there
+  // reads back undefined (verified against pnpm 10.34.1, same day).
+  //
+  // What npm genuinely implements: `before=<date>`, which pins resolution to
+  // packages published before a fixed date, and `ignore-scripts`, which blocks
+  // the install-time lifecycle hooks every worm in this family propagated
+  // through. Neither is a rolling cooldown, and the remediation says so rather
+  // than inventing one.
+  const lock = files.find((f) => /(^|\/)pnpm-lock\.ya?ml$/i.test(f.path));
+  const workspace = files.find((f) => /(^|\/)pnpm-workspace\.ya?ml$/i.test(f.path));
+  const isPnpm = Boolean(lock || workspace);
+  const hasReleaseCooldown = isPnpm
+    ? /minimum-?release-?age/i.test(`${workspace?.content || ''}\n${npmrc.content}`)
+    : /^\s*before\s*=/im.test(npmrc.content) ||
+      /^\s*ignore-scripts\s*=\s*true/im.test(npmrc.content);
   if (!hasReleaseCooldown) {
     findings.push({
       id: `npmrc-cooldown-${npmrc.path}`,
       probe: 'Package Manager Hardening',
-      title: '.npmrc missing min-release-age (release cooldown)',
+      title: isPnpm
+        ? 'No release cooldown configured (pnpm minimumReleaseAge)'
+        : 'No install-time supply-chain control in .npmrc',
       severity: 'low',
       category: 'Supply Chain',
       cwe: 'CWE-1357',
       file: npmrc.path,
       line: 1,
-      evidence: 'No min-release-age directive',
-      remediation:
-        'Set min-release-age=10080 (7 days) so brand-new package versions are not installed during the typical worm propagation window. Most npm supply-chain incidents in 2025-2026 (Shai-Hulud, Axios, Mini Shai-Hulud) were detected and pulled within hours to days; a 7-day cooldown would have blocked them.',
+      evidence: isPnpm
+        ? 'No minimumReleaseAge in pnpm-workspace.yaml'
+        : 'No before= or ignore-scripts=true directive',
+      remediation: isPnpm
+        ? 'This project uses pnpm, which implements a real release cooldown. Put it in pnpm-workspace.yaml, not .npmrc:\n\n  minimumReleaseAge: 10080\n\nThat is 7 days. Most npm supply-chain incidents in 2025-2026 (Shai-Hulud, Axios, Mini Shai-Hulud) were caught and pulled within hours to days, so a cooldown of a week would have kept the malicious versions out of your lockfile without you doing anything.'
+        : 'npm has no rolling release-cooldown setting. If you have seen min-release-age suggested for .npmrc, that is a pnpm feature: npm does not recognise the key, and adding it does nothing. Two controls npm does implement:\n\n  ignore-scripts=true\n\nInstall-time lifecycle scripts are how every worm in this family spread. Turning them off is the single highest-value line in an npm .npmrc. You will need to run builds for packages that genuinely require them, which is the tradeoff.\n\n  before=2026-07-01\n\nResolution is pinned to packages published before that date. It is a fixed date rather than a rolling window, so you have to move it forward deliberately, which is the point: new versions enter your tree when you decide, not when they are published.\n\nIf you want the rolling version, pnpm implements it as minimumReleaseAge in pnpm-workspace.yaml.',
     });
   }
   return findings;

@@ -1808,8 +1808,8 @@ describe('probeNpmrcHygiene', () => {
     expect(probeNpmrcHygiene([file('something.txt', 'x')])).toEqual([]);
   });
 
-  it('flags .npmrc missing min-release-age', () => {
+  it('flags .npmrc with no install-time supply-chain control', () => {
     const f = probeNpmrcHygiene([file('package.json', '{}'), file('.npmrc', 'audit-level=high')]);
-    expect(f.find((x) => x.title.includes('min-release-age'))).toBeDefined();
+    expect(f.find((x) => x.title.includes('supply-chain control'))).toBeDefined();
   });
 });

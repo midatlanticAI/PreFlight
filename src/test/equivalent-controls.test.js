@@ -80,24 +80,73 @@ describe('skip link: recognised by what it does', () => {
   });
 });
 
-describe('.npmrc release cooldown: any spelling of the control', () => {
-  const withNpmrc = (content) => [
+describe('.npmrc install-time control: the spelling has to be one the tool implements', () => {
+  // This block used to assert that `min-release-age=10080` in .npmrc counted as
+  // hardened. Verified 2026-07-26 against npm 10.9.8: npm does not recognise
+  // that key. It survives in `npm config ls -l` only because npm echoes unknown
+  // .npmrc keys back, which is exactly why it looked like it worked. The probe
+  // was recommending an inert line and then certifying the project for adding
+  // it, and this test was holding that loop closed.
+  //
+  // pnpm does implement the rolling cooldown, as `minimumReleaseAge`, but reads
+  // it from pnpm-workspace.yaml. Setting it in .npmrc reads back undefined
+  // (pnpm 10.34.1, same day). So the answer depends on the package manager, and
+  // the tests now say which one they are talking about.
+  const npmProject = (content) => [
     { path: 'package.json', content: '{}' },
+    { path: 'package-lock.json', content: '{}' },
     { path: '.npmrc', content },
   ];
-  const cooldown = (content) =>
-    probeNpmrcHygiene(withNpmrc(content)).filter((x) => /release-age|cooldown/i.test(x.title));
+  const pnpmProject = (npmrc, workspace) =>
+    [
+      { path: 'package.json', content: '{}' },
+      { path: 'pnpm-lock.yaml', content: 'lockfileVersion: 9.0' },
+      { path: '.npmrc', content: npmrc },
+      workspace ? { path: 'pnpm-workspace.yaml', content: workspace } : null,
+    ].filter(Boolean);
+  const control = (files) =>
+    probeNpmrcHygiene(files).filter((x) => /release cooldown|supply-chain control/i.test(x.title));
 
-  it.each([
-    ['npm min-release-age', 'min-release-age=10080'],
-    ['pnpm minimumReleaseAge', 'minimumReleaseAge=10080'],
-    ['hyphenated variant', 'minimum-release-age=10080'],
-    ['npm before= date pin', 'before=2026-07-01'],
-  ])('accepts %s', (_label, content) => {
-    expect(cooldown(content)).toEqual([]);
+  describe('npm projects', () => {
+    it.each([
+      ['ignore-scripts, the control that stops lifecycle-script worms', 'ignore-scripts=true'],
+      ['before=, which npm actually implements', 'before=2026-07-01'],
+    ])('accepts %s', (_label, content) => {
+      expect(control(npmProject(content))).toEqual([]);
+    });
+
+    it('does NOT accept min-release-age, which npm ignores', () => {
+      expect(control(npmProject('min-release-age=10080')).length).toBeGreaterThan(0);
+    });
+
+    it('does not accept pnpm spelling in an npm project either', () => {
+      expect(control(npmProject('minimumReleaseAge=10080')).length).toBeGreaterThan(0);
+    });
+
+    it('flags an .npmrc carrying only audit-level', () => {
+      expect(control(npmProject('audit-level=high')).length).toBeGreaterThan(0);
+    });
+
+    it('names the real npm controls in the remediation, and warns off the inert one', () => {
+      const [f] = control(npmProject('audit-level=high'));
+      expect(f.remediation).toMatch(/ignore-scripts=true/);
+      expect(f.remediation).toMatch(/before=/);
+      expect(f.remediation).toMatch(/npm does not recognise the key/);
+    });
   });
 
-  it('still flags an .npmrc with no cooldown control', () => {
-    expect(cooldown('audit-level=high').length).toBeGreaterThan(0);
+  describe('pnpm projects', () => {
+    it('accepts minimumReleaseAge in pnpm-workspace.yaml, where pnpm reads it', () => {
+      expect(control(pnpmProject('', 'minimumReleaseAge: 10080'))).toEqual([]);
+    });
+
+    it('flags a pnpm project with no cooldown anywhere', () => {
+      expect(control(pnpmProject('audit-level=high')).length).toBeGreaterThan(0);
+    });
+
+    it('points at pnpm-workspace.yaml rather than .npmrc', () => {
+      const [f] = control(pnpmProject('audit-level=high'));
+      expect(f.remediation).toMatch(/pnpm-workspace\.yaml, not \.npmrc/);
+    });
   });
 });

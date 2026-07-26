@@ -9,10 +9,29 @@
 // test-file matches; file-size / structural probes still see those files (the LOC count
 // is real either way).
 
+// Every rule below that looks at a DIRECTORY is written with `/` separators,
+// because that is what a repo path looks like. A caller that hands us a native
+// Windows path hands us backslashes, and then none of those rules match: not
+// the test directories, not the fixture directories, not the vendor
+// directories, not the scanner's own source. `shouldScanFile` still returns
+// true, so the file is scanned with every protection silently switched off.
+//
+// That is how a project's own SSRF test suite gets reported as an SSRF risk.
+// The fixtures exist to prove the app blocks `169.254.169.254`; strip the
+// exclusion and they read as production code reaching for link-local metadata,
+// which means writing the test suite lowers the score. Found 2026-07-26 by an
+// outside review of a scan whose harness used `path.join` without normalising.
+//
+// Normalising here rather than in each predicate is deliberate: this is the one
+// door every rule goes through, and the failure mode is silent, so a rule added
+// later must not be able to forget.
+const norm = (path) => (typeof path === 'string' ? path.replace(/\\/g, '/') : path);
+
 // Structural probes that count whole-project facts (missing .npmrc, architecture
 // classification) still see test files; per-file code-shape probes (including the
 // Code Quality cluster) skip them.
-export function isTestFile(path) {
+export function isTestFile(rawPath) {
+  const path = norm(rawPath);
   if (!path) return false;
   if (/\.(test|spec|eval)\.[jt]sx?$/i.test(path)) return true;
   // Directory names: exact test/fixture/mock dirs plus hyphen/underscore
@@ -73,8 +92,9 @@ export function isSelfScanMode() {
   return selfScanMode;
 }
 
-export function isScannerSelfSource(path) {
+export function isScannerSelfSource(rawPath) {
   if (!selfScanMode) return false;
+  const path = norm(rawPath);
   if (!path) return false;
   // The scanner's own probe modules + the threat-intel manifests + the file/suppression
   // helpers ALL contain pattern literals and IOC strings that pattern-matching probes
@@ -133,7 +153,8 @@ export function isTemplateFragment(content) {
 // URL Reputation hits every documented help-link, and content probes can match suppress-rule
 // title-patterns. We want these files visible to SEO/GEO probes (which target them by name)
 // but invisible to generic content probes.
-export function isMetaDocFile(path) {
+export function isMetaDocFile(rawPath) {
+  const path = norm(rawPath);
   if (!path) return false;
   if (/(^|\/)llms\.txt$/i.test(path)) return true;
   if (/(^|\/)robots\.txt$/i.test(path)) return true;
@@ -154,7 +175,8 @@ export function isMetaDocFile(path) {
 // a real secret accidentally pasted into one is still caught by the secret
 // scanner, which inspects content independently.
 const ENV_TEMPLATE_MARKER = /(?:example|sample|template|dist|defaults|tpl|placeholder)/i;
-export function isEnvTemplateFile(path) {
+export function isEnvTemplateFile(rawPath) {
+  const path = norm(rawPath);
   if (!path) return false;
   const base = path.split('/').pop() || '';
   if (!/^\.?env(?=$|[.\-_])/i.test(base)) return false;
@@ -267,7 +289,9 @@ export const FILE_EXCLUDE = [
   /(^|\/)preflight\/preflight\.lock$/i,
 ];
 
-export function shouldScanFile(path) {
+export function shouldScanFile(rawPath) {
+  const path = norm(rawPath);
+  if (!path) return false;
   if (FILE_EXCLUDE.some((p) => p.test(path))) return false;
   return FILE_INCLUDE.some((p) => p.test(path));
 }
