@@ -157,8 +157,11 @@ describe('discoverability follows the same shape logic', () => {
   });
 
   it('explains the reason in audience terms, not exposure terms', () => {
+    // Share tags survive for a local tool and say why; crawler tags are
+    // dropped outright by isInapplicableForShape and are covered below.
     const out = applyAppShape([finding('SEO Hygiene', 'medium')], shape);
-    expect(out[0].shapeNote).toMatch(/search engine|social card/i);
+    expect(out[0].shapeNote).toMatch(/share preview/i);
+    expect(out[0].shapeNote).not.toMatch(/disclosure/i);
   });
 
   it('leaves them at full weight for a normal web app', () => {
@@ -177,5 +180,35 @@ describe('vendored single files are out of scope', () => {
     // First-party code that merely mentions a library name stays in scope.
     expect(shouldScanFile('src/vendors-page.jsx')).toBe(true);
     expect(shouldScanFile('src/lib/vendorBilling.js')).toBe(true);
+  });
+});
+
+describe('crawler tags versus share tags for a local tool', () => {
+  const shape = { isSingleUserLocal: true };
+  const f = (probe, title, severity = 'medium') => ({ probe, title, severity });
+
+  it('drops crawler-only findings entirely, since nothing crawls loopback', () => {
+    const out = applyAppShape(
+      [
+        f('SEO Hygiene', 'Missing <link rel="canonical">'),
+        f('SEO Hygiene', 'No JSON-LD structured data in <head>'),
+        f('GEO Hygiene', 'No llms.txt for AI-search crawlers'),
+      ],
+      shape
+    );
+    expect(out).toEqual([]);
+  });
+
+  it('keeps share-preview findings, because a pasted link still previews', () => {
+    const out = applyAppShape([f('SEO Hygiene', 'Missing Open Graph og:title')], shape);
+    expect(out).toHaveLength(1);
+    expect(out[0].shapeNote).toMatch(/share previews/i);
+  });
+
+  it('keeps everything at full weight for a normal web app', () => {
+    const set = [f('SEO Hygiene', 'Missing <link rel="canonical">')];
+    const out = applyAppShape(set, { isSingleUserLocal: false });
+    expect(out).toHaveLength(1);
+    expect(out[0].severity).toBe('medium');
   });
 });
