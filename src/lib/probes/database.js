@@ -8,8 +8,141 @@
 // preserved by builtin.js, which is now a back-compat shim re-exporting
 // every probe function from its new family file.
 
-export function probeSupabaseRLS(files) {
+import { isTestFile } from '../file-filter.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Client-side reads of tables this repo never protects
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// The migration checks below only run on `.sql` files, which means they say
+// nothing at all about the population that actually gets breached. The
+// CVE-2025-48757 disclosure found 170 of 1,645 Lovable showcase apps (10.3%)
+// leaking PII through unprotected tables, and those apps typically have no
+// migration files in the repo whatsoever: the schema was created by clicking
+// around a dashboard. A scanner named "Supabase RLS" that returns zero on
+// exactly those repos is not neutral, it is reassuring, which is worse.
+//
+// So the second phase reads the other direction. Find the tables this code
+// queries with the browser client, subtract the tables some migration in this
+// repo provably protects, and report the difference.
+//
+// What this cannot know is whether RLS was switched on in the dashboard, and
+// the finding says so rather than pretending. That uncertainty is why these
+// land at high rather than critical: a missing ENABLE in a migration you can
+// read is a fact, while an unprotected-looking table might be fine. The
+// remediation leads with the ten-second way to check.
+
+// `@supabase/supabase-js` is the classic entry point, but a current Next.js App
+// Router project depends on `@supabase/ssr` (or the older auth-helpers) and may
+// never name supabase-js directly. Matching only the first would have missed
+// the newest half of the ecosystem, which is also the half most likely to have
+// been generated rather than written.
+const SUPABASE_PACKAGE_RE = /@supabase\/(?:supabase-js|ssr|auth-helpers[\w-]*)/;
+// Every factory those packages expose.
+const SUPABASE_FACTORY_RE =
+  /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?(?:createClient|createBrowserClient|createServerClient|createPagesBrowserClient|createPagesServerClient|createClientComponentClient|createServerComponentClient|createRouteHandlerClient|createMiddlewareClient)\s*\(/g;
+// Names a Supabase handle actually goes by. Deliberately a short list: `.from()`
+// is also Knex, Objection and several query builders, and the package check
+// above plus a recognisable receiver is what keeps this off them.
+const SUPABASE_HANDLE_RE = /^(?:supabase|supabaseClient|supabaseAdmin|supabaseServer|supa|sb)$/i;
+
+function collectSupabaseHandles(files) {
+  const handles = new Set();
+  let isSupabaseProject = false;
+  for (const file of files || []) {
+    const content = file?.content || '';
+    const path = file?.path || '';
+    if (/package\.json$/i.test(path) && SUPABASE_PACKAGE_RE.test(content)) isSupabaseProject = true;
+    if (!/\.[jt]sx?$/i.test(path)) continue;
+    if (SUPABASE_PACKAGE_RE.test(content)) isSupabaseProject = true;
+    // const supabase = createClient(url, key) / createBrowserClient() / …
+    for (const m of content.matchAll(SUPABASE_FACTORY_RE)) handles.add(m[1]);
+    // import { supabase } from '../lib/supabase'
+    for (const m of content.matchAll(
+      /import\s*\{([^}]*)\}\s*from\s*['"][^'"]*supabase[^'"]*['"]/gi
+    ))
+      for (const part of m[1].split(','))
+        handles.add(
+          part
+            .split(/\s+as\s+/i)
+            .pop()
+            .trim()
+        );
+  }
+  return { handles, isSupabaseProject };
+}
+
+function collectProtectedTables(files) {
+  const protectedTables = new Set();
+  let sawMigration = false;
+  for (const file of files || []) {
+    if (!/\.sql$/i.test(file?.path || '')) continue;
+    sawMigration = true;
+    for (const m of (file.content || '').matchAll(
+      /alter\s+table\s+(?:[a-z_][\w]*\.)?["`]?([A-Za-z_][\w]*)["`]?\s+enable\s+row\s+level\s+security/gi
+    ))
+      protectedTables.add(m[1].toLowerCase());
+  }
+  return { protectedTables, sawMigration };
+}
+
+function probeSupabaseClientReads(files) {
   const findings = [];
+  const { handles, isSupabaseProject } = collectSupabaseHandles(files);
+  if (!isSupabaseProject) return findings;
+  const { protectedTables, sawMigration } = collectProtectedTables(files);
+  // One finding per table, not per call site. A table read in twenty places is
+  // one unprotected table, and twenty findings would be the same noise this
+  // codebase has spent the week removing.
+  const reported = new Set();
+
+  for (const file of files || []) {
+    const path = file?.path || '';
+    const content = file?.content || '';
+    if (!/\.[jt]sx?$/i.test(path) || isTestFile(path)) continue;
+    // `\s` already spans newlines, which is what matters here: prettier breaks
+    // a Supabase chain onto its own lines the moment it gets long, and the
+    // long ones are the interesting ones.
+    //
+    //   const { data } = await supabase
+    //     .from('profiles')
+    //     .select('*')
+    for (const m of content.matchAll(
+      /\b([A-Za-z_$][\w$]*)\s*\.\s*from\s*\(\s*['"]([A-Za-z_][\w]*)['"]\s*\)\s*\.\s*(select|insert|update|upsert|delete)\s*\(/g
+    )) {
+      const [, receiver, table, op] = m;
+      if (!handles.has(receiver) && !SUPABASE_HANDLE_RE.test(receiver)) continue;
+      if (protectedTables.has(table.toLowerCase())) continue;
+      if (reported.has(table.toLowerCase())) continue;
+      reported.add(table.toLowerCase());
+      findings.push({
+        id: `rls-client-unprotected-${table.toLowerCase()}`,
+        probe: 'Supabase RLS Check',
+        title: `Table "${table}" is queried from the client and nothing in this repo enables RLS on it`,
+        severity: 'high',
+        category: 'Data Breach',
+        cwe: 'CWE-284',
+        file: path,
+        line: content.slice(0, m.index).split('\n').length,
+        evidence: m[0].replace(/\s+/g, ' ').slice(0, 120),
+        remediation: [
+          op === 'select'
+            ? `Open the Supabase dashboard, go to Authentication then Policies, and look at "${table}". If Row Level Security is off, every row in that table is readable by anyone who opens devtools and copies the anon key out of your JavaScript bundle. The anon key is public by design, so it is not a secret you can protect.`
+            : `Open the Supabase dashboard, go to Authentication then Policies, and look at "${table}". This code reaches the table with .${op}(), so if Row Level Security is off, anyone holding the anon key can write to it as well as read it. The anon key is public by design: it ships in your JavaScript bundle and cannot be kept secret.`,
+          sawMigration
+            ? `This repo has migrations, and none of them run ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY.`
+            : `This repo has no .sql migrations, so the schema was most likely created through the dashboard and RLS was never part of a reviewed file.`,
+          `The fix is two statements:\n\n  ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY;\n  CREATE POLICY "${table}_own_rows" ON public.${table}\n    FOR SELECT USING (auth.uid() = user_id);`,
+          `One thing worth internalising: filtering in the query, for example .eq('user_id', user.id), is not what protects this. That filter runs on the client and an attacker simply does not send it. RLS is the only part of this the user cannot edit.`,
+        ].join('\n\n'),
+      });
+    }
+  }
+  return findings;
+}
+
+export function probeSupabaseRLS(files) {
+  const findings = probeSupabaseClientReads(files);
   files.forEach((file) => {
     if (!/\.sql$/.test(file.path)) return;
     const content = file.content;
