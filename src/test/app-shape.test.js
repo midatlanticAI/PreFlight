@@ -142,3 +142,40 @@ describe('applyAppShape re-weights rather than hides', () => {
     expect(applyAppShape(null, { isSingleUserLocal: true })).toEqual([]);
   });
 });
+
+describe('discoverability follows the same shape logic', () => {
+  const shape = { isSingleUserLocal: true };
+  const finding = (probe, severity) => ({ probe, severity, title: 't' });
+
+  it('downgrades SEO and GEO findings for a loopback tool', () => {
+    const out = applyAppShape(
+      [finding('SEO Hygiene', 'medium'), finding('GEO Hygiene', 'low')],
+      shape
+    );
+    expect(out[0].severity).toBe('low');
+    expect(out[1].severity).toBe('info');
+  });
+
+  it('explains the reason in audience terms, not exposure terms', () => {
+    const out = applyAppShape([finding('SEO Hygiene', 'medium')], shape);
+    expect(out[0].shapeNote).toMatch(/search engine|social card/i);
+  });
+
+  it('leaves them at full weight for a normal web app', () => {
+    const out = applyAppShape([finding('SEO Hygiene', 'medium')], { isSingleUserLocal: false });
+    expect(out[0].severity).toBe('medium');
+  });
+});
+
+describe('vendored single files are out of scope', () => {
+  it('excludes vendored library files, not just vendor directories', async () => {
+    const { shouldScanFile } = await import('../lib/file-filter.js');
+    expect(shouldScanFile('server/src/vendor-html2canvas.js')).toBe(false);
+    expect(shouldScanFile('src/lib/app.vendor.js')).toBe(false);
+    expect(shouldScanFile('src/jquery-3.6.0.js')).toBe(false);
+    expect(shouldScanFile('src/xterm.js')).toBe(false);
+    // First-party code that merely mentions a library name stays in scope.
+    expect(shouldScanFile('src/vendors-page.jsx')).toBe(true);
+    expect(shouldScanFile('src/lib/vendorBilling.js')).toBe(true);
+  });
+});
