@@ -27,15 +27,53 @@ describe('computeScore', () => {
     expect(computeScore([])).toBe(100);
   });
 
-  it('subtracts critical weight per critical finding', () => {
-    expect(computeScore([{ severity: 'critical' }])).toBe(100 - SEV_WEIGHT.critical);
-    expect(computeScore([{ severity: 'critical' }, { severity: 'critical' }])).toBe(
-      100 - 2 * SEV_WEIGHT.critical
-    );
+  // Scoring model changed 2026-07 from hard band caps to per-class diminishing
+  // returns. The caps protected against noise but created a plateau: a real
+  // scan went from 24 false-positive findings to 7 and the number did not move
+  // a single point, because both counts sat past the cap. Findings now group
+  // into classes by probe and severity, and a class costs its weight times
+  // count^0.6 (capped at 6x), so removing any instance always changes the total.
+  it('charges full weight for the first instance of a class', () => {
+    expect(computeScore([{ probe: 'A', severity: 'critical' }])).toBe(100 - SEV_WEIGHT.critical);
+  });
+
+  it('charges repeat instances of the same class at a discount', () => {
+    const two = computeScore([
+      { probe: 'A', severity: 'critical' },
+      { probe: 'A', severity: 'critical' },
+    ]);
+    // More than one, less than two.
+    expect(two).toBeLessThan(100 - SEV_WEIGHT.critical);
+    expect(two).toBeGreaterThan(100 - 2 * SEV_WEIGHT.critical);
+  });
+
+  it('charges separate classes at full weight each', () => {
+    expect(
+      computeScore([
+        { probe: 'A', severity: 'critical' },
+        { probe: 'B', severity: 'critical' },
+      ])
+    ).toBe(100 - 2 * SEV_WEIGHT.critical);
+  });
+
+  it('always moves when an instance is removed, at any volume', () => {
+    const at = (n) =>
+      computeScore(Array.from({ length: n }, () => ({ probe: 'A', severity: 'medium' })));
+    // The plateau this replaced: 24 and 7 scored identically.
+    expect(at(24)).toBeLessThan(at(12));
+    expect(at(12)).toBeLessThan(at(7));
+    expect(at(7)).toBeLessThan(at(3));
+    expect(at(3)).toBeLessThan(at(1));
+    expect(at(1)).toBeLessThan(100);
   });
 
   it('clamps to 0', () => {
-    const findings = Array.from({ length: 20 }, () => ({ severity: 'critical' }));
+    // Twenty DISTINCT criticals. Twenty instances of one critical pattern is
+    // one thing to fix and is charged as such.
+    const findings = Array.from({ length: 20 }, (_, i) => ({
+      probe: 'P' + i,
+      severity: 'critical',
+    }));
     expect(computeScore(findings)).toBe(0);
   });
 
@@ -46,31 +84,38 @@ describe('computeScore', () => {
   // REGRESSION: two early users reported a frontend repo scoring ~32
   // ("CRITICAL") off nothing but sparse SEO meta. Low-severity bands now
   // have a capped TOTAL contribution so volume cannot crater the score.
-  it('caps the medium band so cosmetic volume cannot tank the score', () => {
-    const many = Array.from({ length: 100 }, () => ({ severity: 'medium' }));
-    // 100 * 5 = 500 uncapped; capped at 30 -> score 70, not 0.
-    expect(computeScore(many)).toBe(70);
+  it('keeps repeat volume of one pattern from tanking the score', () => {
+    const many = Array.from({ length: 100 }, () => ({ probe: 'A', severity: 'medium' }));
+    // 100 * 5 = 500 if charged linearly. One pattern in 100 places is one
+    // thing to fix, so it stays well clear of zero.
+    const score = computeScore(many);
+    expect(score).toBeGreaterThan(60);
+    expect(score).toBeLessThan(90);
   });
 
-  it('caps low and info bands too', () => {
-    const lows = Array.from({ length: 100 }, () => ({ severity: 'low' }));
-    expect(computeScore(lows)).toBe(88); // cap 12
-    const infos = Array.from({ length: 100 }, () => ({ severity: 'info' }));
-    expect(computeScore(infos)).toBe(95); // cap 5
+  it('bounds a single noisy class so volume alone cannot tank the score', () => {
+    // The bound is asymptotic, never reached, so the score keeps responding.
+    const at = (n, sev) =>
+      computeScore(Array.from({ length: n }, () => ({ probe: 'A', severity: sev })));
+    expect(at(100, 'low')).toBeGreaterThan(100 - SEV_WEIGHT.low * 6);
+    expect(at(100, 'low')).toBeLessThan(at(50, 'low'));
+    expect(at(100, 'info')).toBeGreaterThan(100 - SEV_WEIGHT.info * 6);
   });
 
-  it('a cosmetic-only repo floors at 53 (never near zero)', () => {
+  it('keeps a cosmetic-only repo well clear of the danger zone', () => {
     const cosmetic = [
-      ...Array.from({ length: 40 }, () => ({ severity: 'medium' })),
-      ...Array.from({ length: 40 }, () => ({ severity: 'low' })),
-      ...Array.from({ length: 40 }, () => ({ severity: 'info' })),
+      ...Array.from({ length: 40 }, () => ({ probe: 'A', severity: 'medium' })),
+      ...Array.from({ length: 40 }, () => ({ probe: 'B', severity: 'low' })),
+      ...Array.from({ length: 40 }, () => ({ probe: 'C', severity: 'info' })),
     ];
-    expect(computeScore(cosmetic)).toBe(53); // 100 - (30 + 12 + 5)
+    const score = computeScore(cosmetic);
+    expect(score).toBeGreaterThan(40);
+    expect(score).toBeLessThan(100);
   });
 
-  it('critical and high stay uncapped (real issues still tank it)', () => {
-    const crits = Array.from({ length: 5 }, () => ({ severity: 'critical' }));
-    expect(computeScore(crits)).toBe(0); // 5 * 25 = 125, clamped
+  it('real issues still tank it', () => {
+    const crits = Array.from({ length: 5 }, (_, i) => ({ probe: 'P' + i, severity: 'critical' }));
+    expect(computeScore(crits)).toBe(0); // 5 distinct criticals = 125, clamped
   });
 });
 

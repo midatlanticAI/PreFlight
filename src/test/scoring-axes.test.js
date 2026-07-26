@@ -101,7 +101,10 @@ describe('the cockpit case that started this', () => {
   });
 
   it('real security volume still holds the security number down', () => {
-    const set = Array.from({ length: 6 }, () => f('Security Headers', 'medium'));
+    // Distinct probes on purpose. Under the class-based model six instances of
+    // ONE pattern is one thing to fix and scores milder than six different
+    // problems, which is the behaviour we want.
+    const set = Array.from({ length: 6 }, (_, i) => f('Security Probe ' + i, 'medium'));
     expect(riskTier(computeScore(set), { hasCritical: false, hasHigh: false }).label).toBe(
       'MODERATE RISK'
     );

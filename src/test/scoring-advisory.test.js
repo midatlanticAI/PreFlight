@@ -65,9 +65,10 @@ describe('a repo with no critical and no high can reach LOW RISK', () => {
   });
 
   it('real medium volume still reads MODERATE', () => {
-    // Six real security mediums is genuine exposure, not opinion, and should
-    // still hold the label down.
-    const set = Array.from({ length: 6 }, () => finding('medium'));
+    // Six DISTINCT real security mediums is genuine exposure, not opinion, and
+    // should still hold the label down. Six instances of one pattern is one
+    // thing to fix and now scores milder, which is intended.
+    const set = Array.from({ length: 6 }, (_, i) => finding('medium', 'Security Probe ' + i));
     const score = computeScore(set);
     expect(riskTier(score, { hasCritical: false, hasHigh: false }).label).toBe('MODERATE RISK');
   });
@@ -79,5 +80,47 @@ describe('a repo with no critical and no high can reach LOW RISK', () => {
   it('advisory findings never rescue a repo that has real problems', () => {
     const set = [finding('critical'), ...Array.from({ length: 30 }, () => bloat())];
     expect(computeScore(set)).toBe(75);
+  });
+});
+
+// --- The promise the model exists to keep -------------------------------
+//
+// A hard band cap meant progress stopped showing once you passed it: a real
+// scan went 24 findings -> 7 with zero score movement. Whatever the curve, the
+// score must respond to every fix, or people learn to ignore it.
+describe('progress is always visible', () => {
+  const at = (n, sev = 'medium') =>
+    computeScore(Array.from({ length: n }, () => finding(sev, 'Code Injection')));
+
+  it('moves at every step down, including deep in the tail', () => {
+    const steps = [40, 24, 16, 12, 8, 4, 2, 1, 0];
+    for (let i = 0; i < steps.length - 1; i++) {
+      expect(at(steps[i]), `${steps[i]} should score below ${steps[i + 1]}`).toBeLessThan(
+        at(steps[i + 1])
+      );
+    }
+  });
+
+  it('reaches a clean 100 when the last instance goes', () => {
+    expect(at(0)).toBe(100);
+  });
+
+  it('never returns a negative or above-100 score', () => {
+    for (const n of [0, 1, 5, 50, 500]) {
+      for (const sev of ['critical', 'high', 'medium', 'low', 'info']) {
+        const s = at(n, sev);
+        expect(s).toBeGreaterThanOrEqual(0);
+        expect(s).toBeLessThanOrEqual(100);
+      }
+    }
+  });
+
+  it('does not let one noisy class alone reach the danger zone', () => {
+    // 500 instances of a single medium pattern is still one thing to fix.
+    expect(at(500)).toBeGreaterThan(60);
+  });
+
+  it('still lets one genuine critical dominate', () => {
+    expect(computeScore([finding('critical', 'Secret Scanner')])).toBe(75);
   });
 });
