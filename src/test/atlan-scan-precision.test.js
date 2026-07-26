@@ -210,3 +210,47 @@ describe('vendored third-party code is out of scope', () => {
     expect(shouldScanFile('src/app.js')).toBe(true);
   });
 });
+
+// --- Third pass: array-join assembly and inferred numerics ----------------
+describe('array-of-fragments assembly', () => {
+  it('does not flag joining an array whose pushes are all safe', () => {
+    const src = [
+      'function render(count) {',
+      '  const bits = [];',
+      "  if (count) bits.push(`${count} item${count > 1 ? 's' : ''} queued`);",
+      "  el.innerHTML = bits.join(' · ');",
+      '}',
+    ].join('\n');
+    expect(xss(src)).toEqual([]);
+  });
+
+  it('still flags joining an array that receives an unsafe value', () => {
+    const src = [
+      'function render(input) {',
+      '  const bits = [];',
+      '  bits.push(`<b>${input.name}</b>`);',
+      "  el.innerHTML = bits.join('');",
+      '}',
+    ].join('\n');
+    expect(xss(src).length).toBeGreaterThan(0);
+  });
+
+  it('treats a pluraliser ternary as safe', () => {
+    const src = "el.innerHTML = `${n} file${n > 1 ? 's' : ''}`;\nlet n = 0;";
+    expect(xss(src)).toEqual([]);
+  });
+
+  it('infers a function parameter is numeric from a comparison', () => {
+    const src = [
+      'function show(snapCount) {',
+      '  el.innerHTML = `<b>${snapCount} snapshot${snapCount > 1 ? "s" : ""}</b>`;',
+      '}',
+    ].join('\n');
+    expect(xss(src)).toEqual([]);
+  });
+
+  it('does not treat an unconstrained parameter as numeric', () => {
+    const src = 'function show(name) {\n  el.innerHTML = `<b>${name}</b>`;\n}';
+    expect(xss(src).length).toBeGreaterThan(0);
+  });
+});
