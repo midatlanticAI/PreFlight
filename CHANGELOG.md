@@ -6,6 +6,18 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-07-25 (later) — the masker was blinding the scanner
+
+A health-score investigation on a real project turned up a defect that had been quietly cutting analysis short on a large share of scans. The reported number went from 105 health findings to 53, and the composition changed in both directions: noise came out, and findings that had been hidden came back.
+
+- **Regex literals are now understood by the shared comment/string masker** (`src/lib/probes/_internal/masking.js`). The masker blanks comments and string bodies so structural scans do not trip over quotes and braces that are really data. It did not know what a regex literal was, so the `"` inside `String(s).replace(/[&<>"']/g, …)` opened a string that ran to the next unrelated quote. On the project under investigation that blanked lines 442 through 1098 of a single file, hiding six unhandled promise chains, four empty `catch` blocks, and every other masked-content check in the range. `escapeHtml` written exactly that way is in a large share of generated apps, so this was not a one-project problem. Slash-versus-division is resolved by standard lexical disambiguation on the preceding token, and byte-offset parity is preserved so line numbers still land where they should. This was a silent failure in the worst direction: fewer findings reads as cleaner code.
+- **One promise chain is now one finding.** `fetch(u).then(r => r.json()).then(render)` matched the `.then` pattern twice and reported twice, on the same line, with the same text. Twelve unhandled chains were being reported as 40 findings.
+- **A promise handed to someone else is no longer reported as dropped.** A returned, awaited, assigned, or argument-position chain has a caller who owns its rejection. `window.fetch = (u, o) => rawFetch(u, o).then(…)` and a service worker's `e.waitUntil(caches.open(v).then(…))` both delegate correctly, and both were being flagged.
+- **A function is no longer charged for the branches inside its own callbacks.** Nested-function exclusion only checked the immediate parent, so anything two or more levels deep inside a callback counted toward the enclosing function and a thin route handler scored as if it were the tangle it delegated to. Complexity findings on the sample project went from 19 to 12, and the ones that remain are functions that really are that branchy.
+- **Protocol constants and markup references are no longer counted as magic strings.** `content-type` appearing thirty times is the name of an HTTP header, not a decision worth naming once; `$('buildBtn')` repeated is one element looked up repeatedly. A string used even once as a selector, id, or class is treated as an element name for the whole file, which catches the ids that reach the DOM through a helper rather than a recognisable call. Repeated-string findings went from 33 to 11, and the survivors are app-defined values: state strings, storage keys, cookie names. Deliberately narrow: an earlier version of this rule also excluded `get`/`set`/`getItem`/`setItem`, which swallowed the real case, since `cookies.get('app_session_v2')` in three places is exactly what the check is for.
+
+Thresholds were not touched. Every change above is a classification fix, so real findings survive them.
+
 ### 2026-07-25 — v2 foundation, precision pass, intel review
 
 **Probes added**
