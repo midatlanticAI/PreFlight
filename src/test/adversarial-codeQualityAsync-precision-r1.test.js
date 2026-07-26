@@ -18,6 +18,11 @@ function expectClean(path, content) {
   expect(asyncFindings(path, content)).toEqual([]);
 }
 
+// For fixtures in the ambiguous set that adjudication resolved as real findings.
+function expectFires(path, content) {
+  expect(asyncFindings(path, content).length).toBeGreaterThan(0);
+}
+
 describe('category 1: async sink callbacks WITH try/catch around their awaits', () => {
   it('async addEventListener callback with try/catch wrapping the await', () => {
     expectClean(
@@ -915,10 +920,15 @@ export function route(useFast, report) {
 // maximally precise probe would stay quiet on all of them, but firing on some
 // is defensible. Failures here are signal for calibration, not regressions.
 describe('edge cases where benign-vs-unhandled is genuinely ambiguous', () => {
-  it('AMBIGUOUS: try/catch covers only the first await in an async listener', () => {
+  // ADJUDICATED round 2 (2026-07): the probe became await-level, so this now
+  // fires, and firing is the correct answer. `await submitForm()` sits outside
+  // the try and can genuinely reject with nothing to handle it. This author
+  // predicted the outcome in the original comment below; the expectation is
+  // flipped rather than the finding suppressed.
+  it('RESOLVED: try/catch covers only the first await, so the second still fires', () => {
     // The second await CAN produce an unhandled rejection. A probe that
     // requires "no try/catch at all" stays quiet; an await-level probe fires.
-    expectClean(
+    expectFires(
       'src/partial.js',
       `
 document.addEventListener('submit', async () => {

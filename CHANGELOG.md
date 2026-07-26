@@ -6,6 +6,31 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-07-25 (later still) — a .catch on one promise never guarded another
+
+Reported by an operator running PreFlight against their own cockpit: the probe correctly flagged an unguarded logout handler and missed the password handler four lines below it, which has the identical defect.
+
+```js
+$('pwSave').addEventListener('click', async () => {
+  const r = await fetch('/api/auth/password', { method: 'POST' });
+  const j = await r.json().catch(() => ({}));
+  $('pwMsg').textContent = r.ok ? 'password changed' : j.error;
+});
+```
+
+The `.catch` is bound to `r.json()`. If the fetch itself rejects, `r` never exists, that handler is unreachable, the listener rejects with nothing to catch it, and the Save button silently does nothing. The check was asking whether the body contained `.catch(` anywhere, which cannot tell a handler on one promise from a handler on another. `try {` had the same defect, so a try covering part of a body suppressed findings for every await outside it.
+
+- **Guarding is now decided per await.** An await is handled when it sits inside a `try` block that has a `catch` clause, or when the awaited expression itself ends in `.catch(…)`. Everything else is exposed. The finding names the specific line and expression rather than just the callback, so the reader does not have to re-derive which await is the problem.
+- **A `catch` clause is not a guard for its own awaits.** `catch (e) { await report(e) }` is exposed exactly like any other bare await; a catch handles the try block's failure, not its own. This was wrong in the first draft of the fix, and is the same category error as the wrong-promise `.catch` above, written in different syntax.
+- **`try { … } finally { … }` with no catch does not guard.** finally runs on the way past and the rejection keeps going.
+- **A `.catch` has to be last in its chain.** `await load().catch(() => null).then(normalize)` is exposed: the handler covers only the links before it, so a throw in `normalize` has nothing left to catch it.
+- **Callback shapes that were never matched at all** now are: anonymous `async function () {}`, TypeScript arrows carrying a return-type annotation (`async (e: MouseEvent): Promise<void> => {`), and single-parameter arrows without parentheses.
+- **Two false positives in the neighbouring bare-async-call check.** A formatter that wraps a long chain puts `send()` alone on its line with `.then(…).catch(…)` below it; the line-anchored regex read that as a dropped promise. It now looks ahead for a chain continuation.
+
+Measured on four real codebases: 2 findings on the reporting project (both real, including the reported miss), 10 across 2,270 files of a large CLI fork, 0 on PreFlight's own tree, 0 on a third project. Every one of the 12 was hand-checked and is a genuine unhandled rejection.
+
+**Adversarial contextless round.** Four agents wrote 77 cases from a written spec alone, unable to read the implementation or each other's work: two hunting false negatives, two hunting false positives, one of those attacking the parser rather than the logic. A fifth adjudicated the combined set and found three contradictions where two authors demanded opposite behaviour from the same shape. That round found the catch-clause defect, the try/finally defect, the chain-tail defect, both missing callback shapes, and both false positives listed above. 76 cases survived adjudication and ship as `src/test/adversarial-asyncGuard-r2.test.js`, with the three resolutions recorded in the file header.
+
 ### 2026-07-25 (later) — the masker was blinding the scanner
 
 A health-score investigation on a real project turned up a defect that had been quietly cutting analysis short on a large share of scans. The reported number went from 105 health findings to 53, and the composition changed in both directions: noise came out, and findings that had been hidden came back.
