@@ -147,3 +147,66 @@ describe('URL Reputation: known-good hosts on flagged TLDs', () => {
     expect(found.filter((x) => /Suspicious TLD/i.test(x.title)).length).toBeGreaterThan(0);
   });
 });
+
+// --- Second pass, from re-scanning the same cockpit after the first fix ---
+//
+// The first const-eval pass cleared the synthetic shapes but only 0 of 24 real
+// findings, because value extraction was line-anchored. Real code does not put
+// the whole expression on one line.
+describe('HTML sinks: real-world expression shapes', () => {
+  it('does not flag a multi-line template of static markup', () => {
+    const src = [
+      'el.innerHTML = `<div class="card">',
+      '  <span class="title"></span>',
+      '  <span class="body"></span>',
+      '</div>`;',
+    ].join('\n');
+    expect(xss(src)).toEqual([]);
+  });
+
+  it('does not flag when another statement follows on the same line', () => {
+    const src = "const box = $('x'); box.innerHTML = ''; box.style.display = '';";
+    expect(xss(src)).toEqual([]);
+  });
+
+  it('does not flag a literal followed by a closing brace', () => {
+    const src = 'function f() { list.innerHTML = \'<div class="hint">none</div>\'; }';
+    expect(xss(src)).toEqual([]);
+  });
+
+  it('does not flag a ternary between two static strings', () => {
+    const src = "box.innerHTML = items.length ? '' : '<div class=\"hint\">none yet</div>';";
+    expect(xss(src)).toEqual([]);
+  });
+
+  it('does not flag concatenation of static strings', () => {
+    const src = "row.innerHTML = '<span></span>' + '<button class=\"del\">x</button>';";
+    expect(xss(src)).toEqual([]);
+  });
+
+  it('does not flag a template whose hole is sanitizer-wrapped', () => {
+    const src = 'div.innerHTML = `<div class="p">Permission — ${escapeHtml(tool)}</div>`;';
+    expect(xss(src)).toEqual([]);
+  });
+
+  it('still flags a multi-line template with a tainted hole', () => {
+    const src = ['el.innerHTML = `<div>', '  ${req.query.q}', '</div>`;'].join('\n');
+    expect(xss(src).length).toBeGreaterThan(0);
+  });
+
+  it('still flags a ternary with a tainted branch', () => {
+    const src = "box.innerHTML = ok ? '<b>fine</b>' : userInput;";
+    expect(xss(src).length).toBeGreaterThan(0);
+  });
+});
+
+describe('vendored third-party code is out of scope', () => {
+  it('excludes vendor directories from the scan set', async () => {
+    const { shouldScanFile } = await import('../lib/file-filter.js');
+    expect(shouldScanFile('web/public/vendor/cm/mode/php/php.js')).toBe(false);
+    expect(shouldScanFile('src/third_party/lib.js')).toBe(false);
+    expect(shouldScanFile('bower_components/x/y.js')).toBe(false);
+    expect(shouldScanFile('src/vendors.js')).toBe(true);
+    expect(shouldScanFile('src/app.js')).toBe(true);
+  });
+});
