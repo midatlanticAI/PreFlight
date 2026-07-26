@@ -101,8 +101,32 @@ export function scan(files, opts = {}) {
 }
 
 // Host-friendly engine metadata without importing the React tree.
+// The engine's actual runtime dependencies, declared rather than inferred.
+//
+// Consumers vendor `src/lib` and `src/data` and then need to know what to
+// install. Parsing import statements out of the vendored files looks like the
+// obvious way to find out, and it is a trap: `src/lib/probes/v05/fixtures/`
+// holds deliberately-vulnerable sample code that the probes parse as INPUT, and
+// those samples contain real import statements. JS-AUTH-001's negative case
+// imports `jsonwebtoken` purely as bait for the auth probe.
+//
+// That is not hypothetical. A downstream cockpit traced imports across the
+// vendored tree and installed `jsonwebtoken` into its own dependency tree,
+// where nothing ever ran it (found by an outside review, 2026-07-26). The
+// failure is benign in that instance and would not stay benign: a fixture is
+// exactly the place an attacker-shaped package name belongs, and this repo
+// ships 100+ of them on purpose.
+//
+// So the engine states its own dependencies. Anything not listed here is a
+// fixture, a sample, or scan input, and installing it is a mistake.
+export const ENGINE_RUNTIME_DEPS = Object.freeze(['acorn', 'acorn-jsx', 'acorn-loose']);
+
 export function engineInfo() {
-  return { probeCount: PROBES.length, probes: PROBES.map((p) => p.name) };
+  return {
+    probeCount: PROBES.length,
+    probes: PROBES.map((p) => p.name),
+    runtimeDeps: [...ENGINE_RUNTIME_DEPS],
+  };
 }
 
 export { PROBES } from './probes.js';
