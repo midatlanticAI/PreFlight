@@ -63,6 +63,27 @@ const PROTOCOL_LITERAL_RE =
 const LOOKUP_CALLEES =
   /^(?:\$|jQuery|getElementById|querySelector|querySelectorAll|getElementsByClassName|getElementsByTagName|closest|matches|getAttribute|setAttribute|removeAttribute|hasAttribute|createElement|createElementNS)$/;
 
+/**
+ * True when this function is an immediately-invoked wrapper around the whole
+ * file: the classic no-build-step module boundary.
+ *
+ * Both halves are required. Immediate invocation alone is not enough, because a
+ * genuinely oversized IIFE nested inside real code deserves the finding; and
+ * spanning the file alone is not enough either, because a single enormous named
+ * function IS the finding. Together they identify a wrapper whose length is the
+ * file's length, which the file-size check already reports.
+ */
+function isModuleWrapper(node, parent, ast) {
+  if (node.type !== 'ArrowFunctionExpression' && node.type !== 'FunctionExpression') return false;
+  const invoked = parent?.type === 'CallExpression' && parent.callee === node;
+  if (!invoked) return false;
+  const start = node.loc?.start?.line;
+  const end = node.loc?.end?.line;
+  const fileEnd = ast?.loc?.end?.line;
+  if (!start || !end || !fileEnd) return false;
+  return start <= 5 && end >= fileEnd - 3;
+}
+
 function isLookupCallee(callee) {
   if (!callee) return false;
   if (callee.type === 'Identifier') return LOOKUP_CALLEES.test(callee.name);
@@ -386,6 +407,14 @@ export function probeAICodegenBloat(files) {
       const startLine = node.loc?.start?.line;
       const endLine = node.loc?.end?.line;
       const name = fnName(node, parent);
+      // An IIFE wrapping the whole file is a module boundary, not a function
+      // anyone should split. A no-build-step script that opens with `(() => {`
+      // and closes at the last line was reported as `Function "(anonymous)" is
+      // 1772 lines` at medium severity, which is both unactionable (the advice
+      // is "extract helpers", and the helpers are already in there) and
+      // double-counted: Code Quality's file-length check already says this file
+      // is large, which is the real observation (real-scan finding 2026-07).
+      if (isModuleWrapper(node, parent, ast)) return;
       if (startLine && endLine && endLine - startLine + 1 > BLOAT_FN_LINES) {
         findings.push(
           finding({

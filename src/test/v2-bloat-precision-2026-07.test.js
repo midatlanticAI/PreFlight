@@ -146,3 +146,45 @@ describe('cyclomatic complexity: a function is not charged for its callbacks', (
     ).toMatch(/"tangled"/);
   });
 });
+
+describe('long functions: a whole-file IIFE is a module boundary', () => {
+  const long = (content) => run(content).filter((f) => / is \d+ lines/.test(f.title));
+  const body = (n, indent = '  ') =>
+    Array.from({ length: n }, (_, i) => `${indent}const v${i} = ${i};`).join('\n');
+
+  it('does not report the top-level IIFE that wraps a no-build-step script', () => {
+    // The advice would be "extract helpers", and the helpers are already in
+    // there. Code Quality's file-length check is what has something to say.
+    const src = `/* header */\n(() => {\n${body(140)}\n})();`;
+    expect(long(src)).toHaveLength(0);
+  });
+
+  it('does not report a function-expression module wrapper either', () => {
+    const src = `(function () {\n${body(140)}\n})();`;
+    expect(long(src)).toHaveLength(0);
+  });
+
+  it('still reports an oversized IIFE nested inside real code', () => {
+    // Immediate invocation is not a free pass. This one does not span the file.
+    const src = [
+      'const setup = 1;',
+      'function outer() {',
+      '  (() => {',
+      body(140, '    '),
+      '  })();',
+      '}',
+      'const after = 2;',
+      'export { outer, setup, after };',
+    ].join('\n');
+    expect(long(src).length).toBeGreaterThan(0);
+  });
+
+  it('still reports a single enormous named function that spans the file', () => {
+    const src = `function everything() {\n${body(140)}\n}`;
+    expect(
+      long(src)
+        .map((f) => f.title)
+        .join(' ')
+    ).toMatch(/"everything"/);
+  });
+});
