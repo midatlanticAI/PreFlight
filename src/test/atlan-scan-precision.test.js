@@ -254,3 +254,84 @@ describe('array-of-fragments assembly', () => {
     expect(xss(src).length).toBeGreaterThan(0);
   });
 });
+
+// --- Fourth pass: cross-boundary safety ------------------------------------
+//
+// After a real read-through escaped every inconsistent interpolation, the only
+// XSS findings left on that project were these two shapes. Both are safe and
+// neither was provable while the resolver stopped at the function boundary.
+describe('cross-boundary safety, same file', () => {
+  it('clears a function whose returns are all safe', () => {
+    const src = [
+      'function escapeHtml(s) { return String(s).replace(/[&<>"]/g, (c) => MAP[c]); }',
+      'const LINK_ROW = () => {',
+      '  return `<div class="linkedit"><span>${escapeHtml(name)}</span></div>`;',
+      '};',
+      'wrap.innerHTML = LINK_ROW();',
+    ].join('\n');
+    expect(xss(src)).toEqual([]);
+  });
+
+  it('clears a parameter that every call site feeds a safe value', () => {
+    const src = [
+      'function escapeHtml(s) { return String(s).replace(/[&<>"]/g, (c) => MAP[c]); }',
+      'function addRow(boxId, html) {',
+      '  row.innerHTML = html + \'<button class="rowdel">x</button>\';',
+      '}',
+      "addRow('a', `<span>${escapeHtml(one)}</span>`);",
+      "addRow('b', `<span>${escapeHtml(two)}</span>`);",
+    ].join('\n');
+    expect(xss(src)).toEqual([]);
+  });
+
+  it('still flags when ONE call site passes an unsafe value', () => {
+    const src = [
+      'function escapeHtml(s) { return String(s).replace(/[&<>"]/g, (c) => MAP[c]); }',
+      'function addRow(boxId, html) {',
+      "  row.innerHTML = html + '<button/>';",
+      '}',
+      "addRow('a', `<span>${escapeHtml(one)}</span>`);",
+      "addRow('b', userSuppliedMarkup);",
+    ].join('\n');
+    expect(xss(src).length).toBeGreaterThan(0);
+  });
+
+  it('still flags a function whose returns are not all safe', () => {
+    const src = [
+      'const ROW = () => {',
+      '  return `<div>${untrusted}</div>`;',
+      '};',
+      'wrap.innerHTML = ROW();',
+    ].join('\n');
+    expect(xss(src).length).toBeGreaterThan(0);
+  });
+
+  it('declines a parameter name shared by two functions', () => {
+    // Ambiguous claim: decline rather than approximate.
+    const src = [
+      'function a(html) { row.innerHTML = html; }',
+      'function b(html) { other.innerHTML = html; }',
+      "a('<b>safe</b>');",
+      'b(userInput);',
+    ].join('\n');
+    expect(xss(src).length).toBeGreaterThan(0);
+  });
+});
+
+describe('an embedded copy of this engine is not the host app', () => {
+  it('excludes a vendored PreFlight engine from a host scan', async () => {
+    const { shouldScanFile } = await import('../lib/file-filter.js');
+    expect(shouldScanFile('server/src/preflight/engine/lib/probes.js')).toBe(false);
+    expect(shouldScanFile('server/src/preflight/engine/lib/threat-intel.js')).toBe(false);
+    expect(shouldScanFile('apps/api/preflight/engine/lib/probes/auth.js')).toBe(false);
+    expect(shouldScanFile('server/src/preflight/preflight.lock')).toBe(false);
+  });
+
+  it("still scans the host's own code around it", async () => {
+    const { shouldScanFile } = await import('../lib/file-filter.js');
+    expect(shouldScanFile('server/src/preflight/scanProject.mjs')).toBe(true);
+    expect(shouldScanFile('server/src/index.js')).toBe(true);
+    // A user's own probes directory is theirs and stays in scope.
+    expect(shouldScanFile('src/lib/probes/myRules.js')).toBe(true);
+  });
+});
