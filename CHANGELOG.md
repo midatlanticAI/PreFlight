@@ -6,6 +6,14 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-07-25 — function length drops to low
+
+`Function "x" is 130 lines` was medium. `Function "x" has cyclomatic complexity 19` was low. Same family, same CWE, same underlying property, and the weaker signal outranked the better one by two and a half times: 130 flat sequential lines are easier to hold in your head than 40 lines with 18 branches. Complexity had already been moved to low in an earlier pass; length was left behind, and the gap was never a decision.
+
+Both are now low. Within this family the line is between artifacts and opinions: a backup file sitting in the source tree is a thing that is there and stays medium, while every other check is a judgement about how code is written. Nothing here is an exploit, and the expected response has always been "go read this file", not "patch now".
+
+On the project that surfaced this, health moves 70 to 78 and the class-count ceiling moves 84 to 89. That is the per-class scoring model behaving as designed: what moved the number was a whole class of finding disappearing, not instances leaving a class that survives.
+
 ### 2026-07-25 (later still) — a .catch on one promise never guarded another
 
 Reported by an operator running PreFlight against their own cockpit: the probe correctly flagged an unguarded logout handler and missed the password handler four lines below it, which has the identical defect.
