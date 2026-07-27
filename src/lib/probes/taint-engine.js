@@ -257,6 +257,47 @@ const SINKS = [
     remediation:
       'A request-derived value becomes the URL of an outbound request, which is server-side request forgery: the caller chooses what your server connects to, including cloud metadata endpoints and internal hosts. Resolve the value against an allowlist of permitted hosts before the call, reject non-http(s) schemes, and block link-local and private address ranges.',
   },
+  {
+    id: 'open-redirect',
+    cwe: 'CWE-601',
+    severity: 'medium',
+    title: 'Redirect target built from user-controlled value (taint flow)',
+    // The outbound-request sink above was added when it turned out a URL that
+    // passed through a variable was invisible to the single-line regex probe.
+    // Redirect had exactly the same hole and was missed at the time:
+    //
+    //   const next = req.query.next;
+    //   res.redirect(next);
+    //
+    // The regex probe wants the request accessor inside the call parentheses,
+    // so one intermediate variable — the way anyone actually writes it — hides
+    // the flow. Found 2026-07-27 by running the shapes rather than reading the
+    // patterns.
+    matches(node) {
+      if (node.type !== 'CallExpression') return null;
+      // Bare `redirect(...)`: next/navigation and SvelteKit both export one.
+      // Same shape the regex probe already accepts, so this adds no new class
+      // of false positive.
+      if (node.callee?.type === 'Identifier') {
+        return node.callee.name === 'redirect' ? { detail: 'redirect' } : null;
+      }
+      const name = resolveDottedName(node.callee);
+      if (!name) return null;
+      if (/^(?:res|reply|ctx|context|response)\.redirect$/i.test(name)) return { detail: name };
+      if (/^(?:NextResponse|Response)\.redirect$/.test(name)) return { detail: name };
+      // res.setHeader('Location', <tainted>) — the Location literal is not
+      // tainted, so only the value argument can trigger the emit.
+      if (/^(?:res|reply|response)\.setHeader$/i.test(name)) {
+        const first = node.arguments?.[0];
+        const isLocation =
+          first?.type === 'Literal' && String(first.value).toLowerCase() === 'location';
+        return isLocation ? { detail: `${name}('Location')` } : null;
+      }
+      return null;
+    },
+    remediation:
+      'The caller chooses where your users land. `?next=https://evil.example` on your own domain is the phishing shape: the link looks like yours, the destination is not. Compare the target against an allowlist of permitted paths or hosts before redirecting, and prefer redirecting to a path you construct rather than one you were handed. Rejecting anything that is not a same-site relative path covers most login-return flows.',
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

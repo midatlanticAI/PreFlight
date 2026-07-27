@@ -260,3 +260,53 @@ describe('Taint engine — browser storage sources', () => {
     expect(findings.length).toBeGreaterThan(0);
   });
 });
+
+describe('Taint engine — open redirect through a variable', () => {
+  // The regex probe wants the request accessor inside the redirect call's
+  // parentheses. One intermediate variable — the way anyone actually writes
+  // it — hid the flow from both probes until 2026-07-27.
+  it('req.query.next -> variable -> res.redirect fires', () => {
+    const findings = probeTaintFlow([
+      f(
+        'server/routes/login.js',
+        `export function handler(req, res) {
+  const next = req.query.next;
+  res.redirect(next);
+}
+`
+      ),
+    ]);
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings[0].cwe).toBe('CWE-601');
+  });
+
+  it('req.body.url -> res.setHeader Location fires', () => {
+    const findings = probeTaintFlow([
+      f(
+        'server/routes/go.js',
+        `export function handler(req, res) {
+  const target = req.body.url;
+  res.setHeader('Location', target);
+  res.statusCode = 302;
+  res.end();
+}
+`
+      ),
+    ]);
+    expect(findings.some((x) => x.cwe === 'CWE-601')).toBe(true);
+  });
+
+  it('a redirect to an author-written path is not a finding', () => {
+    const findings = probeTaintFlow([
+      f(
+        'server/routes/home.js',
+        `export function handler(req, res) {
+  const next = '/dashboard';
+  res.redirect(next);
+}
+`
+      ),
+    ]);
+    expect(findings.filter((x) => x.cwe === 'CWE-601')).toHaveLength(0);
+  });
+});
