@@ -11,6 +11,7 @@
 // v05-phase2 parity test guards against drift from the v0.4 detector.
 
 import { javascriptFiles } from '../../shared-detectors/javascript-scope.js';
+import { maskCommentsForPath } from '../../../_internal/masking.js';
 
 const PROBE_NAME = 'JS SQL Injection (XL-002)';
 
@@ -63,7 +64,11 @@ export const JS_SQL_RAW_001 = {
   detect(files) {
     const findings = [];
     for (const file of javascriptFiles(files)) {
-      const lines = file.content.split('\n');
+      // Comment-blind view for decisions; raw text for evidence. The
+      // v0.4 probe this adapter shadows makes the same distinction, and
+      // the parity test asserts they agree.
+      const rawLines = file.content.split('\n');
+      const lines = maskCommentsForPath(file.path, file.content).split('\n');
       lines.forEach((line, i) => {
         const tagMatch = line.match(/(\w+)`[^`]*\$\{/);
         if (tagMatch && SQL_PARAMETERIZED_TAGS.has(tagMatch[1].toLowerCase())) {
@@ -83,7 +88,7 @@ export const JS_SQL_RAW_001 = {
             cwe: 'CWE-89',
             file: file.path,
             line: i + 1,
-            evidence: line.trim().slice(0, 200),
+            evidence: (rawLines[i] ?? line).trim().slice(0, 200),
             remediation:
               'Use parameterized queries. The canonical pattern depends on the driver: with `pg` use `db.query("SELECT * FROM users WHERE id = $1", [id])`; with Prisma use `prisma.user.findUnique({ where: { id } })`; with Knex use `knex("users").where({ id })`. The pattern flagged here interpolates user input into the SQL string at parse time, which is the textbook SQL injection.',
           });
@@ -104,7 +109,7 @@ export const JS_SQL_RAW_001 = {
               cwe: 'CWE-89',
               file: file.path,
               line: i + 1,
-              evidence: line.trim().slice(0, 200),
+              evidence: (rawLines[i] ?? line).trim().slice(0, 200),
               remediation:
                 "This call interpolates user input into a SQL string. Switch to parameterized queries using the driver's built-in placeholder syntax. See the related Learn pattern for driver-specific examples.",
             });

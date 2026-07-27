@@ -16,6 +16,7 @@
 // Same contract as the existing probes.
 
 import { isTestFile, isScannerSelfSource } from '../file-filter.js';
+import { maskCommentsForPath } from './_internal/masking.js';
 
 // ---------- 6. Source map exposure ----------
 //
@@ -155,7 +156,11 @@ export function probeIframeSandbox(files) {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.(?:html?|jsx?|tsx?|astro|vue|svelte)$/.test(file.path)) return;
 
-    const content = file.content;
+    // Comment-blind for JS-family files; HTML passes through untouched, since
+    // it has no `//` comment form and a bare `https://` in markup would read as
+    // one. The `<iframe src="...">` written in a comment to explain this probe
+    // is documentation, not an unsandboxed frame.
+    const content = maskCommentsForPath(file.path, file.content);
     // postMessage handler without origin check — CWE-346, related to iframe
     // boundary control. Detect window.addEventListener('message', ...) where
     // the next ~30 lines have no `.origin` reference.

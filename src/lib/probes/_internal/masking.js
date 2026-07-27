@@ -65,77 +65,45 @@ export function isMatchInsideComment(content, matchIndex) {
 // line numbers and slice positions stay correct. This is the version
 // structural probes should use when the FP set includes patterns hidden
 // inside multi-line comments or template-literal docstrings.
-// Narrower mask for probes that scan per-line for real code patterns inside
-// string literals (e.g. `localStorage.setItem('jwt', token)` — the literal
-// 'jwt' MUST stay visible). This mask blanks only block comments, line
-// comments, and BACKTICK template literals. Single/double-quoted string
-// content is preserved. Indices and newlines preserved.
-export function maskBlockCommentsAndTemplateLiterals(content) {
-  if (typeof content !== 'string' || content.length === 0) return content || '';
-  const out = [];
-  const len = content.length;
-  let i = 0;
-  const blankExceptNewline = (ch) => (ch === '\n' ? '\n' : ' ');
-  while (i < len) {
-    const c = content[i];
-    const c2 = i + 1 < len ? content[i + 1] : '';
-    if (c === '/' && c2 === '*') {
-      out.push('/', '*');
-      const end = content.indexOf('*/', i + 2);
-      if (end === -1) {
-        for (let j = i + 2; j < len; j++) out.push(blankExceptNewline(content[j]));
-        return out.join('');
-      }
-      for (let j = i + 2; j < end; j++) out.push(blankExceptNewline(content[j]));
-      out.push('*', '/');
-      i = end + 2;
-      continue;
-    }
-    if (c === '/' && c2 === '/') {
-      out.push('/', '/');
-      let j = i + 2;
-      while (j < len && content[j] !== '\n') {
-        out.push(' ');
-        j++;
-      }
-      i = j;
-      continue;
-    }
-    if (c === '`') {
-      out.push('`');
-      let j = i + 1;
-      while (j < len) {
-        if (content[j] === '\\' && j + 1 < len) {
-          out.push(blankExceptNewline(content[j]));
-          out.push(blankExceptNewline(content[j + 1]));
-          j += 2;
-          continue;
-        }
-        if (content[j] === '`') break;
-        out.push(blankExceptNewline(content[j]));
-        j++;
-      }
-      if (j >= len) return out.join('');
-      out.push('`');
-      i = j + 1;
-      continue;
-    }
-    out.push(c);
-    i++;
-  }
-  return out.join('');
-}
+//
+// ---------------------------------------------------------------------------
+// One lexer, three views.
+//
+// There used to be two independent walkers here, and only one of them knew how
+// to lex. The narrow one honoured backticks without tracking `'`/`"` at all, so
+// a single backtick inside an ordinary quoted string opened a template literal
+// that ran to the next backtick anywhere later in the file. Two things follow
+// from that, and the second is the dangerous one:
+//
+//   1. Comment text between the phantom pair is emitted as code. That is how a
+//      line reading `// Plaintext password comparison: \`a.password === b\``
+//      became a CRITICAL finding against the file explaining the check.
+//   2. Every real line the phantom swallowed is blanked, so masked checks never
+//      run on it. On src/lib/probes/auth.js that hid 353 of 1371 lines, and on
+//      src/lib/probes/llm.js 110 of 367. Silent, and in the worst direction:
+//      the scan comes back cleaner because the scanner stopped looking.
+//
+// Backticks in comments are ordinary in documented code, so this fired on real
+// projects, not just ours. Found 2026-07-27 scanning PreFlight from GitHub.
+//
+// The fix is to have exactly one walker that understands JS lexical structure —
+// comments, strings, template literals, regex literals — and to vary only what
+// it BLANKS. Every view is then blind to comments by construction, and none of
+// them can desynchronise, because they all consume the source the same way.
+// ---------------------------------------------------------------------------
 
-// A `/` begins a regex literal when what precedes it cannot end an expression.
-// After an identifier, a number, `)` or `]`, a slash is division. After an
-// operator, an opening bracket, a comma, a semicolon, or a keyword, it is a
-// regex. This is the standard lexical disambiguation and it is right for every
-// shape that appears in real source.
-const REGEX_ALLOWED_AFTER = /[({[,;:=!&|?+\-*%^~<>]/;
-const REGEX_ALLOWED_KEYWORDS =
-  /(?:^|[^\w$])(?:return|typeof|instanceof|in|of|new|delete|void|throw|case|do|else|yield|await)$/;
-
-export function maskCommentsAndStringsFromContent(content) {
+/**
+ * Lex `content` once and blank the interiors selected by `opts`, preserving
+ * length, indices, newlines, and all delimiters.
+ *
+ * Comments and regex-literal bodies are blanked in every view: a comment is
+ * prose, and a regex body is a pattern describing code rather than code that
+ * runs. `/eval\s*\(/` is not a call to eval.
+ *
+ * @param {string} content
+ * @param {{blankStrings?: boolean, blankTemplates?: boolean}} opts
+ */
+function maskSource(content, { blankStrings = false, blankTemplates = false } = {}) {
   if (typeof content !== 'string' || content.length === 0) return content || '';
   const out = [];
   const len = content.length;
@@ -228,23 +196,37 @@ export function maskCommentsAndStringsFromContent(content) {
       continue;
     }
     // String literal: ' " or backtick. Template literals can span lines.
+    // Every quote kind is CONSUMED here regardless of whether its body is
+    // blanked, which is the property the old narrow walker lacked.
     if (c === "'" || c === '"' || c === '`') {
       const quote = c;
+      const blank = quote === '`' ? blankTemplates : blankStrings;
+      const keep = (ch) => (blank ? blankExceptNewline(ch) : ch);
       out.push(quote);
       let j = i + 1;
       while (j < len) {
         if (content[j] === '\\' && j + 1 < len) {
-          // Skip escape and the character it escapes; blank both, preserve newlines.
-          out.push(blankExceptNewline(content[j]));
-          out.push(blankExceptNewline(content[j + 1]));
+          // Skip escape and the character it escapes; preserve newlines.
+          out.push(keep(content[j]));
+          out.push(keep(content[j + 1]));
           j += 2;
           continue;
         }
         if (content[j] === quote) break;
-        out.push(blankExceptNewline(content[j]));
+        // A non-template quote does not span lines. An unterminated one is a
+        // lexing dead end, and running to the end of the file from it is how a
+        // whole file silently stops being analysed. Stop at the newline and
+        // treat the quote as ordinary punctuation instead.
+        if (quote !== '`' && content[j] === '\n') break;
+        out.push(keep(content[j]));
         j++;
       }
-      if (j >= len) return out.join(''); // unterminated string; trail consumed
+      if (j >= len) return out.join(''); // unterminated at EOF; trail consumed
+      if (quote !== '`' && content[j] === '\n') {
+        // Unterminated single-line string: resume normal lexing at the newline.
+        i = j;
+        continue;
+      }
       out.push(quote);
       lastSignificant = quote; // a string ends an expression
       lastSignificantIdx = j;
@@ -259,6 +241,123 @@ export function maskCommentsAndStringsFromContent(content) {
     i++;
   }
   return out.join('');
+}
+
+// Narrower mask for probes that scan per-line for real code patterns inside
+// string literals (e.g. `localStorage.setItem('jwt', token)` — the literal
+// 'jwt' MUST stay visible). This mask blanks block comments, line comments,
+// regex bodies, and BACKTICK template literals. Single/double-quoted string
+// content is preserved. Indices and newlines preserved.
+export function maskBlockCommentsAndTemplateLiterals(content) {
+  return maskSource(content, { blankStrings: false, blankTemplates: true });
+}
+
+// Comments (and regex bodies) only. Every string literal survives, including
+// template literals and the URLs inside them.
+//
+// This is the view for checks that ask a question ABOUT A STRING VALUE — a
+// connection string with `root:root@`, a storage key named `jwt`, an inline
+// Basic-auth credential. Those checks used to read the raw line to get past
+// `stripLineComments` mangling the `//` in a URL scheme, and reading the raw
+// line is precisely what let comment prose back in.
+export function maskCommentsOnly(content) {
+  return maskSource(content, { blankStrings: false, blankTemplates: false });
+}
+
+// `#` to end of line, for the languages that comment that way. Quote-aware for
+// the same reason the JS walker is: `'#'` inside a string is a character, and
+// a URL fragment (`https://host/page#anchor`) is not a comment.
+function maskHashComments(content) {
+  if (typeof content !== 'string' || content.length === 0) return content || '';
+  const out = [];
+  const len = content.length;
+  let i = 0;
+  while (i < len) {
+    const c = content[i];
+    if (c === "'" || c === '"') {
+      // Python triple quotes: consume as one literal so a `#` inside a
+      // docstring does not read as a comment and a lone quote inside it does
+      // not terminate the string.
+      const triple = content.slice(i, i + 3);
+      if (triple === "'''" || triple === '"""') {
+        const end = content.indexOf(triple, i + 3);
+        const stop = end === -1 ? len : end + 3;
+        for (let j = i; j < stop; j++) out.push(content[j]);
+        i = stop;
+        continue;
+      }
+      out.push(c);
+      let j = i + 1;
+      while (j < len && content[j] !== c && content[j] !== '\n') {
+        if (content[j] === '\\' && j + 1 < len) {
+          out.push(content[j], content[j + 1]);
+          j += 2;
+          continue;
+        }
+        out.push(content[j]);
+        j++;
+      }
+      if (j < len && content[j] === c) {
+        out.push(c);
+        i = j + 1;
+      } else {
+        i = j;
+      }
+      continue;
+    }
+    if (c === '#') {
+      let j = i;
+      while (j < len && content[j] !== '\n') {
+        out.push(' ');
+        j++;
+      }
+      i = j;
+      continue;
+    }
+    out.push(c);
+    i++;
+  }
+  return out.join('');
+}
+
+// Comment syntax follows the language, so the "ignore comments" rule has to as
+// well. A probe that scans Python with a JavaScript lexer is still reading
+// every `#` line as if it were code.
+//
+// HTML deliberately gets no masking: it has no `//` comment form, and bare
+// `https://` in markup would be read as one.
+const SLASH_COMMENT_LANGS = /\.(?:[jt]sx?|mjs|cjs|go|java|c|h|cpp|cs|swift|kt|scala|rs)$/i;
+const HASH_COMMENT_LANGS = /\.(?:py|rb|sh|bash|zsh|ya?ml|toml|tf|pl)$/i;
+
+/**
+ * Blank comment bodies using the comment syntax of `path`'s language.
+ * String and template contents survive. Returns `content` unchanged for file
+ * types with no supported line-comment form.
+ */
+export function maskCommentsForPath(path, content) {
+  const p = typeof path === 'string' ? path : '';
+  if (SLASH_COMMENT_LANGS.test(p)) return maskCommentsOnly(content);
+  if (HASH_COMMENT_LANGS.test(p)) return maskHashComments(content);
+  // PHP takes both forms.
+  if (/\.php$/i.test(p)) return maskHashComments(maskCommentsOnly(content));
+  return typeof content === 'string' ? content : '';
+}
+
+// A `/` begins a regex literal when what precedes it cannot end an expression.
+// After an identifier, a number, `)` or `]`, a slash is division. After an
+// operator, an opening bracket, a comma, a semicolon, or a keyword, it is a
+// regex. This is the standard lexical disambiguation and it is right for every
+// shape that appears in real source.
+const REGEX_ALLOWED_AFTER = /[({[,;:=!&|?+\-*%^~<>]/;
+const REGEX_ALLOWED_KEYWORDS =
+  /(?:^|[^\w$])(?:return|typeof|instanceof|in|of|new|delete|void|throw|case|do|else|yield|await)$/;
+
+// The widest view: comments, regex bodies, and every string literal blanked.
+// This is what a check should use when it asks a question about CODE SHAPE —
+// a comparison, a call, an assignment. A password comparison written inside a
+// string literal is prose about a password comparison.
+export function maskCommentsAndStringsFromContent(content) {
+  return maskSource(content, { blankStrings: true, blankTemplates: true });
 }
 
 // True when a Private Key Block match should be SUPPRESSED. Two cases:

@@ -9,14 +9,17 @@
 // every probe function from its new family file.
 
 import { isTestFile, isScannerSelfSource } from '../file-filter.js';
-import { maskCommentsAndStringsFromContent } from './_internal/masking.js';
+import { maskCommentsAndStringsFromContent, maskCommentsForPath } from './_internal/masking.js';
 
 export function probeLLMSecurity(files) {
   const findings = [];
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$|\.py$/.test(file.path)) return;
-    const content = file.content;
+    // Comment-blind, string-preserving. The agent-tool names this probe hunts
+    // for (PythonREPL, ShellTool) appear as identifiers in real LangChain code,
+    // and as prose in any file that documents the risk.
+    const content = maskCommentsForPath(file.path, file.content);
     const lines = content.split('\n');
     const isClientFile =
       /^['"]use client['"]/m.test(content) ||

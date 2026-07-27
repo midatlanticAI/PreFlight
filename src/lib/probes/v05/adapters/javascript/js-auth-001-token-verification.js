@@ -13,6 +13,7 @@
 // preserves suppressions. The v05-phase2 parity test guards drift.
 
 import { javascriptFiles, stripJsLineComments } from '../../shared-detectors/javascript-scope.js';
+import { maskCommentsForPath } from '../../../_internal/masking.js';
 
 const PROBE_NAME = 'JS Auth Token Verification (XL-013)';
 
@@ -57,7 +58,11 @@ export const JS_AUTH_001 = {
   detect(files) {
     const findings = [];
     for (const file of javascriptFiles(files)) {
-      const lines = file.content.split('\n');
+      // Comment-blind view for decisions; raw text for evidence. The
+      // v0.4 probe this adapter shadows makes the same distinction, and
+      // the parity test asserts they agree.
+      const rawLines = file.content.split('\n');
+      const lines = maskCommentsForPath(file.path, file.content).split('\n');
       lines.forEach((rawLine, i) => {
         const line = stripJsLineComments(rawLine);
         if (/(?:algorithm|alg)\s*:\s*['"]?none['"]?(?:\s|,|$)/i.test(line)) {
@@ -70,7 +75,7 @@ export const JS_AUTH_001 = {
             cwe: 'CWE-327',
             file: file.path,
             line: i + 1,
-            evidence: line.trim(),
+            evidence: (rawLines[i] ?? line).trim(),
             remediation: `alg: none means tokens are unsigned. Anyone can forge a token claiming to be any user. Use HS256 with a strong secret or RS256 with a key pair.`,
           });
         }
@@ -84,7 +89,7 @@ export const JS_AUTH_001 = {
             cwe: 'CWE-347',
             file: file.path,
             line: i + 1,
-            evidence: line.trim(),
+            evidence: (rawLines[i] ?? line).trim(),
             remediation: `Verify with an explicit secret or public key. Without one, signature validation may be skipped depending on the library, allowing forged tokens.`,
           });
         }
@@ -104,7 +109,7 @@ export const JS_AUTH_001 = {
               cwe: 'CWE-613',
               file: file.path,
               line: i + 1,
-              evidence: line.trim(),
+              evidence: (rawLines[i] ?? line).trim(),
               remediation: `A JWT without expiresIn is valid forever. Stolen tokens remain valid until the secret is rotated. Pass { expiresIn: "15m" } (access) or short windows appropriate to the use case, and issue refresh tokens separately.`,
             });
           }

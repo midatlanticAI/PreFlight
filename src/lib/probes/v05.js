@@ -14,6 +14,7 @@
 // isScannerSelfSource at the top of each per-file loop.
 
 import { isTestFile, isScannerSelfSource } from '../file-filter.js';
+import { maskCommentsForPath } from './_internal/masking.js';
 
 // ---------- 1. SQL injection via template literals ----------
 //
@@ -72,7 +73,11 @@ export function probeSQLInjectionTemplateLiterals(files) {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$|\.py$|\.go$/.test(file.path)) return;
 
-    const lines = file.content.split('\n');
+    // Decisions are made on the comment-blind view. A comment describing
+    // the very shape a probe hunts for is documentation, not a defect;
+    // rawLines keeps the original text for evidence.
+    const rawLines = file.content.split('\n');
+    const lines = maskCommentsForPath(file.path, file.content).split('\n');
     lines.forEach((line, i) => {
       // First check: tagged template `sql\`...\`` with interpolation. We allow
       // these because the well-known SQL tag libraries handle parameterization.
@@ -97,7 +102,7 @@ export function probeSQLInjectionTemplateLiterals(files) {
           cwe: 'CWE-89',
           file: file.path,
           line: i + 1,
-          evidence: line.trim().slice(0, 200),
+          evidence: (rawLines[i] ?? line).trim().slice(0, 200),
           remediation:
             'Use parameterized queries. The canonical pattern depends on the driver: with `pg` use `db.query("SELECT * FROM users WHERE id = $1", [id])`; with Prisma use `prisma.user.findUnique({ where: { id } })`; with Knex use `knex("users").where({ id })`. The pattern flagged here interpolates user input into the SQL string at parse time, which is the textbook SQL injection.',
         });
@@ -121,7 +126,7 @@ export function probeSQLInjectionTemplateLiterals(files) {
             cwe: 'CWE-89',
             file: file.path,
             line: i + 1,
-            evidence: line.trim().slice(0, 200),
+            evidence: (rawLines[i] ?? line).trim().slice(0, 200),
             remediation:
               "This call interpolates user input into a SQL string. Switch to parameterized queries using the driver's built-in placeholder syntax. See the related Learn pattern for driver-specific examples.",
           });
@@ -138,7 +143,7 @@ export function probeSQLInjectionTemplateLiterals(files) {
           cwe: 'CWE-89',
           file: file.path,
           line: i + 1,
-          evidence: line.trim().slice(0, 200),
+          evidence: (rawLines[i] ?? line).trim().slice(0, 200),
           remediation:
             'String concatenation into a SQL call is the textbook SQLi shape. Switch to parameterized placeholders: pg `$1`, mysql/SQLite `?`, prisma `prisma.user.findUnique({ where: { id } })`. Never `+` a request value into a query.',
         });
@@ -157,7 +162,7 @@ export function probeSQLInjectionTemplateLiterals(files) {
           cwe: 'CWE-89',
           file: file.path,
           line: i + 1,
-          evidence: line.trim().slice(0, 200),
+          evidence: (rawLines[i] ?? line).trim().slice(0, 200),
           remediation:
             'Parameterize. With psycopg/sqlite3 use `cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))`. With SQLAlchemy use `text("... WHERE id = :id").bindparams(id=user_id)`.',
         });
@@ -173,7 +178,7 @@ export function probeSQLInjectionTemplateLiterals(files) {
           cwe: 'CWE-89',
           file: file.path,
           line: i + 1,
-          evidence: line.trim().slice(0, 200),
+          evidence: (rawLines[i] ?? line).trim().slice(0, 200),
           remediation:
             'Use $1 placeholders with database/sql: `db.Query("SELECT * FROM users WHERE id = $1", id)`. With GORM use `db.Where("name = ?", name)`.',
         });
@@ -220,7 +225,11 @@ export function probePathTraversal(files) {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$|\.py$/.test(file.path)) return;
 
-    const lines = file.content.split('\n');
+    // Decisions are made on the comment-blind view. A comment describing
+    // the very shape a probe hunts for is documentation, not a defect;
+    // rawLines keeps the original text for evidence.
+    const rawLines = file.content.split('\n');
+    const lines = maskCommentsForPath(file.path, file.content).split('\n');
     lines.forEach((line, i) => {
       const fsHit = FS_CALL_RE.exec(line);
       FS_CALL_RE.lastIndex = 0;
@@ -243,7 +252,7 @@ export function probePathTraversal(files) {
         cwe: 'CWE-22',
         file: file.path,
         line: i + 1,
-        evidence: line.trim().slice(0, 200),
+        evidence: (rawLines[i] ?? line).trim().slice(0, 200),
         remediation:
           'A user-controlled path reaches a filesystem call without visible normalization. Validate the path: resolve it against a fixed base directory with `path.resolve(BASE, userInput)`, then assert the result still starts with BASE via `resolved.startsWith(BASE + path.sep)`. Reject otherwise. Prefer an allowlist of filenames where the use case permits.',
       });
@@ -294,7 +303,11 @@ export function probeWeakRandomness(files) {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$/.test(file.path)) return;
 
-    const lines = file.content.split('\n');
+    // Decisions are made on the comment-blind view. A comment describing
+    // the very shape a probe hunts for is documentation, not a defect;
+    // rawLines keeps the original text for evidence.
+    const rawLines = file.content.split('\n');
+    const lines = maskCommentsForPath(file.path, file.content).split('\n');
     lines.forEach((line, i) => {
       // Depth round 2: crypto.pseudoRandomBytes is deprecated AND
       // explicitly insecure — always fire, no context gate needed.
@@ -308,7 +321,7 @@ export function probeWeakRandomness(files) {
           cwe: 'CWE-338',
           file: file.path,
           line: i + 1,
-          evidence: line.trim().slice(0, 200),
+          evidence: (rawLines[i] ?? line).trim().slice(0, 200),
           remediation:
             'Replace crypto.pseudoRandomBytes with crypto.randomBytes (Node 18+) or crypto.getRandomValues (web). pseudoRandomBytes was deprecated specifically because it is predictable.',
         });
@@ -345,7 +358,7 @@ export function probeWeakRandomness(files) {
         cwe: 'CWE-338',
         file: file.path,
         line: i + 1,
-        evidence: line.trim().slice(0, 200),
+        evidence: (rawLines[i] ?? line).trim().slice(0, 200),
         remediation:
           'Replace `Math.random()` with a CSPRNG. In the browser: `crypto.getRandomValues(new Uint8Array(n))`. In Node: `crypto.randomBytes(n)` or `crypto.randomInt(min, max)`. For UUIDs, `crypto.randomUUID()` is the standard pattern. The visible context here (token / secret / nonce / etc.) means the random value will be used as an authenticator, and Math.random produces predictable sequences.',
       });
@@ -396,7 +409,11 @@ export function probeStackTraceLeaks(files) {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$/.test(file.path)) return;
 
-    const lines = file.content.split('\n');
+    // Decisions are made on the comment-blind view. A comment describing
+    // the very shape a probe hunts for is documentation, not a defect;
+    // rawLines keeps the original text for evidence.
+    const rawLines = file.content.split('\n');
+    const lines = maskCommentsForPath(file.path, file.content).split('\n');
     const isErrorPage = FRAMEWORK_ERROR_PAGE_RE.test(file.path);
     lines.forEach((line, i) => {
       const hasResponse = RESPONSE_CALL_RE.test(line);
@@ -456,7 +473,7 @@ export function probeStackTraceLeaks(files) {
         cwe: 'CWE-209',
         file: file.path,
         line: i + 1,
-        evidence: line.trim().slice(0, 200),
+        evidence: (rawLines[i] ?? line).trim().slice(0, 200),
         remediation:
           'Strip server internals from production error responses. Return a generic error shape (`{ error: "Internal Server Error" }`) with the actual error logged server-side via your logger. Stack traces, raw err.message (often containing DB table names or library versions), and cause chains all leak reconnaissance.',
       });
@@ -494,7 +511,10 @@ export function probeSubresourceIntegrity(files) {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.(?:html?|jsx?|tsx?|astro|vue|svelte)$/.test(file.path)) return;
 
-    const lines = file.content.split('\n');
+    // Comment-blind view. This probe also reads .html, which passes through
+    // untouched: HTML has no `//` comment form, and evidence is built from the
+    // matched tag rather than the whole line, so no raw copy is needed.
+    const lines = maskCommentsForPath(file.path, file.content).split('\n');
     lines.forEach((line, i) => {
       // Script tags
       let m;

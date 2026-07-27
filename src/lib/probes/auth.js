@@ -20,6 +20,7 @@ import {
   SECRET_VALUE_PLACEHOLDER_RE,
   isMatchInPlaceholderNamedAssignment,
   maskBlockCommentsAndTemplateLiterals,
+  maskCommentsOnly,
 } from './_internal/masking.js';
 
 // Strip a single line of `// ...` comments and `/* ... */` (within-line) before testing for code patterns.
@@ -146,9 +147,24 @@ export function probeAuthWeakness(files) {
     const safeBindings = collectSafeBindings(file.content);
     const maskedLines = maskedContent.split('\n');
     const originalLines = file.content.split('\n');
+    // The checks below that need to read a STRING VALUE — a connection string,
+    // a Basic-auth token, a cookie name built in a template literal — used to
+    // test `realLine`, the raw source, because `stripLineComments` chops the
+    // `//` in `mysql://` and the narrow mask blanks template bodies.
+    //
+    // Reading raw source means reading comments, and a comment that documents a
+    // vulnerability then reports itself as one. Every critical finding in the
+    // 2026-07-27 scan of this repo was that: the file explaining what a
+    // plaintext password comparison looks like, flagged for containing one.
+    //
+    // This view keeps every string and template intact and blanks only comments,
+    // which is what those checks wanted in the first place. `realLine` stays,
+    // for evidence text and content offsets — never for deciding.
+    const codeLines = maskCommentsOnly(file.content).split('\n');
     maskedLines.forEach((rawLine, i) => {
       const line = stripLineComments(rawLine);
       const realLine = originalLines[i] || '';
+      const codeLine = codeLines[i] || '';
       // Match quoted OR unquoted "none" — agent FN: `algorithm: none` (no quotes) used to evade.
       if (/(?:algorithm|alg)\s*:\s*['"]?none['"]?(?:\s|,|$)/i.test(line)) {
         findings.push({
@@ -409,15 +425,16 @@ export function probeAuthWeakness(files) {
       // in server access logs, and in any analytics SDK the page loads. The
       // shape: a literal or template-string URL containing ?token= /
       // ?sessionId= / ?accessToken= / ?jwt= with a real-looking value.
-      // Use realLine because the URL contains `//` that stripLineComments
-      // would chop. Template literals in realLine still trigger here (the
-      // FP risk on documentation strings is acceptable for this check).
+      // Read the comment-stripped view: the URL contains `//` that
+      // stripLineComments would chop, and template literals must stay visible
+      // because the URL is usually built in one. The prose that documents this
+      // check is not an instance of it.
       if (
         /[?&](?:token|sessionId|session_id|accessToken|access_token|jwt|auth(?:Token)?)=/i.test(
-          realLine
+          codeLine
         ) &&
         /(?:fetch|axios|http|location\.href|window\.location|new\s+URL|navigate|router\.push|redirect)/i.test(
-          realLine
+          codeLine
         )
       ) {
         findings.push({
@@ -476,11 +493,11 @@ export function probeAuthWeakness(files) {
       // A single title-case word after "Basic" is prose ('Basic Controls',
       // 'Basic Authentication'), not a base64 credential — base64 of any
       // user:pass starts lowercase or mixes in digits/+/=. FP triage 2026-07.
-      const basicTok = realLine.match(/['"]Basic\s+([A-Za-z0-9+/=]{8,})['"]/);
+      const basicTok = codeLine.match(/['"]Basic\s+([A-Za-z0-9+/=]{8,})['"]/);
       const basicIsProse = basicTok !== null && /^[A-Z][a-z]+$/.test(basicTok[1]);
       if (
         /Buffer\.from\s*\(\s*['"][^'"\n]+:[^'"\n]+['"]\s*\)\s*\.\s*toString\s*\(\s*['"]base64/i.test(
-          realLine
+          codeLine
         ) ||
         (basicTok !== null && !basicIsProse)
       ) {
@@ -504,10 +521,10 @@ export function probeAuthWeakness(files) {
       // The second is plaintext-from-request — taint flow.
       if (
         /INSERT\s+INTO\s+[\w.]+\s*\([^)]*\bpassword\b[^)]*\)\s*VALUES\s*\([^)]*['"][^'"]{3,}['"]/i.test(
-          realLine
+          codeLine
         ) ||
         /(?:\.create|\.update|\.insert|\.save)\s*\([^)]*\bpassword\s*:\s*(?:req\.body\.\w*|input\.\w*|userInput|user\.password)/i.test(
-          realLine
+          codeLine
         )
       ) {
         findings.push({
@@ -597,13 +614,16 @@ export function probeAuthWeakness(files) {
       // Default credentials inside a connection-string URL:
       // `mysql://root:root@host`, `postgres://admin:admin@host`. Same identifier
       // for user AND password is the strongest "this was never changed" signal.
-      // Use realLine — stripLineComments mangles the `//` in the URL scheme.
+      // Read the comment-stripped view rather than the raw line:
+      // stripLineComments mangles the `//` in the URL scheme, but the raw line
+      // also carries comments, and this exact rule is documented three lines up
+      // in prose containing `mysql://root:root@host`.
       if (
         /(?:mysql|postgres(?:ql)?|mongodb|mongo|redis|amqp|http|https|ftp|smtp|imap):\/\/(\w+):(\w+)@/i.test(
-          realLine
+          codeLine
         )
       ) {
-        const urlMatch = realLine.match(
+        const urlMatch = codeLine.match(
           /(?:mysql|postgres(?:ql)?|mongodb|mongo|redis|amqp|http|https|ftp|smtp|imap):\/\/(\w+):(\w+)@/i
         );
         if (urlMatch && urlMatch[1].toLowerCase() === urlMatch[2].toLowerCase()) {
@@ -780,6 +800,10 @@ export function probeClientAuthStorage(files) {
     const maskedContent = maskBlockCommentsAndTemplateLiterals(file.content);
     const maskedLines = maskedContent.split('\n');
     const originalLines = file.content.split('\n');
+    // Comments blanked, strings and templates intact — the view the cookie
+    // checks below need, since a cookie name is usually built in a template
+    // literal that the narrow mask blanks.
+    const codeLines = maskCommentsOnly(file.content).split('\n');
     // Common auth-name regex for storage keys. The keyword family must
     // appear as a substring inside a quoted key. Underscored forms
     // (auth_token, access_token) and camelCase forms (authToken) both
@@ -822,6 +846,7 @@ export function probeClientAuthStorage(files) {
     const OAUTH_PUBLIC_RE = /\b(?:oauth_?state|state|nonce|code_?verifier|pkce_?verifier)\b/i;
     maskedLines.forEach((maskedLine, i) => {
       const realLine = originalLines[i] || '';
+      const codeLine = codeLines[i] || '';
       // localStorage.setItem('jwt', ...)
       if (/localStorage\.setItem\s*\(\s*[^,)]*\)/i.test(maskedLine) === false) {
         // skip
@@ -911,22 +936,24 @@ export function probeClientAuthStorage(files) {
       // document.cookie = 'token=...' WITHOUT HttpOnly. Setting a cookie from
       // JS cannot set HttpOnly (browsers refuse). Any token cookie set from
       // client JS is XSS-readable by construction. Same risk as localStorage.
-      // Use realLine — the cookie name and value may span template literal
-      // interpolations that the narrow mask DOES blank (it masks template
-      // bodies). Suppress if the line OR the file content explicitly says
-      // HttpOnly somewhere near (server-side cookies set by middleware should
-      // be using res.cookie, not document.cookie — but Koa ctx.cookies.set
-      // with httpOnly=true is server-side, so check the ctx.cookies form).
+      // Read the comment-stripped view — the cookie name and value may span
+      // template literal interpolations that the narrow mask DOES blank (it
+      // masks template bodies), so the narrow view cannot answer this, but the
+      // raw line brings the comments back with it. Suppress if the line OR the
+      // file content explicitly says HttpOnly somewhere near (server-side
+      // cookies set by middleware should be using res.cookie, not
+      // document.cookie — but Koa ctx.cookies.set with httpOnly=true is
+      // server-side, so check the ctx.cookies form).
       const cookieAuthShape =
         /document\.cookie\s*=\s*['"`][^=]*?(?:token|jwt|auth|session|bearer|access[_-]?token|refresh[_-]?token)/i.test(
-          realLine
+          codeLine
         ) ||
         /\bCookies\.set\s*\(\s*['"`][^'"`]*(?:token|jwt|auth|session|bearer|access[_-]?token|refresh[_-]?token)/i.test(
-          realLine
+          codeLine
         );
       // Koa / Express ctx.cookies.set + httpOnly is SERVER-SIDE and correct;
       // do not flag this shape under the client-side rule.
-      const isServerSideCtxCookies = /\bctx\.cookies\.set\b|\bres\.cookie\b/i.test(realLine);
+      const isServerSideCtxCookies = /\bctx\.cookies\.set\b|\bres\.cookie\b/i.test(codeLine);
       if (cookieAuthShape && !isServerSideCtxCookies) {
         findings.push({
           id: `auth-clientcookie-${file.path}-${i}`,
