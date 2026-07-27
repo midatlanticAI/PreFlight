@@ -532,13 +532,62 @@ function analyzeFunctionBody(body, scope, findings, file) {
   walk(body, scope, findings, file);
 }
 
+/**
+ * Every binding name introduced by a destructuring pattern.
+ *
+ * Handles rename (`{ url: target }`), nesting (`{ body: { url } }`), defaults
+ * (`{ url = '' }`), rest (`{ ...rest }`) and array positions. Computed keys are
+ * skipped: the key is the expression, the binding is its value.
+ */
+function patternNames(pattern, out = []) {
+  if (!pattern || typeof pattern !== 'object') return out;
+  switch (pattern.type) {
+    case 'Identifier':
+      out.push(pattern.name);
+      break;
+    case 'ObjectPattern':
+      for (const prop of pattern.properties || []) {
+        if (prop.type === 'RestElement') patternNames(prop.argument, out);
+        else patternNames(prop.value ?? prop.argument, out);
+      }
+      break;
+    case 'ArrayPattern':
+      for (const el of pattern.elements || []) if (el) patternNames(el, out);
+      break;
+    case 'AssignmentPattern':
+      patternNames(pattern.left, out);
+      break;
+    case 'RestElement':
+      patternNames(pattern.argument, out);
+      break;
+    default:
+      break;
+  }
+  return out;
+}
+
 function walk(node, scope, findings, file) {
   if (!node || typeof node !== 'object') return;
   if (node.type === 'VariableDeclaration') {
     for (const d of node.declarations) {
-      if (d.id?.type === 'Identifier' && d.init) {
+      if (!d.init) continue;
+      if (d.id?.type === 'Identifier') {
         const t = evaluateExpression(d.init, scope);
         if (t) scope.set(d.id.name, t);
+      } else if (d.id?.type === 'ObjectPattern' || d.id?.type === 'ArrayPattern') {
+        // Destructuring a tainted object yields tainted values.
+        //
+        // Only `const x = req.query.x` was bound, so `const { x } = req.query`
+        // — the form every Express and Next handler is actually written in —
+        // taught the engine nothing, and the taint died at the declaration.
+        // Every sink went quiet with it: SSRF, shell, redirect, dynamic code,
+        // filesystem. The regex probes cover the single-line shape, so this
+        // was invisible in exactly the multi-line case the engine exists for.
+        //
+        // Found 2026-07-27 by an adversarial pass that wrote the handler the
+        // ordinary way instead of the way the tests write it.
+        const t = evaluateExpression(d.init, scope);
+        if (t) for (const name of patternNames(d.id)) scope.set(name, t);
       }
     }
   } else if (node.type === 'AssignmentExpression') {

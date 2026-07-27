@@ -173,12 +173,27 @@ function maskSource(content, { blankStrings = false, blankTemplates = false } = 
     }
     // /* block comment (may span lines)
     if (c === '/' && c2 === '*') {
-      out.push('/', '*');
       const end = content.indexOf('*/', i + 2);
       if (end === -1) {
-        for (let j = i + 2; j < len; j++) out.push(blankExceptNewline(content[j]));
-        return out.join('');
+        // No terminator anywhere. In real source an unclosed block comment is
+        // rare; a `/*` with no `*/` is far more often this lexer meeting text
+        // it has no mode for — JSX and HTML copy, where `src/data/*` is a glob
+        // a human is reading, not a comment a compiler is skipping.
+        //
+        // Blanking to EOF on that guess cost 95 of the 187 lines of this
+        // repo's own TermsView.jsx: every masked check stopped running at the
+        // word "src/data/*" and nothing said so. Treat the `/*` as ordinary
+        // text and keep lexing.
+        //
+        // The trade is deliberate and it is the lesson of the whole file: an
+        // unterminated construct is evidence of a mis-lex, and for a scanner,
+        // under-masking risks a false positive somebody can see, while
+        // over-masking hides real code and looks like a clean result.
+        out.push('/', '*');
+        i += 2;
+        continue;
       }
+      out.push('/', '*');
       for (let j = i + 2; j < end; j++) out.push(blankExceptNewline(content[j]));
       out.push('*', '/');
       i = end + 2;
@@ -202,6 +217,7 @@ function maskSource(content, { blankStrings = false, blankTemplates = false } = 
       const quote = c;
       const blank = quote === '`' ? blankTemplates : blankStrings;
       const keep = (ch) => (blank ? blankExceptNewline(ch) : ch);
+      const outLenBeforeQuote = out.length;
       out.push(quote);
       let j = i + 1;
       while (j < len) {
@@ -221,7 +237,16 @@ function maskSource(content, { blankStrings = false, blankTemplates = false } = 
         out.push(keep(content[j]));
         j++;
       }
-      if (j >= len) return out.join(''); // unterminated at EOF; trail consumed
+      if (j >= len) {
+        // Unterminated at EOF. Same reasoning as the unclosed block comment
+        // above: a lone backtick in JSX text ("the ` character starts a
+        // template literal") would otherwise swallow the rest of the file.
+        // Rewind and treat the quote as ordinary punctuation.
+        out.length = outLenBeforeQuote;
+        out.push(quote);
+        i += 1;
+        continue;
+      }
       if (quote !== '`' && content[j] === '\n') {
         // Unterminated single-line string: resume normal lexing at the newline.
         i = j;

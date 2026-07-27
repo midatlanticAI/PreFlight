@@ -47,9 +47,22 @@ const DECIDING_CODE_SHAPES = [
 /**
  * True when `text` reads as an English sentence rather than source code.
  *
- * Conservative by design: it answers "is this definitely prose", so anything
- * ambiguous comes back false and the caller's existing logic still runs. That
- * keeps a wrong answer here from silencing a real finding.
+ * KNOWN LIMIT, and it decides where this may be used. These are four
+ * thresholds, not an ambiguity test, and SQL clears all of them: it is
+ * English-shaped, keyword-heavy and punctuation-light. Measured true for
+ * `SELECT * FROM users WHERE id = ` (function-word ratio 0.29) and for
+ * `GRANT ALL PRIVILEGES ON *.* TO 'app'@'%' IDENTIFIED BY 'letmein'`. The same
+ * holds for VB, AppleScript, and pg_hba lines.
+ *
+ * So: do NOT wire this guard into a SQL-injection, XSS or command-injection
+ * probe. It is for checks whose false positives come from documentation prose
+ * quoting a pattern, and every caller must pass a line that is a string
+ * literal and nothing else — see `lineIsProseString`, which enforces that.
+ *
+ * An earlier version of this comment claimed the function was conservative and
+ * returned false when ambiguous. It does not; that was the author describing
+ * an intention rather than the code. Recorded here because a confident comment
+ * that has not been checked is exactly how the last two bugs survived review.
  *
  * @param {string} text
  * @returns {boolean}
@@ -99,74 +112,30 @@ export function looksLikeProse(text) {
  * @param {string} line
  */
 export function lineIsProseString(line) {
-  const s = String(line ?? '');
-  const m = s.match(/(['"`])([\s\S]*)\1/); // first quote to last matching quote
+  const s = String(line ?? '').trim();
+  if (!s) return false;
+  // Strip a leading binding — `title:`, `remediation =`, `const note =`,
+  // `export const x =`, or a `+` continuation — so the ordinary way of
+  // writing a documentation string still qualifies.
+  const body = s
+    .replace(/^export\s+/, '')
+    .replace(/^(?:const|let|var)\s+/, '')
+    .replace(/^[\w$.]+\s*[:=]\s*/, '')
+    .replace(/^\+\s*/, '');
+  // What remains must BE a string literal and nothing else, give or take
+  // trailing punctuation.
+  //
+  // The first version asked whether the line CONTAINED a prose span, and every
+  // caller uses the answer to skip the whole line. One human-readable sibling
+  // property was therefore enough to switch off every check on that line:
+  //
+  //   const t = jwt.sign({ sub: id, note: 'we only issue this for the partner
+  //     integration and nobody else should be using it' }, null, { algorithm: 'none' })
+  //
+  // — a critical, silenced by a comment-shaped property next to it. That is
+  // not a crafted evasion; it is how people write code. Found 2026-07-27 by an
+  // adversarial pass, the same day the guard shipped.
+  const m = body.match(/^(['"`])((?:\\.|(?!\1)[\s\S])*)\1\s*[,;)\]}]*$/);
   if (!m) return false;
   return looksLikeProse(m[2]);
-}
-
-/**
- * True when the match at `index` sits inside a string literal whose contents
- * read as prose.
- *
- * This is the guard for checks that MUST see string values — a connection
- * string, a JWT `alg` value, a URL carrying a token — and therefore cannot
- * simply run against the strings-blanked view. They still need to ignore the
- * sentence in a remediation string that quotes the very pattern they hunt.
- *
- * @param {string} content full file text
- * @param {number} index   offset of the match within `content`
- */
-export function isMatchInsideProseString(content, index) {
-  if (typeof content !== 'string' || !Number.isInteger(index) || index < 0) return false;
-  const literal = enclosingStringLiteral(content, index);
-  if (literal === null) return false;
-  return looksLikeProse(literal);
-}
-
-// Walk back from `index` to find the string literal containing it, if any.
-// Returns the literal's interior text, or null when the position is code.
-//
-// Scanning from the start of the line is not enough (template literals and
-// concatenated copy span lines) so this walks from the start of the file,
-// which is cheap next to the regex work the callers already do.
-function enclosingStringLiteral(content, index) {
-  let i = 0;
-  const len = Math.min(content.length, index + 1_000_000);
-  while (i < len && i <= index) {
-    const c = content[i];
-    const c2 = content[i + 1];
-    // Skip comments so a quote inside one does not open a literal.
-    if (c === '/' && c2 === '/') {
-      const nl = content.indexOf('\n', i);
-      if (nl === -1 || nl > index) return null;
-      i = nl + 1;
-      continue;
-    }
-    if (c === '/' && c2 === '*') {
-      const end = content.indexOf('*/', i + 2);
-      if (end === -1 || end > index) return null;
-      i = end + 2;
-      continue;
-    }
-    if (c === "'" || c === '"' || c === '`') {
-      const quote = c;
-      let j = i + 1;
-      while (j < content.length) {
-        if (content[j] === '\\') {
-          j += 2;
-          continue;
-        }
-        if (content[j] === quote) break;
-        if (quote !== '`' && content[j] === '\n') break; // unterminated
-        j++;
-      }
-      if (index > i && index < j) return content.slice(i + 1, j);
-      if (j >= content.length) return null;
-      i = (content[j] === quote ? j : j) + 1;
-      continue;
-    }
-    i++;
-  }
-  return null;
 }

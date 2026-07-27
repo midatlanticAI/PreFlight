@@ -14,7 +14,7 @@ import {
   maskCommentsAndStringsFromContent,
   maskCommentsForPath,
 } from './_internal/masking.js';
-import { isMatchInsideProseString, lineIsProseString } from './_internal/prose.js';
+import { lineIsProseString } from './_internal/prose.js';
 
 export function probeLLMSecurity(files) {
   const findings = [];
@@ -110,7 +110,17 @@ export function probeLLMSecurity(files) {
     );
     // A sentence listing dangerous agent tools is naming the risk, not taking
     // it. The tool names are identifiers everywhere they actually matter.
-    if (dangerousAgent && !isMatchInsideProseString(content, dangerousAgent.index)) {
+    //
+    // Judged on the matched LINE rather than by walking the file to find an
+    // enclosing literal. The walker treated a backtick as a string opener
+    // anywhere — including JSX text — and backticks, unlike quotes, never
+    // ended at a newline, so one stray backtick in prose plus any later
+    // template literal put every line between them "inside a string". That
+    // suppressed a real `new ShellTool()` two lines down.
+    const agentLine = dangerousAgent
+      ? (content.split('\n')[content.slice(0, dangerousAgent.index).split('\n').length - 1] ?? '')
+      : '';
+    if (dangerousAgent && !lineIsProseString(agentLine)) {
       const ln = content.slice(0, dangerousAgent.index).split('\n').length;
       findings.push({
         id: `llm-agency-${file.path}-${dangerousAgent.index}`,
