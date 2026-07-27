@@ -185,6 +185,30 @@ export function probeExternalURLs(files) {
     const isIP = URL_RAW_IP_RE.test(host);
     // Depth round 3: RFC 1918 private-IP range distinct from generic raw-IP.
     const isPrivateIP = /^(?:10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(host);
+    // Reserved, non-routable address space: loopback, link-local (which is
+    // where every cloud provider parks its instance-metadata service), the
+    // RFC 5737 documentation ranges, and the unspecified address.
+    //
+    // This probe asks a reputation question — who registered this host, has it
+    // been reported for abuse — and offers reputation remedies: repoint DNS,
+    // move to a verified registrar, check VirusTotal. None of that has an
+    // answer for an address nobody can register. Telling someone to look up
+    // the whois of 127.0.0.1 is the kind of finding that teaches a reader to
+    // skim the rest.
+    //
+    // These addresses are not harmless and they are not skipped. Dropping them
+    // was tried and reverted the same day: `probeSSRFOpenRedirect` turned out
+    // not to catch a hardcoded metadata fetch, so "the SSRF probe owns this"
+    // was an assumption, not a fact, and acting on it would have deleted the
+    // only coverage of the single most valuable SSRF target there is. They are
+    // reported here with a reason and a remedy that fit an address nobody can
+    // register.
+    const isReservedIP =
+      /^(?:127\.|169\.254\.|0\.0\.0\.0$|192\.0\.2\.|198\.51\.100\.|203\.0\.113\.)/.test(host);
+    // 169.254.169.254 is the cloud instance-metadata service on AWS, GCP and
+    // Azure. A reference to it is either an SSRF test or code reading IAM
+    // credentials, and both are worth a look.
+    const isMetadataIP = /^169\.254\.169\.254$/.test(host);
     // A suspicious TLD is a weak signal on its own, and several established
     // developer platforms live on one. Real-scan finding 2026-07 (Atlan
     // cockpit): api.together.xyz, a mainstream model-inference API, was
@@ -220,6 +244,12 @@ export function probeExternalURLs(files) {
     } else if (isPunycode) {
       severity = 'medium';
       reason = 'Punycode / IDN host (possible homograph attack)';
+    } else if (isMetadataIP) {
+      severity = 'medium';
+      reason = 'Cloud instance-metadata address referenced from source';
+    } else if (isReservedIP) {
+      severity = 'low';
+      reason = 'Non-routable address referenced from source';
     } else if (isPrivateIP) {
       severity = 'medium';
       reason = 'Private RFC 1918 IP referenced from source (possible staging endpoint leak)';
@@ -255,13 +285,26 @@ export function probeExternalURLs(files) {
       file: first.file,
       line: first.line,
       evidence,
-      remediation:
-        `This URL trips a heuristic associated with abuse infrastructure (raw IP, suspicious TLD, shortener, or HTTP-only). The probe doesn't claim the domain is malicious; it asks you to verify.\n\n` +
-        `One-click reputation checks (PreFlight can't query these from the browser due to CORS):\n` +
-        `• VirusTotal: https://www.virustotal.com/gui/domain/${encodeURIComponent(host)}\n` +
-        `• urlhaus (abuse.ch): https://urlhaus.abuse.ch/browse.php?search=${encodeURIComponent(host)}\n` +
-        `• whois: https://who.is/whois/${encodeURIComponent(host)}\n\n` +
-        `Fixes by signal: raw IP → use a hostname so DNS can be repointed; suspicious TLD → move to a verified registrar; shortener → use the unshortened destination so the target is auditable; HTTP-only → switch to https://.`,
+      // Reserved space gets its own remediation. The reputation questions
+      // below — who registered this, has it been reported — have no answer for
+      // an address nobody can register, and "use a hostname so DNS can be
+      // repointed" is not advice about 127.0.0.1. Sending a reader to whois a
+      // link-local address teaches them to skim the next finding too.
+      remediation: isReservedIP
+        ? isMetadataIP
+          ? `169.254.169.254 is the cloud instance-metadata service (AWS, GCP, Azure). Code that fetches it is reading instance credentials, and code that fetches a URL a user can influence can be tricked into reading them — this is the canonical SSRF payload.\n\n` +
+            `If this is a deliberate metadata read: move to IMDSv2 (token-required) on AWS, and confirm the instance role carries only the permissions it needs.\n` +
+            `If this is a test fixture or a teaching example: nothing to fix.\n` +
+            `If you did not put it here: treat it as an exfiltration attempt and rotate the instance role.\n\n` +
+            `Either way, any server-side fetch whose URL comes from a request must be validated against an allowlist BEFORE the call, and link-local plus RFC 1918 ranges blocked after DNS resolution.`
+          : `This is a reserved, non-routable address (loopback, link-local, or an RFC 5737 documentation range). It is not abuse infrastructure and there is nothing to look up — no registrar, no whois, no reputation record.\n\n` +
+            `What to check instead: whether it should have shipped. A hardcoded 127.0.0.1 or 0.0.0.0 in code that runs on a server is usually a development endpoint that outlived local testing, and it will fail or, worse, reach a different service in production. Move it to configuration.`
+        : `This URL trips a heuristic associated with abuse infrastructure (raw IP, suspicious TLD, shortener, or HTTP-only). The probe doesn't claim the domain is malicious; it asks you to verify.\n\n` +
+          `One-click reputation checks (PreFlight can't query these from the browser due to CORS):\n` +
+          `• VirusTotal: https://www.virustotal.com/gui/domain/${encodeURIComponent(host)}\n` +
+          `• urlhaus (abuse.ch): https://urlhaus.abuse.ch/browse.php?search=${encodeURIComponent(host)}\n` +
+          `• whois: https://who.is/whois/${encodeURIComponent(host)}\n\n` +
+          `Fixes by signal: raw IP → use a hostname so DNS can be repointed; suspicious TLD → move to a verified registrar; shortener → use the unshortened destination so the target is auditable; HTTP-only → switch to https://.`,
     });
   }
   return findings;

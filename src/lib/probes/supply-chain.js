@@ -15,6 +15,7 @@ import {
   BIDI_CONTROL_RE,
 } from '../threat-intel.js';
 import { isTestFile, isScannerSelfSource, isMetaDocFile } from '../file-filter.js';
+import { maskCommentsForPath } from './_internal/masking.js';
 
 export function probePackageJson(files) {
   const findings = [];
@@ -722,19 +723,21 @@ export function probeMaliciousArtifacts(files) {
     },
     { re: /(^|\/)\.claude\/setup\.mjs$/, label: '.claude/setup.mjs' },
     { re: /(^|\/)\.vscode\/setup\.mjs$/, label: '.vscode/setup.mjs' },
-    { re: /(^|\/)tanstack_runner\.js$/, label: 'tanstack_runner.js' },
+    // Described rather than named: the finding already carries the path, and
+    // a table that spells out its own indicators matches itself.
+    { re: /(^|\/)tanstack_runner\.js$/, label: 'TanStack worm runner drop-file' },
     { re: /(^|\/)router_init\.js$/, label: 'router_init.js' },
   ];
 
   // Distinctive strings inside the payload. Any one is suggestive; multiple together
   // make false positives extremely unlikely in a static scan of normal source.
   const IOC_STRINGS = [
-    { re: /\b__DAEMONIZED\b/, label: '__DAEMONIZED guard variable' },
-    { re: /\btanstack_runner\b/i, label: 'tanstack_runner reference' },
+    { re: /\b__DAEMONIZED\b/, label: 'daemonize re-exec guard variable' },
+    { re: /\btanstack_runner\b/i, label: 'TanStack runner drop-file reference' },
     { re: /filev2\.getsession\.org/i, label: 'Session messenger exfil endpoint' },
     { re: /seed[123]\.getsession\.org/i, label: 'Session seed-node exfil endpoint' },
-    { re: /gh-token-monitor/i, label: 'gh-token-monitor persistence handler' },
-    { re: /com\.user\.gh-token-monitor/i, label: 'gh-token-monitor LaunchAgent label' },
+    { re: /gh-token-monitor/i, label: 'GitHub token-monitor persistence handler' },
+    { re: /com\.user\.gh-token-monitor/i, label: 'GitHub token-monitor LaunchAgent label' },
     { re: /claude@users\.noreply\.github\.com/i, label: 'spoofed Claude commit author' },
     {
       re: /tanstack\/router#79ac49eedf774dd4b0cfa308722bc463cfe5885c/i,
@@ -766,11 +769,23 @@ export function probeMaliciousArtifacts(files) {
     }
 
     // 2. String indicators inside content — applicable to ANY scanned file, not just JS.
-    const content = file.content || '';
+    //
+    // Comment and regex-literal bodies are blanked first. An IOC written as a
+    // detection pattern (`/tanstack_runner/i`) or listed in a comment is a
+    // DEFINITION of the threat, not the threat. Real dropped payloads carry
+    // these as live code and string values, which survive the mask, so recall
+    // is unchanged. Unknown file types pass through untouched.
+    const content = maskCommentsForPath(file.path, file.content || '');
     if (!content || content.length > 5_000_000) return; // skip very large blobs (memory)
+    // Report the text that actually matched IN THE SCANNED FILE, not this
+    // table's label for it. The reader needs to see the string that is sitting
+    // in their repo, and quoting the file means the label above is free to
+    // describe the indicator instead of restating it — which is what let this
+    // table match its own detector and report itself as an infection.
     const hits = [];
     for (const ioc of IOC_STRINGS) {
-      if (ioc.re.test(content)) hits.push(ioc.label);
+      const m = ioc.re.exec(content);
+      if (m) hits.push({ label: ioc.label, text: m[0] });
     }
     if (hits.length > 0) {
       findings.push({
@@ -782,7 +797,10 @@ export function probeMaliciousArtifacts(files) {
         cwe: 'CWE-506',
         file: file.path,
         line: 1,
-        evidence: `Matched ${hits.length} IOC(s): ${hits.slice(0, 4).join(' · ')}`,
+        evidence: `Matched ${hits.length} IOC(s): ${hits
+          .slice(0, 4)
+          .map((h) => `${h.text} (${h.label})`)
+          .join(' · ')}`,
         remediation: `One or more strings from the Mini Shai-Hulud (TanStack, May 11, 2026) payload appear in this file. If you didn't put them there, your repo or your dev machine is compromised. See remediation in the per-file-path finding for incident response steps. Do NOT revoke the GitHub token before disconnecting the machine — the worm wipes \`~\` on 40x responses.`,
       });
     }

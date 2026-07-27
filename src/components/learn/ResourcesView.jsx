@@ -219,7 +219,7 @@ const SECTIONS = [
       },
       {
         title: 'High Scalability',
-        url: 'http://highscalability.com/',
+        url: 'https://highscalability.com/',
         note: 'A long-running blog featuring detailed writeups of how real systems at scale are built. Mostly free.',
       },
       {
@@ -287,7 +287,7 @@ const SECTIONS = [
       },
       {
         title: 'MIT 6.S191 — Introduction to Deep Learning',
-        url: 'http://introtodeeplearning.com/',
+        url: 'https://introtodeeplearning.com/',
         note: "MIT's intro DL course. New videos each year, all free, with labs.",
       },
       {

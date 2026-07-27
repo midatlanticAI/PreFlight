@@ -205,7 +205,7 @@ export const BREAKERS = {
   'Trojan Source': [
     {
       name: 'Bidi-override permission flip',
-      payload: 'if (isAdmin) { allow(); }‮ // grant_to_all = false',
+      payload: 'if (isAdmin) { allow(); }\u202E // grant_to_all = false',
       where: 'A code review tool that respects Unicode bidirectional rendering.',
       effect:
         'The bidi character (U+202E, RTL override) reverses the visual order of subsequent characters. The reviewer reads "// grant_to_all = false" as a comment. The compiler reads the bytes in source order, where the structure may be very different from the visual rendering.',

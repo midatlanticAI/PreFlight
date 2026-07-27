@@ -16,7 +16,11 @@
 // Same contract as the existing probes.
 
 import { isTestFile, isScannerSelfSource } from '../file-filter.js';
-import { maskCommentsAndStringsFromContent, maskCommentsForPath } from './_internal/masking.js';
+import {
+  maskCodeShapeForPath,
+  maskCommentsAndStringsFromContent,
+  maskCommentsForPath,
+} from './_internal/masking.js';
 
 // ---------- 6. Source map exposure ----------
 //
@@ -336,11 +340,17 @@ export function probeSecurityLogging(files) {
     if (!pathIsSecurity && !hasDeleteHandler) return;
     // Path match alone is not enough: require server-handler evidence in the
     // file itself (a DELETE handler is server evidence by definition).
-    if (!hasDeleteHandler && !SERVER_CONTEXT_RE.test(file.content)) return;
+    //
+    // Answered on the code-shape view. A file named auth.js that only DESCRIBES
+    // request handling — a probe's own detection patterns, a type declaration,
+    // a constants table — is not a server route that forgot to log. `res.json(`
+    // inside a regex literal is a pattern, not a response.
+    const codeShape = maskCodeShapeForPath(file.path, file.content);
+    if (!hasDeleteHandler && !SERVER_CONTEXT_RE.test(codeShape)) return;
 
     // The file is in a security-relevant location. Check whether any logging
     // call appears in the file at all. If not, that's the finding.
-    if (LOGGER_CALL_RE.test(file.content)) return;
+    if (LOGGER_CALL_RE.test(codeShape)) return;
 
     // No logging call anywhere. Surface at the first matching handler line.
     const lines = file.content.split('\n');
