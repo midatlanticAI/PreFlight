@@ -14,6 +14,7 @@
 
 import { javascriptFiles, stripJsLineComments } from '../../shared-detectors/javascript-scope.js';
 import { maskCommentsForPath } from '../../../_internal/masking.js';
+import { lineIsProseString } from '../../../_internal/prose.js';
 
 const PROBE_NAME = 'JS Auth Token Verification (XL-013)';
 
@@ -65,6 +66,10 @@ export const JS_AUTH_001 = {
       const lines = maskCommentsForPath(file.path, file.content).split('\n');
       lines.forEach((rawLine, i) => {
         const line = stripJsLineComments(rawLine);
+        // This adapter's own metadata describes the shapes it catches, in
+        // sentences that name `jwt.sign(...)` and `alg:none`. A description of
+        // a defect is not the defect.
+        if (lineIsProseString(line)) return;
         if (/(?:algorithm|alg)\s*:\s*['"]?none['"]?(?:\s|,|$)/i.test(line)) {
           findings.push({
             id: `auth-algnone-${file.path}-${i}`,

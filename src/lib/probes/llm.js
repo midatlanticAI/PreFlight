@@ -9,7 +9,12 @@
 // every probe function from its new family file.
 
 import { isTestFile, isScannerSelfSource } from '../file-filter.js';
-import { maskCommentsAndStringsFromContent, maskCommentsForPath } from './_internal/masking.js';
+import {
+  maskCodeShapeForPath,
+  maskCommentsAndStringsFromContent,
+  maskCommentsForPath,
+} from './_internal/masking.js';
+import { isMatchInsideProseString, lineIsProseString } from './_internal/prose.js';
 
 export function probeLLMSecurity(files) {
   const findings = [];
@@ -76,7 +81,7 @@ export function probeLLMSecurity(files) {
 
     // LLM05: Improper Output Handling — LLM output rendered as HTML
     lines.forEach((line, i) => {
-      if (/dangerouslySetInnerHTML/.test(line)) {
+      if (/dangerouslySetInnerHTML/.test(line) && !lineIsProseString(line)) {
         const ctx = lines.slice(Math.max(0, i - 5), i + 1).join(' ');
         if (
           /(completion|response|message|content|reply|llmOutput|aiResponse)/i.test(ctx) &&
@@ -103,7 +108,9 @@ export function probeLLMSecurity(files) {
     const dangerousAgent = content.match(
       /\b(PythonREPL|PythonREPLTool|ShellTool|RequestsTool|RequestsGetTool|RequestsPostTool|BashProcess|TerminalTool|FileManagementToolkit|ExperimentalCodeInterpreter)\b/
     );
-    if (dangerousAgent) {
+    // A sentence listing dangerous agent tools is naming the risk, not taking
+    // it. The tool names are identifiers everywhere they actually matter.
+    if (dangerousAgent && !isMatchInsideProseString(content, dangerousAgent.index)) {
       const ln = content.slice(0, dangerousAgent.index).split('\n').length;
       findings.push({
         id: `llm-agency-${file.path}-${dangerousAgent.index}`,
@@ -277,8 +284,12 @@ export function probeMCPSecurity(files) {
     }
     // Inline MCP usage in source
     if (!/\.(ts|tsx|js|jsx|py)$/.test(file.path)) return;
-    if (/StdioServerTransport|stdio_server|StdioClientTransport/.test(file.content)) {
-      if (/shell\s*:\s*true|spawn\(\s*["'`](bash|sh|cmd|powershell)/i.test(file.content)) {
+    // Comment-blind, and regex bodies blanked with it. A probe that lists
+    // `StdioServerTransport` and `shell: true` inside its own detection
+    // patterns is describing an MCP server, not running one.
+    const mcpContent = maskCodeShapeForPath(file.path, file.content);
+    if (/StdioServerTransport|stdio_server|StdioClientTransport/.test(mcpContent)) {
+      if (/shell\s*:\s*true|spawn\(\s*["'`](bash|sh|cmd|powershell)/i.test(mcpContent)) {
         findings.push({
           id: `mcp-stdio-${file.path}`,
           probe: 'MCP Security',

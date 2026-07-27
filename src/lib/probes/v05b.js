@@ -16,7 +16,7 @@
 // Same contract as the existing probes.
 
 import { isTestFile, isScannerSelfSource } from '../file-filter.js';
-import { maskCommentsForPath } from './_internal/masking.js';
+import { maskCommentsAndStringsFromContent, maskCommentsForPath } from './_internal/masking.js';
 
 // ---------- 6. Source map exposure ----------
 //
@@ -156,11 +156,23 @@ export function probeIframeSandbox(files) {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.(?:html?|jsx?|tsx?|astro|vue|svelte)$/.test(file.path)) return;
 
-    // Comment-blind for JS-family files; HTML passes through untouched, since
-    // it has no `//` comment form and a bare `https://` in markup would read as
-    // one. The `<iframe src="...">` written in a comment to explain this probe
-    // is documentation, not an unsandboxed frame.
+    // Two checks live here and they need different views.
+    //
+    // The postMessage check reads string VALUES — `addEventListener('message')`
+    // is only that listener because of the literal — so it uses the
+    // comment-blind view that keeps strings.
     const content = maskCommentsForPath(file.path, file.content);
+    // The iframe scan asks the opposite question. In a JS/JSX file an iframe is
+    // markup the compiler sees: `<iframe src=…>` sits in code position, never
+    // inside quotes. A quoted "<iframe>" there is a string ABOUT an iframe — a
+    // finding title, a docs snippet, a breakers payload — so it reads the view
+    // with strings blanked too.
+    //
+    // HTML gets neither treatment: the whole file is markup, it has no `//`
+    // comment form, and a bare `https://` would be read as one.
+    const markup = /\.html?$/i.test(file.path)
+      ? file.content
+      : maskCommentsAndStringsFromContent(file.content);
     // postMessage handler without origin check — CWE-346, related to iframe
     // boundary control. Detect window.addEventListener('message', ...) where
     // the next ~30 lines have no `.origin` reference.
@@ -221,9 +233,13 @@ export function probeIframeSandbox(files) {
     // Iframe tags (whole-file scan, multi-line tolerant).
     let m;
     IFRAME_TAG_RE.lastIndex = 0;
-    while ((m = IFRAME_TAG_RE.exec(content)) !== null) {
-      const tag = m[0];
-      const lineNum = content.slice(0, m.index).split('\n').length;
+    while ((m = IFRAME_TAG_RE.exec(markup)) !== null) {
+      // Position comes from the structural view, so a quoted "<iframe>" in a
+      // string never matches. The tag TEXT comes from the real source at the
+      // same offsets, because the masks preserve length: the src attribute is
+      // a string literal, and blanking it would hide cross-origin detection.
+      const tag = file.content.slice(m.index, m.index + m[0].length);
+      const lineNum = markup.slice(0, m.index).split('\n').length;
       const srcMatch = IFRAME_SRC_RE.exec(tag);
       const src = srcMatch?.[1] || '';
       const isCrossOrigin = /^(https?:)?\/\//i.test(src);

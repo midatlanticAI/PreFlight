@@ -15,6 +15,7 @@
 
 import { isTestFile, isScannerSelfSource } from '../file-filter.js';
 import { maskCommentsForPath } from './_internal/masking.js';
+import { lineIsProseString } from './_internal/prose.js';
 
 // ---------- 1. SQL injection via template literals ----------
 //
@@ -326,6 +327,9 @@ export function probeWeakRandomness(files) {
             'Replace crypto.pseudoRandomBytes with crypto.randomBytes (Node 18+) or crypto.getRandomValues (web). pseudoRandomBytes was deprecated specifically because it is predictable.',
         });
       }
+      // `Math.random()` named inside a sentence is the remediation advice
+      // describing the call, not the call.
+      if (lineIsProseString(line)) return;
       const hit = WEAK_RANDOM_CALL_RE.exec(line);
       WEAK_RANDOM_CALL_RE.lastIndex = 0;
       const lodashHit = LODASH_RANDOM_RE.exec(line);

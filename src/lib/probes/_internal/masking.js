@@ -343,6 +343,18 @@ export function maskCommentsForPath(path, content) {
   return typeof content === 'string' ? content : '';
 }
 
+/**
+ * Comments AND string contents blanked, in the comment syntax of `path`'s
+ * language. The view for a check about code shape rather than string value.
+ *
+ * Composed rather than special-cased: the language-aware pass drops comments,
+ * then the JS string lexer blanks quoted bodies. Both preserve length and
+ * indices, so composing them is safe and offsets still point at real source.
+ */
+export function maskCodeShapeForPath(path, content) {
+  return maskCommentsAndStringsFromContent(maskCommentsForPath(path, content));
+}
+
 // A `/` begins a regex literal when what precedes it cannot end an expression.
 // After an identifier, a number, `)` or `]`, a slash is division. After an
 // operator, an opening bracket, a comma, a semicolon, or a keyword, it is a

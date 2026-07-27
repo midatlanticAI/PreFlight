@@ -27,6 +27,7 @@
 
 import { parseModule, walk } from './context.js';
 import { isTestFile, isScannerSelfSource } from '../../file-filter.js';
+import { looksLikeProse } from '../_internal/prose.js';
 
 const FN_TYPES = new Set(['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression']);
 
@@ -222,11 +223,20 @@ export function probeAICodegenBloat(files) {
         /(?:[A-Z][A-Z0-9]+[-:]\d+|#\d+|https?:\/\/\S+|\bkept (?:on purpose|for|as)\b|\bdo not delete\b|\breference (?:copy|implementation)\b)/.test(
           runText
         );
+      // Disabled code is mostly code. Documentation that illustrates with an
+      // example is mostly prose with a few code lines in it, and the old
+      // "3 code-shaped lines anywhere in the run" test could not tell them
+      // apart: a 45-line architecture note carrying one worked example read as
+      // 45 lines of dead code. Requiring most of the block to be code keeps the
+      // commented-out function and drops the essay.
+      const runLength = endIdx - runStart + 1;
+      const mostlyCode = runLength > 0 && runCodeish / runLength >= 0.6;
       if (
         runStart >= 0 &&
         !justified &&
-        endIdx - runStart + 1 >= BLOAT_COMMENTED_CODE_LINES &&
-        runCodeish >= 3
+        runLength >= BLOAT_COMMENTED_CODE_LINES &&
+        runCodeish >= 3 &&
+        mostlyCode
       ) {
         findings.push(
           finding({
@@ -296,6 +306,14 @@ export function probeAICodegenBloat(files) {
         /(?:->|=>|<-|\|)\s*\S+\s*(?:->|=>|<-|\|)/.test(body)
       )
         return;
+      // A sentence is not disabled code, whatever keywords it contains.
+      //
+      // The keyword test below matches `if`, `for`, `else`, `return`, `class`
+      // and `export` as words, and English uses all of them. That made every
+      // file-header block read as commented-out code: 27 of this repo's own
+      // findings were documentation, and the better a file was documented the
+      // worse it scored. Grammar settles it where vocabulary cannot.
+      if (looksLikeProse(body)) return;
       // Code-shaped: ends in a statement terminator, or contains an
       // assignment / call / declaration / control keyword.
       if (
@@ -400,6 +418,33 @@ export function probeAICodegenBloat(files) {
     if (!ast) return;
 
     // --- 6. Oversized functions and 7. high cyclomatic complexity.
+    //
+    // A callback that spans essentially all of its enclosing function is not a
+    // second oversized function, it is the same one counted again. The common
+    // shape is a probe body: `export function probeX(files) { files.forEach(
+    // (file) => { ... } ) }` reported as 618 lines, then its callback at 614,
+    // then that callback's own inner loop at 557 — three findings, one thing to
+    // fix, and the two extra ones name no function the reader can find.
+    //
+    // Only the outermost is kept. A genuinely nested helper that occupies a
+    // fraction of its parent still reports on its own, which is the case where
+    // "extract this" is real advice.
+    const fnRanges = [];
+    walk(ast, (n) => {
+      if (!FN_TYPES.has(n.type)) return;
+      const s = n.loc?.start?.line;
+      const e = n.loc?.end?.line;
+      if (s && e) fnRanges.push({ node: n, start: s, end: e });
+    });
+    const spansItsParent = (node, startLine, endLine) => {
+      const span = endLine - startLine + 1;
+      return fnRanges.some((r) => {
+        if (r.node === node) return false;
+        if (r.start > startLine || r.end < endLine) return false; // not enclosing
+        const outer = r.end - r.start + 1;
+        return outer > 0 && span >= 0.9 * outer;
+      });
+    };
     const importedNames = new Map(); // local name -> line
     const seenFns = new Set();
     walk(ast, (node, parent) => {
@@ -422,7 +467,12 @@ export function probeAICodegenBloat(files) {
       // double-counted: Code Quality's file-length check already says this file
       // is large, which is the real observation (real-scan finding 2026-07).
       if (isModuleWrapper(node, parent, ast)) return;
-      if (startLine && endLine && endLine - startLine + 1 > BLOAT_FN_LINES) {
+      if (
+        startLine &&
+        endLine &&
+        endLine - startLine + 1 > BLOAT_FN_LINES &&
+        !spansItsParent(node, startLine, endLine)
+      ) {
         findings.push(
           finding({
             id: `bloat-fn-long-${file.path}-${startLine}`,

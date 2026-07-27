@@ -20,8 +20,11 @@ import {
   SECRET_VALUE_PLACEHOLDER_RE,
   isMatchInPlaceholderNamedAssignment,
   maskBlockCommentsAndTemplateLiterals,
+  maskCommentsAndStringsFromContent,
+  maskCommentsForPath,
   maskCommentsOnly,
 } from './_internal/masking.js';
+import { lineIsProseString } from './_internal/prose.js';
 
 // Strip a single line of `// ...` comments and `/* ... */` (within-line) before testing for code patterns.
 // Heuristic — won't fool template literals or strings containing //, but kills the common false-positive
@@ -161,12 +164,23 @@ export function probeAuthWeakness(files) {
     // which is what those checks wanted in the first place. `realLine` stays,
     // for evidence text and content offsets — never for deciding.
     const codeLines = maskCommentsOnly(file.content).split('\n');
+    // The strictest view: comments AND string contents blanked, structure kept.
+    // For a check about CODE SHAPE — a comparison, a call — a match inside a
+    // string literal is prose describing the shape. `title: 'Default
+    // credentials in connection string (user == password)'` is a finding title,
+    // not a password comparison, and no real one is ever written inside quotes.
+    const wideLines = maskCommentsAndStringsFromContent(file.content).split('\n');
     maskedLines.forEach((rawLine, i) => {
       const line = stripLineComments(rawLine);
       const realLine = originalLines[i] || '';
       const codeLine = codeLines[i] || '';
+      const wideLine = wideLines[i] || '';
+      // Checks below read string VALUES, so they cannot use wideLine. They
+      // still must not read a sentence: a remediation string quoting
+      // `alg:none` is describing the defect, not committing it.
+      const proseLine = lineIsProseString(codeLine);
       // Match quoted OR unquoted "none" — agent FN: `algorithm: none` (no quotes) used to evade.
-      if (/(?:algorithm|alg)\s*:\s*['"]?none['"]?(?:\s|,|$)/i.test(line)) {
+      if (!proseLine && /(?:algorithm|alg)\s*:\s*['"]?none['"]?(?:\s|,|$)/i.test(line)) {
         findings.push({
           id: `auth-algnone-${file.path}-${i}`,
           probe: 'Auth Weakness',
@@ -180,7 +194,7 @@ export function probeAuthWeakness(files) {
           remediation: `alg: none means tokens are unsigned. Anyone can forge a token claiming to be any user. Use HS256 with a strong secret or RS256 with a key pair.`,
         });
       }
-      if (/jwt\.verify\([^,)]+\)/.test(line) && !/secret|publicKey|key/.test(line)) {
+      if (!proseLine && /jwt\.verify\([^,)]+\)/.test(line) && !/secret|publicKey|key/.test(line)) {
         findings.push({
           id: `auth-noverify-${file.path}-${i}`,
           probe: 'Auth Weakness',
@@ -194,7 +208,7 @@ export function probeAuthWeakness(files) {
           remediation: `Verify with an explicit secret or public key. Without one, signature validation may be skipped depending on the library, allowing forged tokens.`,
         });
       }
-      if (/eval\s*\(/.test(line) && !/eslint-disable/.test(line)) {
+      if (/eval\s*\(/.test(wideLine) && !/eslint-disable/.test(wideLine)) {
         findings.push({
           id: `code-eval-${file.path}-${i}`,
           probe: 'Code Injection',
@@ -318,8 +332,8 @@ export function probeAuthWeakness(files) {
       // `password` (case-insensitive). Real auth uses bcrypt.compare or
       // argon2.verify, which look completely different.
       if (
-        (/(?:\b\w*(?:password|passwd|pwd)\b)\s*(?:===|==)\s*\w+(?:\.\w+)*\b/i.test(line) ||
-          /\w+(?:\.\w+)*\s*(?:===|==)\s*\b\w*(?:password|passwd|pwd)\b/i.test(line)) &&
+        (/(?:\b\w*(?:password|passwd|pwd)\b)\s*(?:===|==)\s*\w+(?:\.\w+)*\b/i.test(wideLine) ||
+          /\w+(?:\.\w+)*\s*(?:===|==)\s*\b\w*(?:password|passwd|pwd)\b/i.test(wideLine)) &&
         // Self-test / fixture values: `retrieved === testPassword` in a
         // keychain round-trip check is not an auth path. FP triage 2026-07.
         !/\b(?:test|dummy|mock|sample|expected|fake|placeholder)_?(?:password|passwd|pwd)\b/i.test(
@@ -430,6 +444,7 @@ export function probeAuthWeakness(files) {
       // because the URL is usually built in one. The prose that documents this
       // check is not an instance of it.
       if (
+        !proseLine &&
         /[?&](?:token|sessionId|session_id|accessToken|access_token|jwt|auth(?:Token)?)=/i.test(
           codeLine
         ) &&
@@ -464,7 +479,7 @@ export function probeAuthWeakness(files) {
       // is handled by the whole-content pass below.)
       {
         const objLiteralCred = /\b(?:password|passwd|pwd|pass|secret)\s*:\s*(['"])([^'"\n]{3,})\1/i;
-        const m = line.match(objLiteralCred);
+        const m = proseLine ? null : line.match(objLiteralCred);
         if (m) {
           const value = m[2];
           const matchIdx = file.content.indexOf(realLine);
@@ -682,7 +697,7 @@ export function probeAuthWeakness(files) {
       // production probe AND the JS-AUTH-001 shadow probe emit identical
       // findings (same id, title, severity) so the v05-phase2 parity test
       // stays green. Sync the emission shape if one is changed.
-      if (/jwt\.sign\s*\(/.test(line)) {
+      if (!proseLine && /jwt\.sign\s*\(/.test(line)) {
         const startIdx = file.content.indexOf(realLine);
         const around = startIdx >= 0 ? file.content.slice(startIdx, startIdx + 400) : line;
         if (!/expiresIn\s*:|\bexp\s*:/.test(around)) {
@@ -1090,7 +1105,11 @@ export function probeCookieFlags(files) {
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$|\.py$/.test(file.path)) return;
-    const lines = file.content.split('\n');
+    // Comment-blind, and regex bodies blanked with them. `Set-Cookie` listed
+    // inside a header-name alternation is a pattern describing cookies, and a
+    // comment explaining cookie flags is documentation; neither sets a cookie.
+    const rawLines = file.content.split('\n');
+    const lines = maskCommentsForPath(file.path, file.content).split('\n');
     // Same-file helper bodies. Apps commonly build the Set-Cookie value in a
     // cookieHeader() / buildSessionCookie() helper, which puts the flags
     // outside the call-site window and produced a confident "missing httpOnly,
@@ -1105,6 +1124,8 @@ export function probeCookieFlags(files) {
           line
         );
       if (!isCookieSet) return;
+      // A sentence about caching auth headers is not a Set-Cookie call.
+      if (lineIsProseString(line)) return;
       // Auth-cookie name signal widened: connect.sid, PHPSESSID, JSESSIONID,
       // __Host-*, __Secure-*, oauth/sso/bearer/sid/uid/login/account/
       // remember/appSession/sb-access-token (Supabase) / clerk-session.
@@ -1167,7 +1188,7 @@ export function probeCookieFlags(files) {
           cwe: 'CWE-1004',
           file: file.path,
           line: i + 1,
-          evidence: line.trim().slice(0, 200),
+          evidence: (rawLines[i] ?? line).trim().slice(0, 200),
           remediation:
             'Auth cookies should set httpOnly (blocks JS access, mitigates XSS token theft), secure (HTTPS only), and sameSite: "lax" or "strict" (mitigates CSRF). Without these, one XSS becomes account takeover.',
         });
