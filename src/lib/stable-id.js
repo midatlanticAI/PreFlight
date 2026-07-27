@@ -260,6 +260,11 @@ export const PROBE_META = {
     autofix: 'review-needed',
     learn_more_slug: 'sql-injection',
   },
+  'Python Security': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'python-security',
+  },
   'Path Traversal': {
     confidence: 'medium',
     autofix: 'review-needed',
@@ -393,7 +398,7 @@ const HAND_CODED_OWASP_MAP = {
     'Client Auth Storage',
     'Cookie Security',
   ],
-  A03: ['Auth Weakness', 'SQL Injection', 'HTML Hygiene'],
+  A03: ['Auth Weakness', 'SQL Injection', 'HTML Hygiene', 'Python Security'],
   A04: ['AI Code Smells', 'Stack Trace Leaks', 'Code Correctness'],
   A05: ['Security Headers', 'CORS', 'Source Map Exposure', 'Iframe Sandbox'],
   A06: ['Compromised Packages', 'Slopsquat / Typosquat', 'Package Manager Hardening'],

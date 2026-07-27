@@ -11,7 +11,7 @@ const PROBE_NAME = 'Python Raw SQL Interpolation';
 // Raw-SQL surfaces. If an interpolated string reaches one of these, it's a
 // parse-time injection.
 const SQL_SURFACE_RE =
-  /\.extra\s*\(|\bRawSQL\s*\(|\.objects\.raw\s*\(|\bcursor\s*\(\s*\)\s*\.execute\s*\(|\.cursor\(\)\.execute\s*\(|\bcursor\.execute\s*\(|\b(?:session|conn|connection|engine|db)\.execute\s*\(\s*text\s*\(|\btext\s*\(/;
+  /\.extra\s*\(|\bRawSQL\s*\(|\.objects\.raw\s*\(|\bcursor\s*\(\s*\)\s*\.execute\s*\(|\.cursor\(\)\.execute\s*\(|\bcur(?:sor)?\.execute\s*\(|\b(?:session|conn|connection|engine|db|cur)\.execute\s*\(\s*text\s*\(|\btext\s*\(/;
 
 // Interpolation forms: f-string with a substitution, %-format, .format(),
 // or string concatenation of a non-literal into the SQL.

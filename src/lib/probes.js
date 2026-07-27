@@ -153,6 +153,7 @@ import {
   probeRAGIngestion,
   probeVectorEmbeddingWeaknesses,
 } from './probes/v05b.js';
+import { probePythonSecurity } from './probes/python.js';
 export {
   probeExternalURLs,
   probeHTML,
@@ -197,6 +198,9 @@ export const PROBES = [
   { name: 'Package.json', fn: probePackageJson },
   { name: 'Env File Hygiene', fn: probeEnvFiles },
   { name: 'Auth Weakness', fn: probeAuthWeakness },
+  // Python was scanned but barely examined: four adapters, and a realistic
+  // vulnerable Flask app came back clean. See probes/python.js.
+  { name: 'Python Security', fn: probePythonSecurity },
   { name: 'Admin Route Exposure', fn: probeAdminRoutes },
   { name: 'Security Headers', fn: probeMissingHeaders },
   { name: 'CORS', fn: probeCORS },

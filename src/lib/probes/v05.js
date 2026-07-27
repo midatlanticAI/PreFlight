@@ -60,9 +60,9 @@ const SQL_CONCAT_SINK =
 // Python f-string into cursor.execute or SQLAlchemy text(): the Python
 // analog of template-literal interpolation.
 const PY_SQL_FSTRING =
-  /\b(?:cursor|conn|connection|engine|db|session)\s*\.\s*(?:execute|executemany|executescript|exec_driver_sql)\s*\(\s*(?:text\s*\(\s*)?f["']/;
+  /\b(?:cursor|cur|conn|connection|engine|db|session)\s*\.\s*(?:execute|executemany|executescript|exec_driver_sql)\s*\(\s*(?:text\s*\(\s*)?f["']/;
 const PY_SQL_PERCENT_OR_FORMAT =
-  /\b(?:cursor|conn|connection|engine|db|session)\s*\.\s*(?:execute|executemany|executescript)\s*\(\s*["'][^"']*(?:SELECT|INSERT|UPDATE|DELETE)[^"']*["']\s*(?:%|\.\s*format\s*\()/i;
+  /\b(?:cursor|cur|conn|connection|engine|db|session)\s*\.\s*(?:execute|executemany|executescript)\s*\(\s*["'][^"']*(?:SELECT|INSERT|UPDATE|DELETE)[^"']*["']\s*(?:%|\.\s*format\s*\()/i;
 // Go fmt.Sprintf into db.Query/Exec — the Go analog of template-literal
 // interpolation.
 const GO_SQL_SPRINTF =
