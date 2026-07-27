@@ -6,6 +6,60 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-07-27 — Python was scanned but never really examined
+
+A realistic 41-line Flask app carrying SQL injection, `os.system` command injection, `send_file` path traversal, md5 password hashing, a plaintext password comparison, a hardcoded secret key, `eval` on request data and `debug=True` returned zero findings of any severity. Four v0.5 adapters covered deserialization, provider-shaped keys, raw SQL and disabled TLS verification. Everything else was silence dressed as coverage, and a clean report on code like that is worse than no report, because it is the one output that stops the reader looking.
+
+There is now a Python probe for the shapes that ship: shell commands built from request data, filesystem paths built from request data, outbound requests to a caller-supplied URL, `eval`/`exec` on request data, md5 and sha1 on a password, plaintext password comparison, credentials assigned a literal, and debug mode left on. Flask, Django, FastAPI and Tornado request accessors are recognised, plus the one-hop shape where the value lands in a variable on the line above.
+
+Also `cur`. The Python SQL allowlists held cursor, conn, connection, engine, db and session, and not the single most common cursor name in Python, so `cur.execute(f"...")` was invisible while `cursor.execute(f"...")` was critical. Two allowlists, one token each.
+
+Precision was measured rather than assumed: twelve safe idioms stay silent, and each one is a fix this probe's own remediation recommends. Flagging the fix you just advised is how a tool loses someone for good.
+
+The Learn page states the limit instead of leaving it to be inferred. The taint engine parses with acorn and is JavaScript and TypeScript only, so the Python checks see the request value at the call site or one line above it. A clean Python result is weaker evidence than a clean JavaScript one.
+
+### 2026-07-27 — three defects an adversarial round found that our own suites could not
+
+Three contextless agents attacked the masking layer, the prose guard and probe recall with no knowledge of what had just been written. All three found real defects, all three reproduced, and every one was invisible to the tests that shipped beside the code, because the same author wrote both.
+
+The prose guard was suppressing real criticals. It asked whether a line _contained_ a prose span while every caller uses the answer to skip the whole line, so one human-readable sibling property switched off every check on that line. A `note:` beside `algorithm: 'none'` took a critical from two findings to none, and the two most realistic cases were a disclaimer beside LLM output and a password-reset mail call carrying the human copy and the token on one line. Neither is a crafted evasion. The guard now requires the line to _be_ a string literal.
+
+An unterminated construct blanked the rest of the file. `src/data/*` written in JSX copy opens a block comment nothing closes, so 95 of the 187 lines of this repo's own `TermsView.jsx` were blanked in every masked view and every masked check stopped running there. Both that and a lone backtick in prose now rewind and keep lexing. The trade is deliberate: under-masking risks a false positive somebody can see, over-masking hides real code and looks like a clean result.
+
+The taint engine never bound a destructuring pattern. `const x = req.query.x` was tracked; `const { x } = req.query`, the form every Express and Next handler is actually written in, was not. Taint died at the declaration and took every sink with it: SSRF, shell, redirect, dynamic code and filesystem all went quiet. Eight shapes verified missing, all eight now caught.
+
+### 2026-07-27 — a redirect target that passes through a variable is still user-controlled
+
+The outbound-request taint sink exists because a URL passing through a variable is invisible to a single-line regex. Redirect had the identical hole, and it was missed at the time: `const next = req.query.next; res.redirect(next)` was silent in both probes. That is the login-return shape, and it is the phishing one, because the link carries your domain and lands somewhere else.
+
+A correction shipped with it. An earlier commit that day claimed an SSRF recall gap; that claim came from running one probe in isolation instead of the probe set the app runs, and the taint engine catches every user-controlled outbound shape tried. Measured before shipping: zero redirect findings across a 2,270-file corpus.
+
+### 2026-07-27 — a threat pattern is not the threat, and reserved IPs are not a reputation question
+
+Security score on this repo was 42, from seven findings, every one of them PreFlight reading its own definitions as an application. The IOC scan and the security-logging check now read the comment-and-regex-blind view: a pattern written as a regex literal is a definition of an indicator, and a response call inside a detection pattern is not a response. Malicious-artifact evidence now quotes the text matched in the scanned file rather than this table's label for it, which is better for the reader and frees the labels to describe indicators instead of restating them.
+
+Two were ours to fix rather than the probes'. Both HTTP-only Resources links serve HTTPS, verified, and now use it. `breakers.js` shipped a literal U+202E while the Trojan Source remediation tells readers to strip exactly that; it is now written as an escape, identical at runtime and absent from source.
+
+Reserved address space needed care. Loopback, link-local and the RFC 5737 documentation ranges are not registrable, so "check VirusTotal, move registrar, repoint DNS" is advice with no referent. Skipping them entirely was tried and reverted within the hour, because the SSRF probe turned out not to catch a hardcoded metadata fetch and dropping them would have deleted the only coverage of the most valuable SSRF target there is. They are reported with a reason and a remedy that fit an address nobody can register.
+
+Security 42 to 95. Not 100: `breakers.js` really does hardcode the metadata URL as a documented payload, and that finding is correct.
+
+### 2026-07-27 — tell prose from code, and stop counting one function three times
+
+Two checks asked "does this text contain a code keyword", and English contains code keywords constantly. `if`, `for`, `return`, `class`, `export` and `in` are ordinary words, so remediation copy quoting a pattern read as an instance of it, and a file-header block read as a run of disabled code. The better a file was documented, the worse it scored. The discriminator that works is grammar rather than vocabulary: prose is mostly function words, and source has almost none, because code names things and English relates them.
+
+Counting was wrong too. A probe body reported at 618 lines, its `files.forEach` callback at 614, and that callback's inner loop at 557: three findings, one thing to fix, and two of them naming no function a reader can find. Only the outermost is kept now. Commented-out code moved from a count to a ratio, because disabled code is mostly code while documentation that illustrates with an example is mostly prose with a few code lines in it.
+
+### 2026-07-27 — a comment describing a vulnerability is not a vulnerability
+
+Scanning this repo from GitHub returned 0 / 100 with 14 criticals. Every one of them, and all 18 highs, sat on a line that is not executable code.
+
+The narrow masker never learned to lex. It honoured backticks without tracking single or double quotes at all, so one backtick inside an ordinary quoted string opened a template literal that ran to the next backtick anywhere later in the file. Comment text caught between the phantom pair was emitted as code, which is how a line documenting what a plaintext password comparison looks like became a CRITICAL against the file explaining the check.
+
+The other half never showed up in a report. Every real line the phantom swallowed was blanked, so no masked check ran on it: 353 of 1,371 lines in `auth.js`, and 110 of 367 in `llm.js`. Silent, and in the worst direction, because a scan comes back cleaner when the scanner stops looking. Backticks in comments are ordinary in documented code, so this was not about us.
+
+There is now one lexer with three views, differing only in what they blank. Every view is blind to comments by construction and none of them can desynchronise, because they all consume the source the same way. `maskCommentsForPath` picks comment syntax from the file extension, so Python is not lexed as JavaScript, and HTML, which has no `//` comment form, is left alone. The probes that never masked at all now do: SQL injection, path traversal, weak randomness, stack-trace leaks, iframe sandbox and the LLM agent-tool checks.
+
 ### 2026-07-25 — function length drops to low
 
 `Function "x" is 130 lines` was medium. `Function "x" has cyclomatic complexity 19` was low. Same family, same CWE, same underlying property, and the weaker signal outranked the better one by two and a half times: 130 flat sequential lines are easier to hold in your head than 40 lines with 18 branches. Complexity had already been moved to low in an earlier pass; length was left behind, and the gap was never a decision.
