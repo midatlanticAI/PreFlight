@@ -155,6 +155,7 @@ import {
 } from './probes/v05b.js';
 import { probePythonSecurity } from './probes/python.js';
 import { probeReflectedXSS } from './probes/server-xss.js';
+import { probeWeakCryptography } from './probes/crypto.js';
 export {
   probeExternalURLs,
   probeHTML,
@@ -176,6 +177,7 @@ export {
   probeRAGIngestion,
   probeVectorEmbeddingWeaknesses,
   probeReflectedXSS,
+  probeWeakCryptography,
 };
 export { probeTaintFlow } from './probes/taint-engine.js';
 export { probeAgentConfigBackdoor } from './probes/agent-backdoor.js';
@@ -203,6 +205,10 @@ export const PROBES = [
   // Python was scanned but barely examined: four adapters, and a realistic
   // vulnerable Flask app came back clean. See probes/python.js.
   { name: 'Python Security', fn: probePythonSecurity },
+  // Weak randomness had a probe; weak crypto did not. ECB, DES and a fixed IV
+  // had no coverage anywhere, and md5-on-a-password only fired when the
+  // variable happened to be named `password`. See probes/crypto.js.
+  { name: 'Weak Cryptography', fn: probeWeakCryptography },
   { name: 'Admin Route Exposure', fn: probeAdminRoutes },
   { name: 'Security Headers', fn: probeMissingHeaders },
   { name: 'CORS', fn: probeCORS },

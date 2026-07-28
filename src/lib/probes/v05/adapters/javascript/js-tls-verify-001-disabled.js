@@ -13,7 +13,8 @@
 // `strictSSL: false` from the request / npm client family.
 
 import { javascriptFiles } from '../../shared-detectors/javascript-scope.js';
-import { maskCommentsForPath } from '../../../_internal/masking.js';
+import { maskCodeShapeForPath, maskCommentsForPath } from '../../../_internal/masking.js';
+import { lineIsProseString } from '../../../_internal/prose.js';
 
 const PROBE_NAME = 'JavaScript TLS Verification Disabled';
 
@@ -51,7 +52,7 @@ export const JS_TLS_VERIFY_001 = {
   detection_approach:
     'RX per line over the comment-blind view: rejectUnauthorized: false, NODE_TLS_REJECT_UNAUTHORIZED assigned 0, strictSSL: false.',
   fp_gates_v05: [
-    'comments, including block comments spanning lines (maskCommentsForPath)',
+    'comments and string bodies (maskCodeShapeForPath), so prose quoting the pattern is not the pattern',
     'rejectUnauthorized: true and NODE_TLS_REJECT_UNAUTHORIZED set to 1',
     'a value read from a variable or the environment rather than the literal false',
     'test files / scanner self-source / v0.5 fixture tree (handled by javascriptFiles())',
@@ -76,12 +77,45 @@ export const JS_TLS_VERIFY_001 = {
       // Comment bodies blanked, string bodies preserved: the environment
       // override writes its value as the string '0', so the string contents
       // have to survive, and a comment describing the flag must not fire.
-      const code = maskCommentsForPath(f.path, raw);
+      // Strings blanked as well as comments. Every shape here is a CODE
+      // shape: `rejectUnauthorized: false` is an object property, and
+      // NODE_TLS_REJECT_UNAUTHORIZED is an assignment target. None of them can
+      // legitimately live inside a quoted string, and the comment-blind view
+      // is not enough — this adapter's own remediation copy quotes the
+      // patterns it hunts, so it reported itself seven times on the first
+      // scan after it landed. Same defect the masking work spent the day
+      // removing, arriving in new code the same afternoon.
+      const code = maskCodeShapeForPath(f.path, raw);
       const lines = code.split('\n');
       const rawLines = raw.split('\n');
+      // The environment override cannot use the view above: its value is the
+      // STRING '0', which that view blanks along with every other string body,
+      // so the check would never see the 0 it needs. It reads the comment-blind
+      // view instead and takes the prose guard. That is the same split the
+      // masking work settled on: a check about code SHAPE reads the strict
+      // view, a check about a string VALUE reads the permissive one and screens
+      // out sentences.
+      const valueLines = maskCommentsForPath(f.path, raw).split('\n');
       lines.forEach((line, i) => {
+        const valueLine = valueLines[i] || '';
         const agentOff = REJECT_UNAUTHORIZED_FALSE_RE.test(line);
-        const envOff = NODE_TLS_ENV_OFF_RE.test(line);
+        // Anchor in code, value in the string view.
+        //
+        // The identifier has to survive the strings-blanked view, which proves
+        // it is an assignment target rather than text; the `'0'` is then read
+        // from the permissive view, which is the only place it exists. The
+        // prose guard alone was not enough here: this adapter's own finding
+        // TITLE names the variable, and a six-word technical title is not a
+        // sentence by any grammar test, so it read as code and reported itself.
+        // The anchor is `process.env`, not the variable name. Bracket access
+        // (`process.env['NODE_TLS_REJECT_UNAUTHORIZED']`) puts the name inside
+        // a string literal, where the strings-blanked view cannot see it, so
+        // anchoring on the name lost a real shape. `process.env` survives in
+        // both spellings and appears in no finding title.
+        const envOff =
+          /process\s*\.\s*env\b|\benv\s*\[/.test(line) &&
+          NODE_TLS_ENV_OFF_RE.test(valueLine) &&
+          !lineIsProseString(valueLine);
         const strictOff = STRICT_SSL_FALSE_RE.test(line);
         if (!agentOff && !envOff && !strictOff) return;
         findings.push({

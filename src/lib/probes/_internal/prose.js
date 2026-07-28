@@ -121,6 +121,11 @@ export function lineIsProseString(line) {
     .replace(/^export\s+/, '')
     .replace(/^(?:const|let|var)\s+/, '')
     .replace(/^[\w$.]+\s*[:=]\s*/, '')
+    // A ternary branch on its own line is how Prettier formats a conditional
+    // title or message, so the leading `?` / `:` is punctuation, not code.
+    // Without this, an adapter's own title strings sat in `? '...'` branches
+    // and reported themselves as findings.
+    .replace(/^[?:]\s*/, '')
     .replace(/^\+\s*/, '');
   // What remains must BE a string literal and nothing else, give or take
   // trailing punctuation.

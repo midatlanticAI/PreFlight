@@ -270,6 +270,13 @@ export const PROBE_META = {
     autofix: 'review-needed',
     learn_more_slug: 'reflected-xss',
   },
+  'Weak Cryptography': {
+    confidence: 'medium',
+    // review-needed, not mechanical: the fix means choosing a key and IV
+    // strategy, which is a decision, not a rename.
+    autofix: 'review-needed',
+    learn_more_slug: 'weak-cryptography',
+  },
   'Path Traversal': {
     confidence: 'medium',
     autofix: 'review-needed',
@@ -402,6 +409,7 @@ const HAND_CODED_OWASP_MAP = {
     'Weak Randomness',
     'Client Auth Storage',
     'Cookie Security',
+    'Weak Cryptography',
   ],
   A03: ['Auth Weakness', 'SQL Injection', 'HTML Hygiene', 'Python Security', 'Reflected XSS'],
   A04: ['AI Code Smells', 'Stack Trace Leaks', 'Code Correctness'],
