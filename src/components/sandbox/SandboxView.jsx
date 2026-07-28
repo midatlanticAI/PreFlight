@@ -43,7 +43,7 @@ export function SandboxView() {
   const [code, setCode] = useState(shape.buffer);
   // Initial findings computed synchronously so the first paint already shows
   // what fires on this shape rather than an empty panel.
-  const [findings, setFindings] = useState(() => runSandboxScan(shape.buffer));
+  const [findings, setFindings] = useState(() => runSandboxScan(shape.buffer, shape.filename));
 
   const load = (text) => {
     setSeed((prev) => ({ text, n: prev.n + 1 }));
@@ -62,10 +62,10 @@ export function SandboxView() {
 
   useEffect(() => {
     const id = setTimeout(() => {
-      setFindings(runSandboxScan(code));
+      setFindings(runSandboxScan(code, shape.filename));
     }, SCAN_DEBOUNCE_MS);
     return () => clearTimeout(id);
-  }, [code]);
+  }, [code, shape.filename]);
 
   return (
     <section aria-labelledby="sandbox-heading" className="ap-fade-in">

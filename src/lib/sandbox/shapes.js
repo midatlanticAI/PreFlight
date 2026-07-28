@@ -33,6 +33,11 @@
 //   learnSlug        optional  Published Learn pattern this shape illustrates.
 //   findingIdPrefix  optional  Prefix of the probe-emitted finding.id, for exact
 //                              finding -> shape routing from FindingCard.
+//   filename         optional  Virtual path the runner shows the probes. The
+//                              extension is what engages a language-scoped
+//                              check, so a Python shape sets `sandbox.py` and
+//                              the Python probe runs on it. Defaults to
+//                              sandbox.jsx.
 
 export const DEFAULT_SHAPE_SLUG = 'starter';
 
@@ -273,6 +278,44 @@ export function applyFilter(rows, name) {
     return DEFAULT_SETTINGS;
   }
 }
+`,
+  },
+
+  {
+    // The shape that proves `filename` is real. Nothing in this buffer is
+    // JavaScript, and until the runner took a filename the Python probe could
+    // never see it: a check scoped to `.py` does not run on `sandbox.jsx`.
+    slug: 'python-path-traversal',
+    title: 'Flask download route that joins a request value onto a path',
+    probeId: 'Python Security',
+    learnSlug: 'python-security',
+    findingIdPrefix: 'py-path-',
+    filename: 'sandbox.py',
+    note: 'os.path.join does not keep the result inside BASE, and given an absolute second argument it discards the first entirely. Resolve the path, then check it is still under BASE.',
+    buffer: `import os
+from flask import Flask, request, send_file
+
+app = Flask(__name__)
+BASE = "uploads"
+
+
+@app.route("/download")
+def download():
+    return send_file(os.path.join(BASE, request.args.get("name")))
+`,
+    fixedBuffer: `from pathlib import Path
+from flask import Flask, request, abort, send_file
+
+app = Flask(__name__)
+BASE = Path("uploads").resolve()
+
+
+@app.route("/download")
+def download():
+    target = (BASE / request.args.get("name", "")).resolve()
+    if not target.is_relative_to(BASE):
+        abort(400)
+    return send_file(target)
 `,
   },
 ];

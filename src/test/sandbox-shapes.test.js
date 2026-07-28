@@ -26,12 +26,12 @@ import { resolvePatternForProbe } from '../lib/learn-content.js';
 describe('sandbox shapes — the loop actually closes', () => {
   for (const shape of SHAPES) {
     it(`${shape.slug}: the buffer fires ${shape.probeId}`, () => {
-      const found = runSandboxScan(shape.buffer) || [];
+      const found = runSandboxScan(shape.buffer, shape.filename) || [];
       expect(found.some((f) => f.probe === shape.probeId)).toBe(true);
     });
 
     it(`${shape.slug}: the fix clears every finding`, () => {
-      expect(runSandboxScan(shape.fixedBuffer) || []).toHaveLength(0);
+      expect(runSandboxScan(shape.fixedBuffer, shape.filename) || []).toHaveLength(0);
     });
   }
 });
@@ -61,7 +61,7 @@ describe('sandbox shapes — registry integrity', () => {
 
   it('findingIdPrefix, where set, matches a real emitted finding id', () => {
     for (const s of SHAPES.filter((x) => x.findingIdPrefix)) {
-      const found = runSandboxScan(s.buffer) || [];
+      const found = runSandboxScan(s.buffer, s.filename) || [];
       expect(
         found.some((f) => String(f.id).startsWith(s.findingIdPrefix)),
         s.slug

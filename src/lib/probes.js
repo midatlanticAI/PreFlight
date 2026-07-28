@@ -176,6 +176,7 @@ export {
   probeSecurityLogging,
   probeRAGIngestion,
   probeVectorEmbeddingWeaknesses,
+  probePythonSecurity,
   probeReflectedXSS,
   probeWeakCryptography,
 };
