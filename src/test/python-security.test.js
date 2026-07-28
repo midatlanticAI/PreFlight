@@ -185,3 +185,50 @@ describe('probePythonSecurity — precision', () => {
     expect(scan('os.system("ping " + request.args.get("h"))', 'src/app.js')).toHaveLength(0);
   });
 });
+
+describe('probePythonSecurity — path assembly without a string operator', () => {
+  // Found by a hand-written positive control during the fix-PR corpus work.
+  // The harvested pairs proved nothing; the control caught a live gap. That is
+  // the argument for writing controls even when you think you have real data.
+  //
+  // os.path.join and pathlib are how Python actually builds paths, more common
+  // than concatenation, and the interpolation gate saw neither: no f-string,
+  // no %, no .format, no +.
+  const shapes = [
+    [
+      'os.path.join with a request value',
+      'import os\nfrom flask import request, send_file\nBASE = "/srv/files"\ndef d():\n    return send_file(os.path.join(BASE, request.args.get("name")))\n',
+    ],
+    [
+      'os.path.join one hop through a variable',
+      'import os\nfrom flask import request, send_file\nBASE = "/srv/files"\ndef d():\n    name = request.args.get("name")\n    return send_file(os.path.join(BASE, name))\n',
+    ],
+    [
+      'open(os.path.join(...))',
+      'import os\nfrom flask import request\ndef d():\n    with open(os.path.join("docs", request.args.get("n"))) as fh:\n        return fh.read()\n',
+    ],
+    [
+      'pathlib division operator',
+      'from pathlib import Path\nfrom flask import request\ndef d():\n    return (Path("uploads") / request.args.get("n")).read_text()\n',
+    ],
+  ];
+  for (const [name, src] of shapes) {
+    it(`${name} fires CWE-22`, () => {
+      expect(scan(src).some((x) => x.cwe === 'CWE-22')).toBe(true);
+    });
+  }
+
+  it('a resolved path with a containment check stays silent', () => {
+    // This is the fix the remediation recommends. Flagging it would be advising
+    // a change and then reporting the change.
+    const src =
+      'from pathlib import Path\nfrom flask import request\nBASE = Path("uploads").resolve()\ndef d():\n    t = (BASE / request.args.get("n")).resolve()\n    if not t.is_relative_to(BASE):\n        return "no", 400\n    return t.read_text()\n';
+    expect(scan(src).filter((x) => x.cwe === 'CWE-22')).toHaveLength(0);
+  });
+
+  it('joining constants is not a finding', () => {
+    expect(scan('import os\ndef d():\n    return os.path.join("a", "b", "c.txt")\n')).toHaveLength(
+      0
+    );
+  });
+});

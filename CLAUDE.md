@@ -85,7 +85,7 @@ Wired today: Sam SNIPPET is the system prompt for `formatAgentPrompt` (Copy Agen
 ```bash
 npm install            # install dependencies
 npm run dev            # vite dev server on :5173
-npm test               # vitest run (3897 tests across 111 files on main)
+npm test               # vitest run (3903 tests across 111 files on main)
 npm run lint           # eslint
 npm run lint:fix       # eslint --fix
 npm run format         # prettier write
@@ -112,7 +112,7 @@ Architecturally enforced, not promised. If you ever build a backend, you break t
 - 16 OWASP categories covered (A01-A10 + LLM01/02/04/06/07/08). Five probes are intentionally unmapped: SEO, GEO, and A11y are discoverability/accessibility, AI Codegen Bloat is maintainability, and Architecture and Host Detection are classifiers.
 - 58 published Learn patterns, 5 published field reports, 15 published architecture shapes (no drafts)
 - 9 BYOK providers
-- 3897 tests across 111 files on `main`, lint clean, self-audit 9/9
+- 3903 tests across 111 files on `main`, lint clean, self-audit 9/9
 - Breakers v1 hardening suite merged into `main`
 - v2 build in progress: F0 context detectors and F7 AI Codegen Bloat have landed. See `docs/preflight-v2-spec.md` for the remaining family roster, and `CHANGELOG.md` for what shipped when.
 

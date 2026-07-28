@@ -35,10 +35,36 @@ const PY_USER_INPUT =
 // .format(), or `+` concatenation.
 const PY_INTERPOLATED = /f['"]|%\s*\(|%\s*[a-zA-Z_(]|\.\s*format\s*\(|\+/;
 
+// Path assembly that uses no string operator at all.
+//
+// `os.path.join(BASE, request.args.get("name"))` and `Path("uploads") / name`
+// are how Python actually builds paths — more common than concatenation — and
+// the interpolation test above sees neither, because there is no f-string, no
+// %, no .format and no +. So the single most idiomatic traversal shape in the
+// language was silent. Found 2026-07-27 by a hand-written positive control in
+// the fix-PR corpus work, which is exactly what controls are for: the
+// harvested pairs proved nothing, and the control caught a live gap.
+//
+// os.path.join is the sharper of the two. It does not merely fail to protect:
+// given a second argument that starts with `/`, it DISCARDS the first, so
+// os.path.join("uploads", "/etc/passwd") is "/etc/passwd".
+const PY_PATH_ASSEMBLY = /os\s*\.\s*path\s*\.\s*join\s*\(|\bPath\s*\([^)]*\)\s*\/|\bPurePath\s*\(/;
+
+// Evidence that the author resolved the path and then checked where it landed.
+// `is_relative_to` after `.resolve()` is the documented containment test and is
+// the fix this probe recommends; flagging it would be advising a change and
+// then reporting the change.
+const PY_PATH_CONTAINED =
+  /\.\s*is_relative_to\s*\(|os\s*\.\s*path\s*\.\s*commonpath\s*\(|\.\s*startswith\s*\(\s*[A-Za-z_]|\bsecure_filename\s*\(|\bwerkzeug\b[\s\S]{0,40}secure_filename/;
+
 const CMD_SINKS =
   /\bos\s*\.\s*(?:system|popen|startfile)\s*\(|\bsubprocess\s*\.\s*(?:run|call|check_call|check_output|Popen|getoutput|getstatusoutput)\s*\(|\bcommands\s*\.\s*getoutput\s*\(/;
+// `Path` is matched bare as well as via `pathlib.`, because `from pathlib
+// import Path` is how everybody imports it, and the pathlib read/write methods
+// are sinks in their own right: `(Path(base) / name).read_text()` never touches
+// `open`, so a sink list built around `open` did not see it.
 const FS_SINKS =
-  /\bopen\s*\(|\bsend_file\s*\(|\bsend_from_directory\s*\(|\bos\s*\.\s*remove\s*\(|\bos\s*\.\s*unlink\s*\(|\bshutil\s*\.\s*(?:copy|move|rmtree)\s*\(|\bpathlib\s*\.\s*Path\s*\(|\bos\s*\.\s*path\s*\.\s*join\s*\(/;
+  /\bopen\s*\(|\bsend_file\s*\(|\bsend_from_directory\s*\(|\bos\s*\.\s*remove\s*\(|\bos\s*\.\s*unlink\s*\(|\bshutil\s*\.\s*(?:copy|move|rmtree)\s*\(|\b(?:pathlib\s*\.\s*)?Path\s*\(|\bos\s*\.\s*path\s*\.\s*join\s*\(|\.\s*(?:read_text|read_bytes|write_text|write_bytes|unlink)\s*\(/;
 const HTTP_SINKS =
   /\brequests\s*\.\s*(?:get|post|put|patch|delete|head|options|request)\s*\(|\bhttpx\s*\.\s*(?:get|post|put|patch|delete|head|request|AsyncClient)\s*\(|\burllib\s*\.\s*request\s*\.\s*urlopen\s*\(|\burlopen\s*\(|\baiohttp\b[\s\S]{0,40}?\.\s*(?:get|post)\s*\(/;
 const CODE_EXEC_SINKS = /(?<![.\w])(?:eval|exec)\s*\(|\bcompile\s*\(/;
@@ -113,7 +139,18 @@ export function probePythonSecurity(files) {
       }
 
       // --- Path traversal.
-      if (FS_SINKS.test(line) && carriesUserInput(line) && PY_INTERPOLATED.test(line)) {
+      //
+      // Assembly is either a string operator or a path-joining call. The
+      // containment window looks at the surrounding lines rather than this one,
+      // because `resolve()` and the `is_relative_to` check that makes it safe
+      // are two statements by construction.
+      const contained = PY_PATH_CONTAINED.test(lines.slice(Math.max(0, i - 4), i + 6).join('\n'));
+      if (
+        FS_SINKS.test(line) &&
+        carriesUserInput(line) &&
+        (PY_INTERPOLATED.test(line) || PY_PATH_ASSEMBLY.test(line)) &&
+        !contained
+      ) {
         push({
           id: `py-path-${file.path}-${ln}`,
           title: 'Filesystem path built from request data',
