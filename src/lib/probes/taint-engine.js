@@ -150,7 +150,78 @@ const SOURCES = [
 // dangerous with a tainted value. Each sink has a `matches(node)` predicate
 // and a `cwe`/`severity`/`title`/`remediation`.
 
+// Receivers whose .query/.execute/.raw carries SQL TEXT in the first argument.
+// Kept to database handles on purpose: a bare `query(x)` says nothing about
+// what is being queried, and `client` alone is ambiguous enough without the
+// rest of the shape.
+const SQL_TAINT_CALLEE_RE =
+  /^(?:\w+\.)*(?:db|client|connection|conn|pool|knex|sequelize|manager|repository|repo|datasource|dataSource|prisma|supabase|database|DB|pg|mysql|sqlite|cursor)\.(?:\$?query|\$?execute|\$?queryRaw|\$?executeRaw|\$?queryRawUnsafe|\$?executeRawUnsafe|raw|unsafe|prepare|exec|run)$/;
+// The method half of the regex above, as a set. Building a dotted name means
+// walking the member chain and joining an array, and `x.y(z)` is one of the
+// most common shapes in any codebase — doing that work for every one of them
+// to reject nearly all of them is most of what the sink would cost. A hash
+// lookup on the property name rejects them first.
+const SQL_TAINT_METHODS = new Set([
+  'query',
+  '$query',
+  'execute',
+  '$execute',
+  'queryRaw',
+  '$queryRaw',
+  'executeRaw',
+  '$executeRaw',
+  'queryRawUnsafe',
+  '$queryRawUnsafe',
+  'executeRawUnsafe',
+  '$executeRawUnsafe',
+  'raw',
+  'unsafe',
+  'prepare',
+  'exec',
+  'run',
+]);
+
 const SINKS = [
+  // A request-derived value used as the QUERY TEXT.
+  //
+  // The regex probe can only see the interpolation when the literal is inside
+  // the call parentheses. Two lines instead of one —
+  //
+  //   const sql = `SELECT * FROM users WHERE id = ${req.params.id}`;
+  //   return db.query(sql);
+  //
+  // — and it is invisible, which is unfortunate because naming the query
+  // before running it is how people write the long ones. The engine already
+  // tracks that assignment; it had no SQL sink to deliver it to.
+  {
+    id: 'sql-query',
+    cwe: 'CWE-89',
+    severity: 'critical',
+    title: 'SQL query text built from user-controlled value (taint flow)',
+    // Only argument 0 is query text. Arguments after it are the BOUND
+    // PARAMETERS, and `db.query('… WHERE id = $1', [req.params.id])` is the
+    // correct answer — checking every argument would flag the fix as the bug.
+    argIndexes: [0],
+    matches(node) {
+      if (node.type !== 'CallExpression') return null;
+      // Identifier first argument only: the value was built somewhere else and
+      // named. The inline shapes already belong to the regex probe, and
+      // restricting to a named binding keeps the two from reporting the same
+      // call twice. Tested first because it is the cheapest and by far the
+      // most selective of the three gates.
+      const first = node.arguments?.[0];
+      if (!first || first.type !== 'Identifier') return null;
+      const callee = node.callee;
+      if (callee.type !== 'MemberExpression' || callee.computed) return null;
+      if (callee.property?.type !== 'Identifier') return null;
+      if (!SQL_TAINT_METHODS.has(callee.property.name)) return null;
+      const name = readDottedName(callee);
+      if (!name || !SQL_TAINT_CALLEE_RE.test(name)) return null;
+      return { detail: name };
+    },
+    remediation:
+      'A request-derived value becomes the text of the query, so the caller is writing SQL, not supplying a value. Naming the string first does not change that. Pass the value as a bound parameter instead: pg `db.query("SELECT * FROM users WHERE id = $1", [id])`, mysql/SQLite `?`, Prisma `prisma.user.findUnique({ where: { id } })`, Knex `knex("users").where({ id })`. If the untrusted part is an identifier rather than a value (a table or column name), no placeholder exists for it — resolve it through an allowlist of known names before it reaches the string.',
+  },
   // fs.readFile / fs.createReadStream / fs.writeFile / fsp.* / path.join /
   // path.resolve when called with a tainted argument.
   {
@@ -617,7 +688,12 @@ function walk(node, scope, findings, file) {
         let emitted = false;
         for (const argList of argSources) {
           if (emitted) break;
-          for (const arg of argList) {
+          for (let ai = 0; ai < argList.length; ai++) {
+            // A sink may restrict WHICH argument positions carry the dangerous
+            // value. Without this the SQL sink flags `db.query(text, [id])`,
+            // where the tainted argument is the bound parameter — the fix.
+            if (sink.argIndexes && !sink.argIndexes.includes(ai)) continue;
+            const arg = argList[ai];
             const t = evaluateExpression(arg, scope);
             if (t) {
               emitted = true;

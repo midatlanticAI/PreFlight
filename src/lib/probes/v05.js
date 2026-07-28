@@ -52,11 +52,44 @@ const SQL_RISK_CALLEES =
 const SQL_BARE_CALLEES =
   /\b(?:query|execute|raw|unsafe|prepare|exec|executeQuery|runQuery|runSql|rawQuery|sqlQuery|executeRaw|queryRaw|executeRawUnsafe|queryRawUnsafe)\s*\(\s*`/g;
 const SQL_HAS_INTERPOLATION = /\$\{[^}]+\}/;
+// Same callee alternations as above with the trailing backtick dropped, so the
+// call OPENING can be located independently of where its first argument starts.
+// The originals require the literal to sit on the same line as the paren, which
+// is only true until a formatter wraps the call.
+const SQL_RISK_CALL_OPEN =
+  /\b(?:db|client|connection|conn|pool|knex|sequelize|manager|repository|repo|datasource|dataSource|prisma|supabase|DB)\.(?:\$?query|\$?execute|\$?queryRaw|\$?executeRaw|\$?queryRawUnsafe|\$?executeRawUnsafe|raw|unsafe|prepare|exec|whereRaw|orderByRaw|havingRaw|joinRaw|fromRaw|unionRaw|groupByRaw|selectRaw|rpc)\s*\(/g;
+const SQL_BARE_CALL_OPEN =
+  /\b(?:query|execute|raw|unsafe|prepare|exec|executeQuery|runQuery|runSql|rawQuery|sqlQuery|executeRaw|queryRaw|executeRawUnsafe|queryRawUnsafe)\s*\(/g;
+// How far past the opening paren to look for the first argument. Prettier wraps
+// a long query call over three to five lines and will park a comment between
+// the paren and the literal; four lines of slack covers the shapes it emits.
+const SQL_CALL_LOOKAHEAD = 5;
+// A call is WRAPPED when its opening paren is the last thing on the line (a
+// trailing blanked comment still counts). Only those lines need the lookahead;
+// everything else the single-line callee regexes above already decide. Cheap
+// enough to run per line and selective enough that the lookahead almost never
+// runs: on a 2,270-file corpus it keeps the probe's cost flat.
+const SQL_CALL_WRAPPED = /\(\s*(?:\/\/.*)?$/;
 // Concatenation-shape sink: `db.query("SELECT ... " + userVar)`. Anchor on
 // the SQL keyword in the literal AND a user-input token on the right-hand
 // side to keep FP low.
+//
+// The literal is now matched to its OWN closing quote via a backreference.
+// `[^'"]*['"]` ended the literal at the first quote of either kind, so
+// `db.query("SELECT ... a = '" + req.query.x)` — a quoted string value, the
+// single most common concatenation shape there is — ended at the inner `'`
+// and never reached the `+`. The quote that makes the injection worse was the
+// quote that hid it.
 const SQL_CONCAT_SINK =
-  /\b(?:db|client|connection|conn|pool|knex|sequelize|prisma|supabase|cursor)\s*\.\s*(?:query|execute|exec|raw|prepare|run)\s*\(\s*['"]\s*(?:SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)\b[^'"]*['"]\s*\+\s*(?:req|request|ctx|event|userInput|userMessage|body|query|params|searchParams|user_input)/i;
+  /\b(?:db|client|connection|conn|pool|knex|sequelize|prisma|supabase|cursor)\s*\.\s*(?:query|execute|exec|raw|prepare|run)\s*\(\s*(['"])\s*(?:SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)\b(?:(?!\1)[\s\S])*?\1\s*\+\s*(?:req|request|ctx|event|userInput|userMessage|body|query|params|searchParams|user_input)/i;
+// The `*RawUnsafe` escape hatches are named for what they do: the driver stops
+// parameterizing and hands your string to the parser. Concatenating anything
+// into one is the finding on the callee's own terms, so this branch does not
+// need to prove the right-hand side is request-derived — the safe spelling of
+// the same call (`$queryRaw` as a tagged template, or `$queryRawUnsafe(sql,
+// ...params)`) takes bound parameters instead.
+const SQL_RAW_UNSAFE_CONCAT =
+  /\b\$?(?:query|execute)RawUnsafe\s*\(\s*(['"])(?:(?!\1)[\s\S])*?\1\s*\+/;
 // Python f-string into cursor.execute or SQLAlchemy text(): the Python
 // analog of template-literal interpolation.
 const PY_SQL_FSTRING =
@@ -67,6 +100,50 @@ const PY_SQL_PERCENT_OR_FORMAT =
 // interpolation.
 const GO_SQL_SPRINTF =
   /\b(?:db|tx|conn|stmt)\.(?:Query|QueryRow|QueryContext|QueryRowContext|Exec|ExecContext|Prepare)\s*\(\s*(?:fmt\.Sprintf|"[^"]*"\s*\+)/;
+
+/**
+ * Body of the first argument of a call opened on `lines[i]`, when that argument
+ * is a template literal — even if the literal opens on a later line.
+ *
+ * `lines` is the comment-blind view, so a `//` that survives masking has an
+ * empty body and a wrapped call with a comment between the paren and the
+ * literal still resolves. Returns null when the first argument is not a
+ * template literal (a quoted string, a bound-parameter call, an object) or
+ * when no matching call opens on this line.
+ *
+ * @param {string[]} lines masked source, split on newline
+ * @param {number} i index of the line holding the call's opening paren
+ * @param {RegExp} re global regex matching `callee(`
+ * @returns {string|null}
+ */
+function firstTemplateArgBody(lines, i, re) {
+  re.lastIndex = 0;
+  let m;
+  while ((m = re.exec(lines[i])) !== null) {
+    let text = lines[i].slice(m.index + m[0].length);
+    const limit = Math.min(lines.length, i + SQL_CALL_LOOKAHEAD);
+    for (let k = i + 1; k < limit; k++) text += '\n' + lines[k];
+    // Whitespace and blanked comment markers may sit between the paren and
+    // the first argument.
+    const lead = /^(?:\s|\/\/[^\n]*|\/\*|\*\/)+/.exec(text);
+    const rest = lead ? text.slice(lead[0].length) : text;
+    if (rest.charCodeAt(0) === 96) {
+      let j = 1;
+      while (j < rest.length) {
+        if (rest[j] === '\\') {
+          j += 2;
+          continue;
+        }
+        if (rest.charCodeAt(j) === 96) break;
+        j++;
+      }
+      re.lastIndex = 0;
+      return rest.slice(1, j);
+    }
+  }
+  re.lastIndex = 0;
+  return null;
+}
 
 export function probeSQLInjectionTemplateLiterals(files) {
   const findings = [];
@@ -93,7 +170,18 @@ export function probeSQLInjectionTemplateLiterals(files) {
       // Look ahead a few lines for the interpolation in case the call spans
       // multiple lines (`.query(\n\`SELECT...\n${x}\n\`)`).
       const span = lines.slice(i, Math.min(lines.length, i + 4)).join('\n');
-      if (m1 && SQL_HAS_INTERPOLATION.test(span)) {
+      // The span above only ever widened the INTERPOLATION test. The callee
+      // test stayed on one line and demanded a backtick immediately after the
+      // paren, so every call Prettier wrapped — the ordinary shape for a query
+      // long enough to be interesting — matched nothing and the span was
+      // decoration. Resolving the first argument across the span is what makes
+      // the wrapped call visible.
+      const wrapped = SQL_CALL_WRAPPED.test(line);
+      const riskArg = wrapped ? firstTemplateArgBody(lines, i, SQL_RISK_CALL_OPEN) : null;
+      if (
+        (m1 && SQL_HAS_INTERPOLATION.test(span)) ||
+        (riskArg !== null && SQL_HAS_INTERPOLATION.test(riskArg))
+      ) {
         findings.push({
           id: `sqli-tl-${file.path}-${i}`,
           probe: 'SQL Injection',
@@ -115,7 +203,11 @@ export function probeSQLInjectionTemplateLiterals(files) {
       // / 'UPDATE' / 'DELETE' inside the template).
       const m2 = SQL_BARE_CALLEES.exec(line);
       SQL_BARE_CALLEES.lastIndex = 0;
-      if (m2 && SQL_HAS_INTERPOLATION.test(span)) {
+      const bareArg = wrapped ? firstTemplateArgBody(lines, i, SQL_BARE_CALL_OPEN) : null;
+      if (
+        (m2 && SQL_HAS_INTERPOLATION.test(span)) ||
+        (bareArg !== null && SQL_HAS_INTERPOLATION.test(bareArg))
+      ) {
         const looksLikeSQL = /SELECT |INSERT INTO|UPDATE |DELETE FROM/i.test(span);
         if (looksLikeSQL) {
           findings.push({
@@ -134,7 +226,7 @@ export function probeSQLInjectionTemplateLiterals(files) {
         }
       }
       // Depth round 2: concatenation-shape sink. `db.query("..." + req.body.x)`.
-      if (SQL_CONCAT_SINK.test(line)) {
+      if (SQL_CONCAT_SINK.test(line) || SQL_RAW_UNSAFE_CONCAT.test(line)) {
         findings.push({
           id: `sqli-concat-${file.path}-${i}`,
           probe: 'SQL Injection',
