@@ -361,3 +361,107 @@ export const seal = (k, d) => crypto.createCipheriv('aes-256-gcm', k, crypto.ran
     expect(found[0].title).toContain('Broken cipher algorithm');
   });
 });
+
+describe('the electerm shape: static IV spelling and KDF parameters', () => {
+  // Reported as three gaps by one adversarial pass and re-checked by a second,
+  // contextless one before anything was built. Two were real. The third,
+  // `aes-192-cbc`, is correct silence: AES-192 is NIST-approved and CBC with a
+  // random IV is fine, so a key-size list would have shipped a false-positive
+  // generator against perfectly good crypto. The defects in that module are the
+  // IV and the salt; the algorithm is a red herring.
+  const scan = (content) =>
+    probeWeakCryptography([{ path: 'src/server/encryption.js', content }]) || [];
+
+  it('the whole module reports the IV and the salt', () => {
+    const src = `import crypto from 'crypto'
+const algorithmDefault = 'aes-192-cbc'
+const iv = Buffer.alloc(16, 0)
+export function encrypt(text, password, algorithm = algorithmDefault) {
+  const key = crypto.scryptSync(password, 'salt', 24)
+  const cipher = crypto.createCipheriv(algorithm, key, iv)
+  return cipher.update(text, 'utf8', 'hex') + cipher.final('hex')
+}
+`;
+    const found = scan(src);
+    expect(found.some((x) => x.cwe === 'CWE-329')).toBe(true);
+    expect(found.some((x) => x.cwe === 'CWE-760')).toBe(true);
+  });
+
+  // The explicit zero-fill was silent while the implicit one fired, which is
+  // backwards: `, 0` states intent, and `Buffer.alloc(16)` may not even be
+  // known by its author to zero-fill.
+  const ivSpellings = [
+    ['Buffer.alloc(16, 0)', 'Buffer.alloc(16, 0)'],
+    ['Buffer.alloc(16,0)', 'Buffer.alloc(16,0)'],
+    ['Buffer.alloc(16, 0x00)', 'Buffer.alloc(16, 0x00)'],
+    ["Buffer.alloc(16, 'a')", "Buffer.alloc(16, 'a')"],
+    ['Buffer.alloc(16)', 'Buffer.alloc(16)'],
+  ];
+  for (const [name, expr] of ivSpellings) {
+    it(`${name} is a fixed IV`, () => {
+      const src = `import crypto from 'crypto'\nconst iv = ${expr}\nexport function e(k, t) {\n  return crypto.createCipheriv('aes-256-cbc', k, iv).update(t)\n}\n`;
+      expect(scan(src).some((x) => x.cwe === 'CWE-329')).toBe(true);
+    });
+  }
+
+  it('a variable fill is not assumed to be zero', () => {
+    const src = `import crypto from 'crypto'\nexport function e(k, t, fillByte) {\n  const iv = Buffer.alloc(16, fillByte)\n  return crypto.createCipheriv('aes-256-cbc', k, iv).update(t)\n}\n`;
+    expect(scan(src).filter((x) => x.cwe === 'CWE-329')).toHaveLength(0);
+  });
+
+  // `{ iv }` is the idiomatic modern spelling and was the one that escaped.
+  it('WebCrypto shorthand { iv } is a fixed IV', () => {
+    const src = `export async function e(key, data) {\n  const iv = new Uint8Array(12)\n  return crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data)\n}\n`;
+    expect(scan(src).some((x) => x.cwe === 'CWE-329')).toBe(true);
+  });
+
+  it('WebCrypto shorthand with a random IV stays silent', () => {
+    const src = `export async function e(key, data) {\n  const iv = crypto.getRandomValues(new Uint8Array(12))\n  return crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data)\n}\n`;
+    expect(scan(src).filter((x) => x.cwe === 'CWE-329')).toHaveLength(0);
+  });
+
+  // A module that only derives a key matches none of the cipher or hash tokens,
+  // so the file-level fast gate returned before any check ran.
+  it('a key-derivation-only module is still scanned', () => {
+    const src = `import crypto from 'crypto'\nexport function k(password) {\n  return crypto.scryptSync(password, 'salt', 24)\n}\n`;
+    expect(scan(src).some((x) => x.cwe === 'CWE-760')).toBe(true);
+  });
+
+  it('a hoisted literal salt resolves one hop back', () => {
+    const src = `import crypto from 'crypto'\nconst SALT = 'pepper'\nexport function k(password) {\n  return crypto.scryptSync(password, SALT, 32)\n}\n`;
+    expect(scan(src).some((x) => x.cwe === 'CWE-760')).toBe(true);
+  });
+
+  it('too few PBKDF2 iterations reports', () => {
+    const src = `import crypto from 'crypto'\nexport function k(password, salt) {\n  return crypto.pbkdf2Sync(password, salt, 100, 32, 'sha1')\n}\n`;
+    expect(scan(src).some((x) => x.cwe === 'CWE-916')).toBe(true);
+  });
+
+  const safe = [
+    [
+      'a random salt',
+      "import crypto from 'crypto'\nexport function k(password) {\n  const salt = crypto.randomBytes(16)\n  return { key: crypto.scryptSync(password, salt, 32), salt }\n}\n",
+    ],
+    [
+      'a salt supplied by the caller',
+      "import crypto from 'crypto'\nexport function k(password, salt) {\n  return crypto.scryptSync(password, salt, 32)\n}\n",
+    ],
+    [
+      'a salt read back from storage',
+      "import crypto from 'crypto'\nexport function v(password, row) {\n  const salt = Buffer.from(row.salt, 'hex')\n  return crypto.scryptSync(password, salt, 32)\n}\n",
+    ],
+    [
+      'PBKDF2 at the OWASP iteration count',
+      "import crypto from 'crypto'\nexport function k(password, salt) {\n  return crypto.pbkdf2Sync(password, salt, 600000, 32, 'sha256')\n}\n",
+    ],
+    [
+      'aes-192-cbc with a random IV',
+      "import crypto from 'crypto'\nexport function e(k, t) {\n  const iv = crypto.randomBytes(16)\n  return crypto.createCipheriv('aes-192-cbc', k, iv).update(t)\n}\n",
+    ],
+  ];
+  for (const [name, src] of safe) {
+    it(`${name} stays silent`, () => {
+      expect(scan(src)).toHaveLength(0);
+    });
+  }
+});

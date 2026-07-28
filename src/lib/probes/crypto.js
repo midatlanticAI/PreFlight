@@ -52,7 +52,19 @@ const JS_TS_FILE_RE = /\.(?:m|c)?[jt]sx?$/i;
 // Union of every token any check below needs. Deliberately loose: it runs on
 // raw bytes as a skip test, so over-matching only costs a masking pass and
 // under-matching would cost a finding.
-const CRYPTO_TOKEN_RE = /createHash|createCipher|createDecipher|CryptoJS|forge|subtle/;
+// File-level fast gate, ahead of two masking passes. The raw view is a
+// superset of both masked views, so a file with none of these tokens had
+// nothing for any check to find and can be skipped whole. Worth ~25x on a
+// 2,270-file corpus.
+//
+// scrypt and pbkdf2 joined the list when the KDF-parameter check landed: a
+// module that derives a key and neither hashes nor enciphers matches none of
+// the original tokens, so the probe returned before reaching the new check and
+// `scryptSync(password, 'salt', 24)` on its own stayed silent. A gate is only
+// correct while it is a superset of everything downstream of it, and adding a
+// check without revisiting it is how that invariant quietly breaks.
+const CRYPTO_TOKEN_RE =
+  /createHash|createCipher|createDecipher|CryptoJS|forge|subtle|scrypt|pbkdf2/;
 
 // Any cipher construction API. Used as a file-level gate for the algorithm
 // string checks: a bare `'des'` or `'bf-cbc'` in a file that never builds a
@@ -136,8 +148,18 @@ const RANDOM_IV_RE =
 // A value fixed at author time. Note what is NOT here: `Buffer.from(ivHex,
 // 'hex')` with a VARIABLE first argument is how every correct decrypt path
 // reads the IV back off the wire, and flagging it would flag the fix.
+// `Buffer.alloc(16, 0)` takes an optional fill argument, and requiring the
+// paren to close straight after the length meant the EXPLICIT zero IV was
+// missed while the implicit one fired. That is backwards: the author who typed
+// `, 0` said what they meant, and the author who typed `Buffer.alloc(16)` may
+// not have known it zero-fills at all. `Buffer.alloc(16, 0)` is also the spelling
+// in most tutorials, so it is the one that reaches production.
+//
+// The fill has to be a LITERAL. `Buffer.alloc(16, someByte)` could be anything,
+// and guessing would cost the precision this check is built on.
+// Verified across eighteen spellings by an independent checker, 2026-07-28.
 const STATIC_IV_EXPR_RE =
-  /^(?:['"][^'"]*['"]|Buffer\s*\.\s*from\s*\(\s*(?:['"]|\[)|Buffer\s*\.\s*alloc(?:Unsafe)?\s*\(\s*\d+\s*\)|new\s+Uint8Array\s*\(\s*(?:\d+\s*\)|\[)|new\s+Array\s*\(\s*\d+\s*\)\s*\.\s*fill\s*\(\s*\d+\s*\))/;
+  /^(?:['"][^'"]*['"]|Buffer\s*\.\s*from\s*\(\s*(?:['"]|\[)|Buffer\s*\.\s*alloc(?:Unsafe)?\s*\(\s*\d+\s*(?:,\s*(?:0[xX][0-9a-fA-F]+|\d+|['"][^'"]*['"]))?\s*\)|new\s+Uint8Array\s*\(\s*(?:\d+\s*\)|\[)|new\s+Array\s*\(\s*\d+\s*\)\s*\.\s*fill\s*\(\s*\d+\s*\))/;
 
 const IDENTIFIER_RE = /^[A-Za-z_$][\w$]*$/;
 
@@ -466,17 +488,86 @@ export function probeWeakCryptography(files) {
 
       // WebCrypto passes the IV as an option rather than an argument.
       if (/\bsubtle\s*\.\s*(?:encrypt|decrypt)\s*\(/.test(shape)) {
-        const IV_PROP_RE = /\biv\s*:\s*([^,}\n]+)/g;
+        // `{ iv: iv }` fired and `{ iv }` did not, which had it exactly the
+        // wrong way round: the shorthand is the idiomatic modern spelling and
+        // therefore the common one. Matched here and resolved through the same
+        // binding map the longhand uses, so both forms answer identically.
+        const IV_PROP_RE = /\biv\s*(?::\s*([^,}\n]+)|(?=\s*[,}]))/g;
         IV_PROP_RE.lastIndex = 0;
         for (let m = IV_PROP_RE.exec(code); m; m = IV_PROP_RE.exec(code)) {
           if (!isRealCodeAt(m.index, 'iv')) continue;
-          if (classifyIv(m[1]) !== 'static') continue;
+          // Shorthand: the property name IS the binding name.
+          const expr = m[1] === undefined ? 'iv' : m[1];
+          if (classifyIv(expr) !== 'static') continue;
           report('staticiv', lineOf(m.index), {
             title: 'Fixed initialization vector passed to WebCrypto',
             severity: 'high',
             cwe: 'CWE-329',
             remediation:
               'AES-GCM with a repeated IV is worse than a repeated IV in CBC: reusing one nonce under the same key lets an attacker recover the authentication key and forge messages that your own code will accept as genuine. Build the IV fresh for every call with crypto.getRandomValues(new Uint8Array(12)), send it alongside the ciphertext, and pass the received value back on decrypt.',
+          });
+        }
+      }
+    }
+
+    // -------------------------------------------------------------------
+    // 4. Key derivation with a hardcoded salt, or too few iterations.
+    // -------------------------------------------------------------------
+    // Nothing checked KDF PARAMETERS anywhere in the registry. `scrypt` and
+    // `pbkdf2` appeared only as a suppression gate — seeing one was taken as
+    // evidence the author had done the right thing — so
+    // `scryptSync(password, 'salt', 24)` read as a KDF in use and passed.
+    //
+    // A literal salt is most of the point thrown away. The salt exists so
+    // that two people with the same password get different keys and so that
+    // an attacker cannot precompute anything reusable. Share one across
+    // every user and one table works against all of them at once.
+    //
+    // `crypto.scryptSync(password, 'salt', 24)` is the example in Node's own
+    // documentation, which is exactly why it ends up in production.
+    const KDF_CALL_RE =
+      /\bcrypto\s*\.\s*(scrypt|scryptSync|pbkdf2|pbkdf2Sync)\s*\(\s*([^,]+),\s*([^,]+),\s*([^,)]+)/g;
+    KDF_CALL_RE.lastIndex = 0;
+    for (let m = KDF_CALL_RE.exec(code); m; m = KDF_CALL_RE.exec(code)) {
+      if (!isRealCodeAt(m.index, 'crypto')) continue;
+      const fn = m[1];
+      const saltArg = m[3].trim();
+      const ln = lineOf(m.index);
+      // A quoted literal, or a Buffer built from one. A variable might hold
+      // randomBytes and is left alone.
+      //
+      // One hop back covers the `const SALT = 'pepper'` spelling. Resolved
+      // here rather than through the cipher block's binding map, because this
+      // check deliberately runs on files that never build a cipher: a module
+      // that only derives a key is exactly the case the file gate used to miss.
+      let resolved = saltArg;
+      if (IDENTIFIER_RE.test(saltArg)) {
+        const decl = new RegExp(`(?:const|let|var)\\s+${saltArg}\\s*=\\s*([^;\\n]+)`).exec(code);
+        if (decl) resolved = decl[1].trim();
+      }
+      const literalSalt =
+        /^['"][^'"]*['"]$/.test(resolved) || /^Buffer\s*\.\s*from\s*\(\s*['"]/.test(resolved);
+      if (literalSalt) {
+        report('kdfsalt', ln, {
+          title: `Key derivation with a hardcoded salt in ${fn}`,
+          severity: 'high',
+          cwe: 'CWE-760',
+          remediation:
+            'The salt is what stops one precomputed table working against every account, and a constant salt hands that back: two users with the same password derive the same key, and an attacker who builds a table for this one salt can reuse it against your whole database. Generate the salt per record with crypto.randomBytes(16), store it next to the derived value, and read it back when you verify. A salt is not a secret, it only has to be different every time.',
+        });
+      }
+      // PBKDF2 iterations are argument three. OWASP's 2023 guidance is
+      // 600,000 for PBKDF2-HMAC-SHA256; the threshold here is deliberately
+      // far below that so only clearly-inadequate values report.
+      if (/^pbkdf2/.test(fn)) {
+        const iterations = Number((m[4] || '').trim().replace(/_/g, ''));
+        if (Number.isFinite(iterations) && iterations > 0 && iterations < 100000) {
+          report('kdfiterations', ln, {
+            title: `Password-based key derivation with only ${iterations} iterations`,
+            severity: 'medium',
+            cwe: 'CWE-916',
+            remediation:
+              'The iteration count is the entire cost an attacker pays per guess, so a low one makes the derivation fast for them as well as for you. OWASP recommends 600000 iterations for PBKDF2-HMAC-SHA256. Raise it, or move to scrypt or argon2id, which are also memory-hard and therefore much worse to attack with a rented GPU.',
           });
         }
       }
