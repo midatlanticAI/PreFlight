@@ -14,8 +14,22 @@ export const SECRET_PATTERNS = [
     cwe: 'CWE-798',
   },
   {
+    // The 40-character secret half of the pair. It has no prefix of its own
+    // (unlike the AKIA id), so the identifier beside it is the only signal
+    // worth trusting: 40 base64 characters on their own is also the shape of
+    // every pinned action SHA in every workflow file.
+    //
+    // The `aws` prefix is not always there. An AWS SDK credentials object in
+    // JavaScript is `{ accessKeyId, secretAccessKey }` and an STS response is
+    // `{ "AccessKeyId": ..., "SecretAccessKey": ... }`; neither spells `aws`
+    // next to the value, and both were read as clean.
+    //
+    // Value shape: base64 of 30 random bytes, so `[A-Za-z0-9/+]` and never a
+    // `=` pad. The trailing guard stops a longer token (a 64-character hex
+    // digest) matching on its first 40 characters.
     name: 'AWS Secret Access Key',
-    regex: /aws[_\-]?secret[_\-]?(?:access[_\-]?)?key["'\s:=]+["']?([A-Za-z0-9/+=]{40})["']?/gi,
+    regex:
+      /(?:aws[_\-]?secret[_\-]?(?:access[_\-]?)?key|secret[_\-]?access[_\-]?key)["'\s:=]+["']?([A-Za-z0-9/+]{40})(?![A-Za-z0-9/+=])/gi,
     severity: 'critical',
     category: 'Data Breach',
     cwe: 'CWE-798',

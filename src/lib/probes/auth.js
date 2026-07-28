@@ -11,15 +11,22 @@
 import { isTestFile, isScannerSelfSource } from '../file-filter.js';
 import {
   collectSafeBindings,
-  resolvesToConstant,
   collectFunctionBodies,
   expandCalledHelpers,
   readAssignedExpression,
 } from './_internal/const-eval.js';
 import {
+  extractHtmlValue,
+  isTaintableHtmlValue,
+  probeMarkupHtmlSinks,
+  resolveHtmlHolder,
+} from './_internal/html-sinks.js';
+import { findDecodedJwtIdentityUses } from './_internal/jwt-shapes.js';
+import {
   SECRET_VALUE_PLACEHOLDER_RE,
   isMatchInPlaceholderNamedAssignment,
   maskBlockCommentsAndTemplateLiterals,
+  maskCodeShapeForPath,
   maskCommentsAndStringsFromContent,
   maskCommentsForPath,
   maskCommentsOnly,
@@ -47,49 +54,6 @@ function stripLineComments(line) {
     }
   }
   return s;
-}
-
-// Known HTML sanitizers. A value wrapped in one of these has been through the
-// escaping step the finding would have asked for, so flagging it is telling the
-// author to do what they already did.
-const HTML_SANITIZER_RE =
-  /\b(?:DOMPurify\s*\.\s*sanitize|sanitizeHtml|sanitize_html|xss|he\s*\.\s*encode|escapeHtml|escape_html|validator\s*\.\s*escape|purify\s*\.\s*sanitize)\s*\(/;
-
-// Pull the expression assigned to __html, following up to three lines so the
-// common prettier-wrapped form is covered:
-//   dangerouslySetInnerHTML={{
-//     __html: value,
-//   }}
-// Returns null when no __html key is present on the line or its continuation.
-function extractHtmlValue(line, lines, idx) {
-  const span = lines
-    .slice(idx, Math.min(lines.length, idx + 3))
-    .join('\n')
-    .replace(/\n\s*/g, ' ');
-  const m = span.match(/__html\s*:\s*([\s\S]*?)(?:,\s*\}|\}\s*\}|\s*\}\s*$)/);
-  if (!m) return null;
-  return m[1].trim();
-}
-
-// True when the value could carry attacker-controlled HTML. A literal the
-// author typed cannot; anything computed might.
-//
-// `bindings` is the same-file constant map from collectSafeBindings. Real-scan
-// finding 2026-07 (Atlan cockpit): without it, every one of a 22-finding XSS
-// report was a false positive, because the classifier could see that a value
-// was an expression but not that the expression resolves to a constant.
-function isTaintableHtmlValue(value, bindings) {
-  if (!value) return false;
-  // Sanitized at the sink by a well-known library.
-  if (HTML_SANITIZER_RE.test(value)) return false;
-  // A plain string literal with no interpolation. Empty string included.
-  if (/^'[^']*'$/.test(value) || /^"[^"]*"$/.test(value)) return false;
-  // A template literal with no ${} substitution is still a constant.
-  if (/^`[^`]*`$/.test(value) && !/\$\{/.test(value)) return false;
-  // Resolves to something the author wrote: a const literal, a numeric value,
-  // the author's own escaper, or a function that only returns literals.
-  if (resolvesToConstant(value, bindings)) return false;
-  return true;
 }
 
 export function probeAuthWeakness(files) {
@@ -134,6 +98,13 @@ export function probeAuthWeakness(files) {
             'Configs checked into git ship with the password. Use env interpolation (${DB_PASSWORD}), a secret manager reference, or move the secret out of the config entirely. Rotate the leaked value.',
         });
       });
+      return;
+    }
+    // Vue and Svelte single-file components: template-only sinks, handled by
+    // their own reader because the rest of this probe assumes JS comment and
+    // string semantics that markup does not have.
+    if (/\.(?:vue|svelte)$/i.test(file.path)) {
+      findings.push(...probeMarkupHtmlSinks(file));
       return;
     }
     if (!/\.[jt]sx?$/.test(file.path)) return;
@@ -194,18 +165,39 @@ export function probeAuthWeakness(files) {
           remediation: `alg: none means tokens are unsigned. Anyone can forge a token claiming to be any user. Use HS256 with a strong secret or RS256 with a key pair.`,
         });
       }
-      if (!proseLine && /jwt\.verify\([^,)]+\)/.test(line) && !/secret|publicKey|key/.test(line)) {
+      // Two shapes of the same defect: no key argument at all, and a key
+      // argument that is literally undefined or null.
+      //
+      // The second one is what a refactor leaves behind. The secret moves to an
+      // env var, the env var is never set in one environment, and
+      // `process.env.JWT_SECRET` arrives as undefined. Written out as
+      // `jwt.verify(token, undefined)` it is the same call the no-argument
+      // check already flags, and it read as clean because a comma was present.
+      //
+      // Read the null/undefined shape off wideLine (comments and string bodies
+      // blanked) rather than line: this is a question about code shape, and a
+      // remediation string quoting the call is prose about the defect.
+      const jwtVerifyNoKey =
+        /jwt\.verify\([^,)]+\)/.test(line) && !/secret|publicKey|key/.test(line);
+      const jwtVerifyNullKey = /jwt\.verify\s*\(\s*[^,)]+,\s*(?:undefined|null)\s*[,)]/.test(
+        wideLine
+      );
+      if (!proseLine && (jwtVerifyNoKey || jwtVerifyNullKey)) {
         findings.push({
           id: `auth-noverify-${file.path}-${i}`,
           probe: 'Auth Weakness',
-          title: 'jwt.verify called without secret argument',
+          title: jwtVerifyNullKey
+            ? 'jwt.verify called with an undefined or null key'
+            : 'jwt.verify called without secret argument',
           severity: 'high',
           category: 'Auth & Access',
           cwe: 'CWE-347',
           file: file.path,
           line: i + 1,
           evidence: realLine.trim(),
-          remediation: `Verify with an explicit secret or public key. Without one, signature validation may be skipped depending on the library, allowing forged tokens.`,
+          remediation: jwtVerifyNullKey
+            ? `Pass a real key. undefined and null give the library nothing to check the signature against, so this accepts tokens you did not sign. If the key comes from the environment, check it at startup and refuse to boot without it: if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is not set'). Then call jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] }).`
+            : `Verify with an explicit secret or public key. Without one, signature validation may be skipped depending on the library, allowing forged tokens.`,
         });
       }
       if (/eval\s*\(/.test(wideLine) && !/eslint-disable/.test(wideLine)) {
@@ -233,8 +225,34 @@ export function probeAuthWeakness(files) {
       //
       // A constant cannot carry an injection. Only a value the author did not
       // fully write is a sink.
+      //
+      // The object does not have to be written inline. `const markup = {
+      // __html: post.body }` two lines up and `dangerouslySetInnerHTML={markup}`
+      // at the sink is the same code, and reading only the sink line finds no
+      // `__html` at all. When the attribute is a bare identifier, follow it to
+      // its declaration and classify the value found there.
+      //
+      // The declaration is read from the comment-blind view with string bodies
+      // intact (probeAuthWeakness only reads .js/.jsx/.ts/.tsx, which is what
+      // maskCommentsForPath dispatches to maskCommentsOnly for), so a
+      // commented-out declaration supplies nothing and a real string literal
+      // still reads as a constant.
       if (/dangerouslySetInnerHTML/.test(line)) {
-        const htmlValue = extractHtmlValue(realLine, originalLines, i);
+        let htmlValue = extractHtmlValue(realLine, originalLines, i);
+        let holder = null;
+        if (htmlValue === null) {
+          // wideLine, not line: whether the attribute is a bare identifier is a
+          // question about code shape, and `'... pass dangerouslySetInnerHTML=
+          // {markup} to a tag'` in a remediation string is a sentence.
+          const ref = wideLine.match(/dangerouslySetInnerHTML\s*=\s*\{\s*([A-Za-z_$][\w$]*)\s*\}/);
+          if (ref) {
+            const resolved = resolveHtmlHolder(ref[1], wideLines.join('\n'), codeLines.join('\n'));
+            if (resolved) {
+              htmlValue = resolved.value;
+              holder = ref[1];
+            }
+          }
+        }
         if (htmlValue !== null && isTaintableHtmlValue(htmlValue, safeBindings)) {
           findings.push({
             id: `code-dsih-${file.path}-${i}`,
@@ -246,7 +264,9 @@ export function probeAuthWeakness(files) {
             file: file.path,
             line: i + 1,
             evidence: realLine.trim().slice(0, 200),
-            remediation: `dangerouslySetInnerHTML bypasses React's escaping and parses its input as HTML. The value here is computed rather than written literally, so whether this is XSS depends entirely on where it came from. Sanitize at the boundary with DOMPurify.sanitize(value), or render the text through normal JSX so React escapes it. A string literal written in the source is not flagged, because a constant cannot carry an injection.`,
+            remediation: holder
+              ? `dangerouslySetInnerHTML bypasses React's escaping and parses its input as HTML. The object comes from ${holder}, declared earlier in this file as { __html: ${htmlValue.slice(0, 60)} }, and that value is computed rather than written literally. Sanitize where the object is built: { __html: DOMPurify.sanitize(value) }. Rendering the text through normal JSX instead lets React escape it. A string literal written in the source is not flagged, because a constant cannot carry an injection.`
+              : `dangerouslySetInnerHTML bypasses React's escaping and parses its input as HTML. The value here is computed rather than written literally, so whether this is XSS depends entirely on where it came from. Sanitize at the boundary with DOMPurify.sanitize(value), or render the text through normal JSX so React escapes it. A string literal written in the source is not flagged, because a constant cannot carry an injection.`,
           });
         }
       }
@@ -331,9 +351,39 @@ export function probeAuthWeakness(files) {
       // equality (=== or ==) against an identifier whose name ends in
       // `password` (case-insensitive). Real auth uses bcrypt.compare or
       // argon2.verify, which look completely different.
+      //
+      // The inequality forms count too. `if (req.body.password !== user.password)
+      // return res.status(401)` is the same comparison written as a guard
+      // clause, which is how most generated login handlers are shaped, and
+      // matching only `===`/`==` missed every one of them. `[!=]==?` covers
+      // ==, ===, != and !== and still cannot match a single `=`.
+      //
+      // The other operand may not be null, undefined, true or false.
+      // `if (user.password == null) return res.status(500)` is a presence
+      // check, and nobody authenticates by comparing a password to a boolean.
+      // That shape was already reported before the inequality forms were added
+      // here, and adding them without this guard would have doubled it.
+      //
+      // `pwd` is also "print working directory". Corpus run 2026-07-27, the
+      // single new finding the inequality forms produced across 2,324 files:
+      //
+      //   if (finalPwd && finalPwd !== targetDir) {
+      //
+      // That is a path comparison, and the operand beside it says so. When the
+      // only spelling present is `pwd` and the line also names a directory or a
+      // path, read it as filesystem code. `password` and `passwd` are
+      // unambiguous and are never suppressed this way.
+      const pwdSpellingOnly = !/\b\w*(?:password|passwd)\b/i.test(wideLine);
+      const namesAPath =
+        /\b\w*(?:dir|directory|folder|cwd|path|filename|filepath|workspace)\w*\b/i.test(wideLine);
       if (
-        (/(?:\b\w*(?:password|passwd|pwd)\b)\s*(?:===|==)\s*\w+(?:\.\w+)*\b/i.test(wideLine) ||
-          /\w+(?:\.\w+)*\s*(?:===|==)\s*\b\w*(?:password|passwd|pwd)\b/i.test(wideLine)) &&
+        (/(?:\b\w*(?:password|passwd|pwd)\b)\s*[!=]==?\s*(?!(?:null|undefined|true|false)\b)\w+(?:\.\w+)*\b/i.test(
+          wideLine
+        ) ||
+          /(?<!\.)\b(?!(?:null|undefined|true|false)\b)\w+(?:\.\w+)*\s*[!=]==?\s*\b\w*(?:password|passwd|pwd)\b/i.test(
+            wideLine
+          )) &&
+        !(pwdSpellingOnly && namesAPath) &&
         // Self-test / fixture values: `retrieved === testPassword` in a
         // keychain round-trip check is not an auth path. FP triage 2026-07.
         !/\b(?:test|dummy|mock|sample|expected|fake|placeholder)_?(?:password|passwd|pwd)\b/i.test(
@@ -738,6 +788,16 @@ export function probeAuthWeakness(files) {
         });
       }
     });
+    // A decoded JWT used as identity. See _internal/jwt-shapes.js: the check
+    // is file-scoped rather than per-line because the shape usually spans two
+    // statements, decode into a local and then assign that local to req.user.
+    findings.push(
+      ...findDecodedJwtIdentityUses(
+        file,
+        maskCodeShapeForPath(file.path, file.content),
+        originalLines
+      )
+    );
   });
   return findings;
 }
