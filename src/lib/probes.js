@@ -154,6 +154,7 @@ import {
   probeVectorEmbeddingWeaknesses,
 } from './probes/v05b.js';
 import { probePythonSecurity } from './probes/python.js';
+import { probeReflectedXSS } from './probes/server-xss.js';
 export {
   probeExternalURLs,
   probeHTML,
@@ -174,6 +175,7 @@ export {
   probeSecurityLogging,
   probeRAGIngestion,
   probeVectorEmbeddingWeaknesses,
+  probeReflectedXSS,
 };
 export { probeTaintFlow } from './probes/taint-engine.js';
 export { probeAgentConfigBackdoor } from './probes/agent-backdoor.js';
@@ -221,6 +223,10 @@ export const PROBES = [
   { name: 'AI Code Smells', fn: probeAICodeSmells },
   { name: 'URL Reputation', fn: probeExternalURLs },
   { name: 'HTML Hygiene', fn: probeHTML },
+  // The browser half of XSS was covered from the first release and the server
+  // half was not: a request value concatenated into an <h1> and written with
+  // res.send returned nothing at all. See probes/server-xss.js.
+  { name: 'Reflected XSS', fn: probeReflectedXSS },
   { name: 'SEO Hygiene', fn: probeSEOHygiene },
   { name: 'GEO Hygiene', fn: probeGEOHygiene },
   { name: 'A11y Landmarks', fn: probeA11yLandmarks },

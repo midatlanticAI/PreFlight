@@ -13,6 +13,7 @@ import { PY_SECRETS_001 } from './python/py-secrets-001-hardcoded-key.js';
 import { JS_SECRET_001 } from './javascript/js-secret-001-hardcoded.js';
 import { JS_SQL_RAW_001 } from './javascript/js-sql-raw-001-template-literal.js';
 import { JS_AUTH_001 } from './javascript/js-auth-001-token-verification.js';
+import { JS_TLS_VERIFY_001 } from './javascript/js-tls-verify-001-disabled.js';
 import { RS_DESERIALIZE_001 } from './rust/rs-deserialize-001-untrusted.js';
 import { RS_SQL_RAW_001 } from './rust/rs-sql-raw-001-format.js';
 import { RS_TLS_VERIFY_001 } from './rust/rs-tls-verify-001-danger.js';
@@ -72,6 +73,7 @@ export const ADAPTERS = [
   JS_SECRET_001,
   JS_SQL_RAW_001,
   JS_AUTH_001,
+  JS_TLS_VERIFY_001,
   RS_DESERIALIZE_001,
   RS_SQL_RAW_001,
   RS_TLS_VERIFY_001,
