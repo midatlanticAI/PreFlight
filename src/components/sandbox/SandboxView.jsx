@@ -8,63 +8,57 @@
 // debounced live scan against an opening set of v0.4 probes so subsequent
 // commits extend rather than rebuild the contract.
 //
+// /sandbox?shape=<slug> seeds the editor from src/lib/sandbox/shapes.js, which
+// is how a Learn page and a finding card both point INTO this surface instead
+// of it sitting off to one side. getShape() falls back to the default entry for
+// a missing or unknown slug, so there is no error state to render and no reason
+// to add /sandbox to scripts/lib/routes.mjs (it stays out of the prerender and
+// the sitemap).
+//
 // SSR caveat: CodeMirror touches DOM during construction. SandboxView is
 // client-only (the prerender skips /sandbox the same way it skips / and
 // /settings); App.jsx wraps the route in React.Suspense so the first paint
 // is the loading state and the editor mounts after.
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Editor } from './Editor.jsx';
 import { FindingsPanel } from './FindingsPanel.jsx';
 import { runSandboxScan } from '../../lib/sandbox/runner.js';
+import { getShape } from '../../lib/sandbox/shapes.js';
 import { T, fontUI, fontMono } from '../../lib/theme.js';
-
-// Starter buffer. Intentionally vibe-coded so the surface demonstrates the
-// patterns the sandbox catches: a fetch in useEffect with no AbortController
-// and no r.ok check, an addEventListener with no cleanup, a console.log left
-// behind, an index-as-key in a dynamic list. The console.log alone is enough
-// for the runner's current probe set to fire on first paint, so a user
-// landing on /sandbox immediately sees the panel populated.
-const STARTER_BUFFER = `import { useState, useEffect } from 'react';
-
-function UserSearch({ onSelect }) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-
-  useEffect(() => {
-    fetch('/api/search?q=' + query)
-      .then((r) => r.json())
-      .then(setResults);
-  }, [query]);
-
-  useEffect(() => {
-    window.addEventListener('resize', () => {
-      console.log('resized');
-    });
-  }, []);
-
-  return (
-    <div>
-      <input value={query} onChange={(e) => setQuery(e.target.value)} />
-      {results.map((r, i) => (
-        <div key={i} onClick={() => onSelect(r)}>
-          {r.name}
-        </div>
-      ))}
-    </div>
-  );
-}
-`;
 
 // Debounce window in ms before re-running the scan after the user stops
 // typing. 300ms is the budget from preflight-v2-spec.md §1.12.
 const SCAN_DEBOUNCE_MS = 300;
 
 export function SandboxView() {
-  const [code, setCode] = useState(STARTER_BUFFER);
+  const [params] = useSearchParams();
+  const shape = getShape(params.get('shape'));
+
+  // `seed` is what the editor was last mounted with. Editor keys its mount
+  // effect on initialValue, so reloading the SAME text (Reset after edits)
+  // would not change that dependency; the nonce forces a real remount.
+  const [seed, setSeed] = useState(() => ({ text: shape.buffer, n: 0 }));
+  const [code, setCode] = useState(shape.buffer);
   // Initial findings computed synchronously so the first paint already shows
-  // what fires on the starter buffer rather than an empty panel.
-  const [findings, setFindings] = useState(() => runSandboxScan(STARTER_BUFFER));
+  // what fires on this shape rather than an empty panel.
+  const [findings, setFindings] = useState(() => runSandboxScan(shape.buffer));
+
+  const load = (text) => {
+    setSeed((prev) => ({ text, n: prev.n + 1 }));
+    setCode(text);
+  };
+
+  // A different ?shape= is a different exercise, not an edit to this one, so
+  // the buffer resets. Adjusted during render rather than in an effect: an
+  // effect would paint the previous shape's code once and then replace it.
+  const [prevSlug, setPrevSlug] = useState(shape.slug);
+  if (prevSlug !== shape.slug) {
+    setPrevSlug(shape.slug);
+    setSeed({ text: shape.buffer, n: 0 });
+    setCode(shape.buffer);
+  }
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -108,6 +102,38 @@ export function SandboxView() {
       </header>
 
       <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'baseline',
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
+        <span style={{ fontSize: 13, color: T.textDim, lineHeight: 1.6, flex: '1 1 320px' }}>
+          <strong style={{ color: T.text, fontWeight: 600 }}>{shape.title}.</strong> {shape.note}
+        </span>
+        <span style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className="ap-btn ap-btn-ghost"
+            style={{ fontSize: 12, padding: '6px 14px' }}
+            onClick={() => load(shape.fixedBuffer)}
+          >
+            Show the fix
+          </button>
+          <button
+            type="button"
+            className="ap-btn ap-btn-ghost"
+            style={{ fontSize: 12, padding: '6px 14px' }}
+            onClick={() => load(shape.buffer)}
+          >
+            Reset
+          </button>
+        </span>
+      </div>
+
+      <div
         className="ap-sandbox-grid"
         style={{
           display: 'grid',
@@ -116,7 +142,7 @@ export function SandboxView() {
           alignItems: 'flex-start',
         }}
       >
-        <Editor initialValue={STARTER_BUFFER} onChange={setCode} />
+        <Editor key={seed.n} initialValue={seed.text} onChange={setCode} />
         <FindingsPanel findings={findings} />
       </div>
 

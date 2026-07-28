@@ -10,6 +10,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { getBySlug } from '../../lib/learn-content.js';
+import { shapesForPattern } from '../../lib/sandbox/shapes.js';
 import { T, fontMono } from '../../lib/theme.js';
 
 // Map a content type to its index URL segment so the back-link points home.
@@ -242,6 +243,35 @@ export function EntryBody({ entry }) {
                   style={{ fontSize: 13, color: T.text, marginBottom: 4 }}
                 >
                   · {p}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* The pattern explains the shape; the sandbox is where you change it
+            and watch the finding go. Only rendered for patterns that have a
+            shape, which today is a small number of them. */}
+        {shapesForPattern(entry.slug).length > 0 && (
+          <section style={{ marginTop: 28 }}>
+            <h3
+              className="ap-eyebrow"
+              style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted }}
+            >
+              TRY IT IN THE SANDBOX
+            </h3>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              {shapesForPattern(entry.slug).map((shape) => (
+                <li key={shape.slug} style={{ marginBottom: 8 }}>
+                  <Link
+                    to={`/sandbox?shape=${shape.slug}`}
+                    style={{ color: T.accent, textDecoration: 'none', fontSize: 14 }}
+                  >
+                    {shape.title}
+                  </Link>
+                  <div style={{ fontSize: 13, color: T.textDim, lineHeight: 1.6 }}>
+                    Open it, edit it, and watch the finding clear.
+                  </div>
                 </li>
               ))}
             </ul>

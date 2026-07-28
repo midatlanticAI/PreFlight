@@ -107,6 +107,14 @@ export function isScannerSelfSource(rawPath) {
   // so PreFlight scanning its own source doesn't false-positive on the
   // adversarial-input catalogue it ships to users.
   if (/(^|\/)src\/lib\/breakers\.[jt]sx?$/i.test(path)) return true;
+  // Sandbox shapes: the same category as the breakers catalogue above. Each
+  // entry is a deliberately vulnerable buffer we SHIP so a reader can open it,
+  // edit it, and watch the finding clear. Real criticals by construction, and
+  // fixing them would delete the teaching material.
+  //
+  // Identity-based like everything else here, so it is off for user scans: a
+  // user's own src/lib/sandbox/ is still scanned normally.
+  if (/(^|\/)src\/lib\/sandbox\/shapes\.[jt]s$/i.test(path)) return true;
   if (/(^|\/)src\/lib\/threat-intel\.[jt]sx?$/i.test(path)) return true;
   if (/(^|\/)src\/lib\/file-filter\.[jt]sx?$/i.test(path)) return true;
   if (/(^|\/)src\/lib\/stable-id\.[jt]sx?$/i.test(path)) return true;
