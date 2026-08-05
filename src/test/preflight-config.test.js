@@ -186,3 +186,80 @@ describe('configToSuppressions', () => {
     expect(configToSuppressions(config, findings).a.note).toBe('first');
   });
 });
+
+// A repo config is untrusted: it arrives inside the project being scanned. A
+// wrong-typed field used to throw out of configToSuppressions, which runs
+// outside the per-probe try/catch, so one malformed rule aborted the whole
+// scan instead of degrading. Found by an embedder whose server process exited
+// on a single request carrying such a config.
+describe('malformed rule fields', () => {
+  const findings = [{ stableId: 'a', probe: 'X', file: 'src/foo.js', title: 'one' }];
+
+  it('does not throw when title-pattern is not a string', () => {
+    for (const bad of [1, true, null, {}, [], 0]) {
+      const config = { suppress: [{ probe: 'X', 'title-pattern': bad }] };
+      expect(() => configToSuppressions(config, findings)).not.toThrow();
+      expect(() => findingMatchesRule(findings[0], config.suppress[0])).not.toThrow();
+    }
+  });
+
+  it('does not throw for any wrong-typed rule field', () => {
+    const fields = ['id', 'probe', 'file', 'title', 'title-pattern', 'reason', 'expires'];
+    for (const field of fields) {
+      for (const bad of [1, true, {}, []]) {
+        const config = { suppress: [{ probe: 'X', [field]: bad }] };
+        expect(() => configToSuppressions(config, findings)).not.toThrow();
+      }
+    }
+  });
+
+  it('survives a parsed config, the path an actual repo takes', () => {
+    const json = '{"schema":"preflight/v1","suppress":[{"probe":"X","title-pattern":1}]}';
+    const cfg = parsePreflightConfig('.preflight.json', json);
+    expect(cfg.error).toBeUndefined();
+    expect(() => configToSuppressions(cfg, findings)).not.toThrow();
+  });
+
+  it('drops a wrong-typed field rather than keeping it', () => {
+    const cfg = parsePreflightConfig(
+      '.preflight.json',
+      '{"schema":"preflight/v1","suppress":[{"probe":"X","title-pattern":1,"reason":"r"}]}'
+    );
+    expect(cfg.suppress[0]['title-pattern']).toBeUndefined();
+    expect(cfg.suppress[0].probe).toBe('X');
+    expect(cfg.suppress[0].reason).toBe('r');
+  });
+
+  it('a rule stripped of a bad filter still applies its remaining filters', () => {
+    // Dropping title-pattern widens the rule to probe-only. That is the
+    // documented behaviour of a probe-only rule, not a silent no-op.
+    const cfg = parsePreflightConfig(
+      '.preflight.json',
+      '{"schema":"preflight/v1","suppress":[{"probe":"X","title-pattern":1,"reason":"r"}]}'
+    );
+    expect(Object.keys(configToSuppressions(cfg, findings))).toEqual(['a']);
+    const other = [{ stableId: 'b', probe: 'Z', file: 'src/z.js', title: 'z' }];
+    expect(Object.keys(configToSuppressions(cfg, other))).toEqual([]);
+  });
+
+  it('still honours a well-formed title-pattern', () => {
+    const cfg = parsePreflightConfig(
+      '.preflight.json',
+      '{"schema":"preflight/v1","suppress":[{"probe":"X","title-pattern":"one","reason":"r"}]}'
+    );
+    expect(Object.keys(configToSuppressions(cfg, findings))).toEqual(['a']);
+    const noMatch = parsePreflightConfig(
+      '.preflight.json',
+      '{"schema":"preflight/v1","suppress":[{"probe":"X","title-pattern":"nope","reason":"r"}]}'
+    );
+    expect(Object.keys(configToSuppressions(noMatch, findings))).toEqual([]);
+  });
+
+  it('rejects a suppress entry that is an array rather than an object', () => {
+    const cfg = parsePreflightConfig(
+      '.preflight.json',
+      '{"schema":"preflight/v1","suppress":[[1,2]]}'
+    );
+    expect(cfg.suppress).toEqual([]);
+  });
+});

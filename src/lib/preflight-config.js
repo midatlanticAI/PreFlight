@@ -193,8 +193,25 @@ function normalize(raw) {
   const self_domains = Array.isArray(raw.self_domains)
     ? raw.self_domains.filter((s) => typeof s === 'string')
     : [];
+  // Every rule field below is used as a string: matched, escaped, or compiled
+  // into a RegExp. A repo config is untrusted input (it arrives with the
+  // scanned project), and `title-pattern: 1` used to survive normalization and
+  // reach `pattern.includes('*')` in findingMatchesRule, throwing a TypeError
+  // out of configToSuppressions. That is outside the per-probe try/catch, so it
+  // took down the whole scan rather than one probe. Drop wrong-typed values
+  // here the same way self_domains already does, so a malformed rule degrades
+  // to a narrower rule instead of an exception.
+  const RULE_STRING_FIELDS = ['id', 'probe', 'file', 'title', 'title-pattern', 'reason', 'expires'];
   const suppress = Array.isArray(raw.suppress)
-    ? raw.suppress.filter((s) => s && typeof s === 'object')
+    ? raw.suppress
+        .filter((s) => s && typeof s === 'object' && !Array.isArray(s))
+        .map((rule) => {
+          const clean = { ...rule };
+          for (const field of RULE_STRING_FIELDS) {
+            if (field in clean && typeof clean[field] !== 'string') delete clean[field];
+          }
+          return clean;
+        })
     : [];
   return { schema: 'preflight/v1', self_domains, suppress };
 }
@@ -239,7 +256,10 @@ export function findingMatchesRule(finding, rule) {
     const fileRe = globToRegExp(rule.file);
     if (!fileRe || !fileRe.test(finding.file || '')) return false;
   }
-  if (rule['title-pattern']) {
+  // Guarded rather than assumed: findingMatchesRule is exported and callable
+  // with a rule that never passed through normalize(), and globToRegExp above
+  // already type-checks its own input for the same reason.
+  if (rule['title-pattern'] && typeof rule['title-pattern'] === 'string') {
     // title-pattern: substring match when no wildcards, glob match when * is used.
     const pattern = rule['title-pattern'];
     const titleRe = pattern.includes('*')
