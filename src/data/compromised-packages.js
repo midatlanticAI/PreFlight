@@ -19,7 +19,7 @@ export default {
   // 2026-07-25 research pass confidently reported a wave-wide "0.10.1" marker
   // version across the TanStack packages that GHSA-g7cv-rxg3-hmpx shows does
   // not exist; importing it would have false-positived ~45 packages.
-  _lastReviewed: '2026-07-25',
+  _lastReviewed: '2026-08-07',
 
   axios: {
     versions: ['1.14.1', '0.30.4'],
@@ -776,5 +776,107 @@ export default {
   'ts-dna': {
     versions: ['3.0.1', '3.0.2', '3.0.4'],
     note: 'Mini Shai-Hulud — May 11, 2026 (TeamPCP)',
+  },
+
+  // Mini Shai-Hulud keyv/cacheable wave, August 4, 2026. A hijacked maintainer
+  // GitHub account published malicious versions across the keyv and cacheable
+  // families inside a ~45-minute window, then the worm spread through stolen
+  // publish credentials. Every entry below was verified two ways on 2026-08-07:
+  // read directly off its own OSV MAL- advisory, and checked against the
+  // registry (each flagged version no longer resolves, and each package's
+  // current latest sits immediately below it — the removed-as-malware
+  // signature). Secondary reporting also names file-entry-cache 11.1.7; the
+  // advisory (MAL-2026-11970) lists 11.1.6 only, so 11.1.7 is deliberately
+  // not listed. The wave's long tail (~444 package names per independent
+  // tracking) is deliberately not enumerated here either: tail coverage
+  // belongs to the behavioral checks (install hooks, agent-config implants),
+  // not to a curated version list.
+  keyv: {
+    versions: ['6.0.0'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-11524); ~150M weekly downloads, entry point of the campaign',
+  },
+  '@keyv/redis': {
+    versions: ['6.0.0'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-12020)',
+  },
+  '@keyv/sqlite': {
+    versions: ['6.0.0'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-12023)',
+  },
+  '@keyv/mongo': {
+    versions: ['6.0.0'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-12017)',
+  },
+  '@keyv/postgres': {
+    versions: ['6.0.0'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-12019)',
+  },
+  '@keyv/mysql': {
+    versions: ['6.0.0'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-12018)',
+  },
+  '@keyv/memcache': {
+    versions: ['6.0.0'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-12016)',
+  },
+  '@keyv/etcd': {
+    versions: ['6.0.0'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-12015)',
+  },
+  '@keyv/valkey': {
+    versions: ['6.0.0'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-12025)',
+  },
+  '@keyv/compress-brotli': {
+    versions: ['6.0.0'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-12009)',
+  },
+  '@keyv/compress-gzip': {
+    versions: ['6.0.0'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-12010)',
+  },
+  'flat-cache': {
+    versions: ['6.1.24'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-11971); ~150M weekly downloads via the eslint dependency tree',
+  },
+  'file-entry-cache': {
+    versions: ['11.1.6'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-11970). The advisory lists 11.1.6 only; a secondarily-reported 11.1.7 could not be confirmed and is not listed.',
+  },
+  'cacheable-request': {
+    versions: ['13.0.20'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-11964)',
+  },
+  cacheable: {
+    versions: ['2.5.1'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-11963)',
+  },
+  'cache-manager': {
+    versions: ['7.2.10'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-11523)',
+  },
+  '@cacheable/memory': {
+    versions: ['2.2.1'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-11558)',
+  },
+  '@cacheable/node-cache': {
+    versions: ['3.1.2'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-11560)',
+  },
+  '@cacheable/utils': {
+    versions: ['2.5.1'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-11561)',
+  },
+  '@cacheable/net': {
+    versions: ['2.1.1'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-11559)',
+  },
+  ecto: {
+    versions: ['5.0.1'],
+    note: 'Mini Shai-Hulud keyv wave — August 4, 2026 (OSV MAL-2026-11966)',
+  },
+  '@thiennq/docs-viewer': {
+    versions: ['1.6.2', '1.6.3', '1.6.4'],
+    note: 'Mini Shai-Hulud keyv wave, out-of-namespace compromise — August 4, 2026 (OSV MAL-2026-11952)',
   },
 };

@@ -60,6 +60,22 @@ describe('COMPROMISED_PACKAGES', () => {
     expect(COMPROMISED_PACKAGES['@tanstack/react-router'].versions).toContain('1.169.8');
   });
 
+  it('includes the August 2026 keyv wave, and only advisory-listed versions', () => {
+    expect(COMPROMISED_PACKAGES['keyv'].versions).toEqual(['6.0.0']);
+    expect(COMPROMISED_PACKAGES['@keyv/redis'].versions).toEqual(['6.0.0']);
+    expect(COMPROMISED_PACKAGES['flat-cache'].versions).toEqual(['6.1.24']);
+    expect(COMPROMISED_PACKAGES['cacheable'].versions).toEqual(['2.5.1']);
+    // Secondary reporting named file-entry-cache 11.1.7; the advisory
+    // (MAL-2026-11970) lists 11.1.6 only. The manifest ships the advisory,
+    // not the reporting — this pin fails if 11.1.7 ever sneaks in.
+    expect(COMPROMISED_PACKAGES['file-entry-cache'].versions).toEqual(['11.1.6']);
+    expect(COMPROMISED_PACKAGES['@thiennq/docs-viewer'].versions).toEqual([
+      '1.6.2',
+      '1.6.3',
+      '1.6.4',
+    ]);
+  });
+
   it('every entry has the { versions: string[], note: string } shape', () => {
     for (const [name, entry] of Object.entries(COMPROMISED_PACKAGES)) {
       expect(Array.isArray(entry.versions), `versions for ${name}`).toBe(true);

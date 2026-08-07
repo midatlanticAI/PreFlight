@@ -6,6 +6,14 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-08-07 — the August 4 keyv wave, read off the advisories
+
+On August 4 a hijacked maintainer account published malicious versions across the keyv and cacheable families, and the Shai-Hulud worm rode two billion monthly downloads into 444 package names. The manifest now carries the wave: 22 packages, 24 versions, every one read directly off its own OSV malware advisory and cross-checked against the registry, where each flagged version no longer resolves and each package's latest sits immediately below it.
+
+One version was left out on purpose. Secondary reporting names `file-entry-cache` 11.1.7; the advisory lists 11.1.6 only. The unconfirmed-majority review in July found exactly this error shape in assembled intel, an extra version the advisory does not carry, so the manifest ships the advisory's list and a test now pins it that way. The wave's long tail is also deliberately not enumerated: 400-plus names that were still moving when the advisories were written belong to the behavioral checks, not to a curated list.
+
+A new field report covers the incident, including the part that lands closest to home for this audience: the payload's persistence is a `SessionStart` hook in `.claude/settings.json` and a `folderOpen` task in `.vscode/tasks.json`, files that survive every package-level cleanup and that most review never reads. The dead-man-switch from May is back too, so the report leads with the response sequence, not the malware tour.
+
 ### 2026-07-27 — Python was scanned but never really examined
 
 A realistic 41-line Flask app carrying SQL injection, `os.system` command injection, `send_file` path traversal, md5 password hashing, a plaintext password comparison, a hardcoded secret key, `eval` on request data and `debug=True` returned zero findings of any severity. Four v0.5 adapters covered deserialization, provider-shaped keys, raw SQL and disabled TLS verification. Everything else was silence dressed as coverage, and a clean report on code like that is worse than no report, because it is the one output that stops the reader looking.

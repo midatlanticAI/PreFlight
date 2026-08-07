@@ -106,13 +106,13 @@ Architecturally enforced, not promised. If you ever build a backend, you break t
 - Analytics is counters-only in localStorage. No remote SDK, no fetch beacons.
 - Suppression + history state live in localStorage. No sync, no cloud.
 
-## Counts (as of 2026-07-27)
+## Counts (as of 2026-08-07)
 
 - 104 probes (v0.4 + v0.5 phase-1/2/3 language adapters + v2 F0 Host Detection + v2 F7 AI Codegen Bloat + Python Security + Reflected XSS + Weak Cryptography)
 - 16 OWASP categories covered (A01-A10 + LLM01/02/04/06/07/08). Five probes are intentionally unmapped: SEO, GEO, and A11y are discoverability/accessibility, AI Codegen Bloat is maintainability, and Architecture and Host Detection are classifiers.
-- 58 published Learn patterns, 5 published field reports, 15 published architecture shapes (no drafts)
+- 58 published Learn patterns, 6 published field reports, 15 published architecture shapes (no drafts)
 - 9 BYOK providers
-- 3942 tests across 112 files on `main`, lint clean, self-audit 9/9
+- 3960 tests across 113 files on `main`, lint clean, self-audit 9/9
 - Breakers v1 hardening suite merged into `main`
 - v2 build in progress: F0 context detectors and F7 AI Codegen Bloat have landed. See `docs/preflight-v2-spec.md` for the remaining family roster, and `CHANGELOG.md` for what shipped when.
 
