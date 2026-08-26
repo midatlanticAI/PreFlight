@@ -471,10 +471,16 @@ export function isLiveAdapter(adapter) {
  * maintainer promotes the adapter — a held migration must never relabel a
  * live finding as something it did not produce.
  *
+ * The v0.4 probes have no manifest entry at all, so their mapping arrives as a
+ * second argument keyed by probe name. It is validated with the same rules as a
+ * manifest ref and collides against the manifest-derived keys, so a v0.4 entry
+ * can never silently shadow a family's mapping.
+ *
  * @param {Object<string, object>} manifest
+ * @param {Object<string, object[]>} [v04RefsByProbeName]  v0.4 probe name -> refs
  * @returns {Object<string, {probe_id: string, refs: object[]}>}
  */
-export function buildComplianceRefsByProbeName(manifest) {
+export function buildComplianceRefsByProbeName(manifest, v04RefsByProbeName) {
   const out = {};
   const claim = (name, adapter) => {
     if (typeof name !== 'string' || name.length === 0) return;
@@ -498,6 +504,14 @@ export function buildComplianceRefsByProbeName(manifest) {
     else if (adapter.legacy_finding_id_seed != null) {
       claim(adapter.legacy_finding_id_seed, adapter);
     }
+  }
+  // v0.4 probes carry no manifest record, so their refs are supplied directly.
+  // Same validator as a manifest ref: a mapping that skipped validation is how
+  // a malformed clause or an out-of-scope framework would reach the export.
+  for (const [probeName, refs] of Object.entries(v04RefsByProbeName || {})) {
+    validateComplianceRefs(refs, `v0.4 probe "${probeName}"`);
+    if (!Array.isArray(refs) || refs.length === 0) continue;
+    claim(probeName, { probe_id: `v04:${probeName}`, compliance_refs: refs });
   }
   return out;
 }

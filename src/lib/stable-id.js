@@ -8,12 +8,16 @@ import {
   mergeOwaspMaps,
   buildComplianceRefsByProbeName,
 } from './probes/v05/manifest.js';
+import { PROBE_COMPLIANCE_REFS_V04 } from './compliance-refs-v04.js';
 
 // Reverse-lookup: probe name -> scan-scope compliance_refs. Separate from
 // MANIFEST_BY_PROBE_NAME because it resolves a held migration adapter's refs
 // under the v0.4 probe name that actually fires, WITHOUT adopting the rest of
 // that adapter's record. See buildComplianceRefsByProbeName().
-const COMPLIANCE_REFS_BY_PROBE_NAME = buildComplianceRefsByProbeName(PROBE_MANIFEST_V05);
+const COMPLIANCE_REFS_BY_PROBE_NAME = buildComplianceRefsByProbeName(
+  PROBE_MANIFEST_V05,
+  PROBE_COMPLIANCE_REFS_V04
+);
 
 // Reverse-lookup: probe name -> v0.5 manifest entry. Built lazily at module load so
 // attachProbeMeta can find the v0.5 record by the same `finding.probe` string the

@@ -41,7 +41,7 @@ export const XL_001 = {
   compliance_refs: [
     {
       framework: 'PCI-DSS',
-      clause: 'Req 6.2.4 (injection and insecure deserialization defenses)',
+      clause: 'Req 6.2.4 (software engineering techniques to prevent common software attacks)',
       url: 'https://www.pcisecuritystandards.org/document_library/',
       relationship: 'indicative',
       last_reviewed: '2026-05-15',

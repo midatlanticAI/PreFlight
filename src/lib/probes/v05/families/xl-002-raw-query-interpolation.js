@@ -34,7 +34,7 @@ export const XL_002 = {
   compliance_refs: [
     {
       framework: 'PCI-DSS',
-      clause: 'Req 6.2.4 (injection-flaw defenses, incl. SQL injection)',
+      clause: 'Req 6.2.4 (software engineering techniques to prevent common software attacks)',
       url: 'https://www.pcisecuritystandards.org/document_library/',
       relationship: 'direct',
       last_reviewed: '2026-05-15',
@@ -52,6 +52,13 @@ export const XL_002 = {
       url: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679',
       relationship: 'indicative',
       last_reviewed: '2026-05-15',
+    },
+    {
+      framework: 'SOC2',
+      clause: 'Trust Services Criteria CC6.1 (logical access controls)',
+      url: 'https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services',
+      relationship: 'indicative',
+      last_reviewed: '2026-08-25',
     },
   ],
 };

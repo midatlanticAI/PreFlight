@@ -96,8 +96,9 @@ const DISCLAIMER =
   'You declared the regulatory scope; PreFlight maps technical clauses, ' +
   'it does not decide a regime applies to you. "indicative" mappings need ' +
   'human judgement in context. PreFlight scans only code-detectable ' +
-  'technical safeguards (HIPAA 164.312, PCI-DSS, GDPR Art.32/25, SOC2 ' +
-  'readiness). It does not scan FERPA, SOX, FDA 21 CFR 11, FTC, or the EU ' +
+  'technical safeguards (HIPAA 164.312 plus 164.308(a)(5)(ii)(B), PCI-DSS, ' +
+  'GDPR Art.32, SOC2 readiness). It does not scan FERPA, SOX, FDA 21 CFR 11, ' +
+  'FTC, or the EU ' +
   'AI Act; those are taught in the compliance Learn pages, not detected.';
 
 export { DISCLAIMER as COMPLIANCE_DISCLAIMER };
