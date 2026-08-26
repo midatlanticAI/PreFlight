@@ -447,6 +447,61 @@ export function isLiveAdapter(adapter) {
   return !adapter.shadow && adapter.legacy_finding_id_seed == null;
 }
 
+/**
+ * Reverse-lookup of scan-scope compliance_refs, keyed by the probe NAME that
+ * actually reaches a finding.
+ *
+ * Two different names can carry the same vulnerability class depending on
+ * migration state, and only one of them ever appears on a real finding:
+ *  - a LIVE adapter emits findings under `adapter.name`.
+ *  - a HELD migration adapter (legacy_finding_id_seed set) does not fire at
+ *    all — isLiveAdapter() keeps it out of the live set so it cannot
+ *    double-fire with the v0.4 probe it will replace. That v0.4 probe fires
+ *    instead, under the seed name.
+ *
+ * Keying only on `name` silently drops the mapping for every held migration:
+ * the family's refs sit in the manifest while findings arrive under the v0.4
+ * name and match nothing, so an app in a declared regime gets an EMPTY
+ * compliance report rendered directly above real findings. The regulatory
+ * mapping belongs to the vulnerability class, not to whichever implementation
+ * happened to detect it, so the seed name is mapped too.
+ *
+ * COMPLIANCE ONLY. The rest of the v0.5 record (probe_id, maturity,
+ * confidence, autofix, Learn slug) stays v0.4-authoritative until a
+ * maintainer promotes the adapter — a held migration must never relabel a
+ * live finding as something it did not produce.
+ *
+ * @param {Object<string, object>} manifest
+ * @returns {Object<string, {probe_id: string, refs: object[]}>}
+ */
+export function buildComplianceRefsByProbeName(manifest) {
+  const out = {};
+  const claim = (name, adapter) => {
+    if (typeof name !== 'string' || name.length === 0) return;
+    const refs = adapter.compliance_refs;
+    if (!Array.isArray(refs) || refs.length === 0) return;
+    const prior = out[name];
+    if (prior && prior.probe_id !== adapter.probe_id) {
+      // Two adapters mapping one probe name means a finding would get an
+      // arbitrary one of two regulatory readings. Fail the build instead.
+      throw new ManifestError(
+        `probe name "${name}" is claimed for compliance mapping by two adapters: ` +
+          `${prior.probe_id} and ${adapter.probe_id}`,
+        'compliance_refs',
+        name
+      );
+    }
+    out[name] = { probe_id: adapter.probe_id, refs };
+  };
+  for (const adapter of Object.values(manifest)) {
+    if (isLiveAdapter(adapter)) claim(adapter.name, adapter);
+    else if (adapter.legacy_finding_id_seed != null) {
+      claim(adapter.legacy_finding_id_seed, adapter);
+    }
+  }
+  return out;
+}
+
 export function buildOwaspMapFromManifest(manifest) {
   const out = {};
   for (const adapter of Object.values(manifest)) {
