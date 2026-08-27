@@ -56,7 +56,7 @@ import { isTestFile, isScannerSelfSource } from '../file-filter.js';
 // JSX but keeps something analyzable for .js / .ts).
 const JsxParser = Parser.extend(jsx());
 
-function parseFile(content, ext) {
+export function parseFile(content, ext) {
   const isJsx = /\.(?:jsx|tsx)$/.test(ext);
   try {
     return JsxParser.parse(content, {
@@ -93,7 +93,7 @@ function parseFile(content, ext) {
 // predicate that returns truthy when the AST node represents a read of that
 // source. Returns a `Source` object describing what was matched.
 
-const SOURCES = [
+export const SOURCES = [
   // req.url, req.originalUrl, req.path, req.baseUrl, req.body, req.body.x,
   // req.query, req.query.x, req.params, req.params.id, req.headers,
   // req.headers.host, req.cookies, req.searchParams.get(...)
@@ -181,7 +181,7 @@ const SQL_TAINT_METHODS = new Set([
   'run',
 ]);
 
-const SINKS = [
+export const SINKS = [
   // A request-derived value used as the QUERY TEXT.
   //
   // The regex probe can only see the interpolation when the literal is inside
@@ -379,7 +379,7 @@ const SINKS = [
 // tainted. Sanitizers are matched as call expressions: the LHS that receives
 // the result is the binding that gets cleared.
 
-const SANITIZERS = [
+export const SANITIZERS = [
   // path.normalize / path.resolve(BASE, x) when BASE is a literal — the
   // canonical traversal mitigation.
   {
@@ -417,7 +417,7 @@ const SANITIZERS = [
 
 // Read a chain of MemberExpression / Identifier and return the dotted name.
 // Returns null when computed properties (`obj[expr]`) interrupt the chain.
-function readDottedName(node) {
+export function readDottedName(node) {
   const parts = [];
   let cur = node;
   while (
@@ -463,7 +463,7 @@ let currentAliases = new Map();
 // `node:child_process` and `child_process` are the same module.
 const stripNodePrefix = (m) => String(m || '').replace(/^node:/, '');
 
-function collectModuleAliases(ast) {
+export function collectModuleAliases(ast) {
   const map = new Map();
   const add = (local, canonical) => {
     if (local && canonical) map.set(local, canonical);
@@ -517,7 +517,7 @@ function resolveDottedName(node) {
 
 // Evaluate an expression node and decide whether it is tainted.
 // `scope` is a Map<name, TaintTag>. Returns either the TaintTag or null.
-function evaluateExpression(node, scope) {
+export function evaluateExpression(node, scope) {
   if (!node) return null;
   // Direct source pattern (e.g. req.url is a MemberExpression that matches).
   for (const src of SOURCES) {

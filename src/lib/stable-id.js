@@ -350,6 +350,17 @@ export const PROBE_META = {
     learn_more_slug: 'path-traversal',
   },
 
+  // Cross-file taint. Same source and sink registries as Taint Flow, applied
+  // across a module boundary, so it shares the Learn destination. Confidence is
+  // a step lower on purpose: the flow is assembled from a per-function summary
+  // rather than watched end to end, so a reader should confirm the call really
+  // reaches the sink before treating it as proven.
+  'Cross-File Taint': {
+    confidence: 'medium',
+    autofix: 'review-needed',
+    learn_more_slug: 'path-traversal',
+  },
+
   // Architectural classification — informational, no autofix, no dedicated pattern.
   // Architecture findings are themselves shape descriptions; the per-shape Learn
   // pages under /learn/shapes/ are the natural destination but those don't map
@@ -416,6 +427,7 @@ const HAND_CODED_OWASP_MAP = {
     'Firebase Rules',
     'Path Traversal',
     'Taint Flow',
+    'Cross-File Taint',
   ],
   A02: [
     'Secret Scanner',

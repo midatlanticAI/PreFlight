@@ -123,6 +123,7 @@ import { MANIFEST_LIVE_PROBES } from './probes/v05/manifest.js';
 
 // v0.6 taint engine — intra-procedural dataflow analyzer.
 import { probeTaintFlow } from './probes/taint-engine.js';
+import { probeCrossFileTaint } from './probes/taint-cross-file.js';
 import { probeHostDetection } from './probes/v2/context.js';
 import { probeAICodegenBloat } from './probes/v2/bloat.js';
 
@@ -181,6 +182,7 @@ export {
   probeWeakCryptography,
 };
 export { probeTaintFlow } from './probes/taint-engine.js';
+export { probeCrossFileTaint } from './probes/taint-cross-file.js';
 export { probeAgentConfigBackdoor } from './probes/agent-backdoor.js';
 // v2 F0: cross-cutting context detectors (framework / host / hook-context /
 // async-context) that route the v2 probe families. See docs/preflight-v2-spec.md §1.10.
@@ -258,6 +260,10 @@ export const PROBES = [
   // the regex-list probes by catching multi-line flows the literal regexes
   // miss (e.g. `const x = req.body.path; ... ; fs.readFile(x)`).
   { name: 'Taint Flow', fn: probeTaintFlow },
+  // Cross-file taint runs after the intra-file engine: the same source and
+  // sink registries, applied across a module boundary the single-file pass
+  // treats as the end of the world.
+  { name: 'Cross-File Taint', fn: probeCrossFileTaint },
   // v2 F0: host detection surfaced as an inspectable info finding.
   { name: 'Host Detection', fn: probeHostDetection },
   // v2 F7: AI Codegen Bloat — the maintainability tells of unreviewed
