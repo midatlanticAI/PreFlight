@@ -410,7 +410,7 @@ export const PROBE_META = {
 // for the OWASP category chip rendered in FindingCard.
 //
 // Reference: OWASP Top 10 2025 (https://owasp.org/Top10/) and
-//            OWASP LLM Top 10 2025 (https://genai.owasp.org/llm-top-10/).
+//            OWASP LLM Top 10 2026 (https://genai.owasp.org/llm-top-10/).
 //
 // v0.5 migration shape: the hand-coded map below is one of two contributors.
 // MANIFEST_OWASP_MAP (built from the v0.5 PROBE_MANIFEST_V05) is the other.
@@ -456,7 +456,7 @@ const HAND_CODED_OWASP_MAP = {
   A09: ['Security Logging', 'Code Quality'],
   A10: ['SSRF / Open Redirect'],
 
-  // OWASP LLM Top 10 2025
+  // OWASP LLM Top 10 2026
   LLM01: ['LLM Security'],
   LLM02: ['LLM Security'],
   LLM04: ['RAG Ingestion'],

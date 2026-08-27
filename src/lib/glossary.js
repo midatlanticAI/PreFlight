@@ -508,7 +508,7 @@ export const GLOSSARY_GROUPS = [
     id: 'owasp',
     title: 'OWASP categories',
     intro:
-      'The Top 10 (2025 edition) and LLM Top 10 (2025 edition), one-line each. Full mapping at /learn/owasp.',
+      'The Top 10 (2025 edition) and LLM Top 10 (2026 edition), one-line each. Full mapping at /learn/owasp.',
     entries: [
       {
         term: 'A01: Broken Access Control',

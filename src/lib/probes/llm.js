@@ -50,7 +50,7 @@ export function probeLLMSecurity(files) {
           line: i + 1,
           evidence: line.trim().slice(0, 200),
           remediation:
-            'Direct string interpolation enables prompt injection. The user can override your system prompt with payloads like "Ignore previous instructions." Pass user input as a separate user-role message, never interpolated into the system prompt or tool descriptions. Validate the LLM output schema before acting on it. OWASP LLM01:2025.',
+            'Direct string interpolation enables prompt injection. The user can override your system prompt with payloads like "Ignore previous instructions." Pass user input as a separate user-role message, never interpolated into the system prompt or tool descriptions. Validate the LLM output schema before acting on it. OWASP LLM01:2026.',
         });
       }
     });
@@ -74,7 +74,7 @@ export function probeLLMSecurity(files) {
           line: i + 1,
           evidence: line.trim().slice(0, 200),
           remediation:
-            'LLM API calls from client code expose your provider key to every visitor. Move the call to a server route handler, API route, or Edge Function. Pass only the prompt content from client to server, never the key. OWASP LLM02:2025.',
+            'LLM API calls from client code expose your provider key to every visitor. Move the call to a server route handler, API route, or Edge Function. Pass only the prompt content from client to server, never the key. OWASP LLM02:2026.',
         });
       }
     });
@@ -93,12 +93,12 @@ export function probeLLMSecurity(files) {
             title: 'LLM response possibly rendered as raw HTML',
             severity: 'high',
             category: 'AI/LLM Security',
-            cwe: 'CWE-79 (LLM05)',
+            cwe: 'CWE-79 (LLM10)',
             file: file.path,
             line: i + 1,
             evidence: line.trim().slice(0, 200),
             remediation:
-              'LLMs can be coerced into emitting HTML/JS via prompt injection; rendering through dangerouslySetInnerHTML becomes XSS. Use react-markdown with rehype-sanitize, or DOMPurify the HTML before injection. OWASP LLM05:2025.',
+              'LLMs can be coerced into emitting HTML/JS via prompt injection; rendering through dangerouslySetInnerHTML becomes XSS. Use react-markdown with rehype-sanitize, or DOMPurify the HTML before injection. OWASP LLM10:2026 (was LLM05:2025).',
           });
         }
       }
@@ -128,12 +128,12 @@ export function probeLLMSecurity(files) {
         title: `${dangerousAgent[0]} grants arbitrary code execution to the LLM`,
         severity: 'critical',
         category: 'AI/LLM Security',
-        cwe: 'CWE-94 (LLM06)',
+        cwe: 'CWE-94 (LLM03)',
         file: file.path,
         line: ln,
         evidence: dangerousAgent[0],
         remediation:
-          'PythonREPL, ShellTool, RequestsTool and similar let the LLM execute arbitrary code or make arbitrary network requests on your server. A successful prompt injection becomes RCE. Replace with narrowly-scoped tools that take typed arguments and validate them. If sandboxed execution is genuinely needed, isolate it in Pyodide, Modal, e2b, or Daytona. OWASP LLM06:2025.',
+          'PythonREPL, ShellTool, RequestsTool and similar let the LLM execute arbitrary code or make arbitrary network requests on your server. A successful prompt injection becomes RCE. Replace with narrowly-scoped tools that take typed arguments and validate them. If sandboxed execution is genuinely needed, isolate it in Pyodide, Modal, e2b, or Daytona. OWASP LLM03:2026 (was LLM06:2025).',
       });
     }
 
@@ -151,12 +151,12 @@ export function probeLLMSecurity(files) {
         title: `LLM tool with destructive name: "${m[1]}"`,
         severity: 'high',
         category: 'AI/LLM Security',
-        cwe: 'CWE-77 (LLM06)',
+        cwe: 'CWE-77 (LLM03)',
         file: file.path,
         line: ln,
         evidence: m[0],
         remediation:
-          'Tools with destructive capabilities exposed to an LLM agent must perform authorization checks INSIDE the tool implementation, not just at the route level. The LLM can be tricked into calling them by indirect prompt injection (poisoned issues, README, RAG content). Validate caller identity, scope, and arguments inside every tool. OWASP LLM06:2025.',
+          'Tools with destructive capabilities exposed to an LLM agent must perform authorization checks INSIDE the tool implementation, not just at the route level. The LLM can be tricked into calling them by indirect prompt injection (poisoned issues, README, RAG content). Validate caller identity, scope, and arguments inside every tool. OWASP LLM03:2026 (was LLM06:2025).',
       });
     });
 
@@ -173,12 +173,12 @@ export function probeLLMSecurity(files) {
           title: 'System prompt embedded in client-side bundle',
           severity: 'medium',
           category: 'AI/LLM Security',
-          cwe: 'CWE-200 (LLM07)',
+          cwe: 'CWE-200 (LLM08)',
           file: file.path,
           line: ln,
           evidence: sysPrompt[1].slice(0, 100) + (sysPrompt[1].length > 100 ? '...' : ''),
           remediation:
-            'System prompts shipped to the client are inspectable by every user (DevTools, View Source) and reveal product logic, guardrails, and competitive IP. Move prompt construction server-side. OWASP LLM07:2025.',
+            'System prompts shipped to the client are inspectable by every user (DevTools, View Source) and reveal product logic, guardrails, and competitive IP. Move prompt construction server-side. OWASP LLM08:2026 (was LLM07:2025).',
         });
       }
     }
@@ -195,12 +195,12 @@ export function probeLLMSecurity(files) {
         title: 'LLM call without max_tokens limit',
         severity: 'low',
         category: 'AI/LLM Security',
-        cwe: 'CWE-770 (LLM10)',
+        cwe: 'CWE-770 (LLM06)',
         file: file.path,
         line: 1,
         evidence: 'LLM API call detected with no max_tokens / max_output_tokens parameter',
         remediation:
-          'Without an output cap, an attacker can craft inputs that force long generations, multiplying your bill (Denial of Wallet) and degrading service. Always set a reasonable max_tokens. Pair with per-user rate limits. OWASP LLM10:2025.',
+          'Without an output cap, an attacker can craft inputs that force long generations, multiplying your bill (Denial of Wallet) and degrading service. Always set a reasonable max_tokens. Pair with per-user rate limits. OWASP LLM06:2026 (was LLM10:2025).',
       });
     }
   });

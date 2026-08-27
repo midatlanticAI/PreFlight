@@ -149,7 +149,7 @@ export function HomeOverview() {
       </ul>
 
       <p style={{ marginTop: 24, fontSize: 13, color: T.textMuted, fontFamily: fontMono }}>
-        OWASP Top 10 2025 + OWASP LLM Top 10 2025 · Free, no signup · Code MIT, threat-intel data
+        OWASP Top 10 2025 + OWASP LLM Top 10 2026 · Free, no signup · Code MIT, threat-intel data
         CC-BY-4.0 · <A href="mailto:John@midatlantic.ai">John@midatlantic.ai</A>
       </p>
     </main>

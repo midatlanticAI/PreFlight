@@ -325,7 +325,7 @@ export function HomeView({
           </div>
           <div style={{ marginTop: 18, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
             v0.5 release. Static analysis only. {PROBES.length} probes covering OWASP Top 10 2025 +
-            OWASP LLM Top 10 2025 + 2026 supply-chain incidents (Shai-Hulud, Axios/Sapphire Sleet,
+            OWASP LLM Top 10 2026 + 2026 supply-chain incidents (Shai-Hulud, Axios/Sapphire Sleet,
             Mini Shai-Hulud TanStack) + MCP attack surface + AI-tooling rules-file injection +
             post-infection malicious-artifact detection + multi-language adapters (Python, Go, Ruby,
             PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust). Does not perform live endpoint
@@ -404,7 +404,7 @@ export function HomeView({
             ))}
           </dl>
           <p style={{ fontSize: 12, color: T.textMuted, marginTop: 12, marginBottom: 0 }}>
-            Last updated 2026-05-16 · machine-readable index at{' '}
+            Last updated 2026-08-27 · machine-readable index at{' '}
             <a href="/llms.txt" style={{ color: T.textMuted }}>
               llms.txt
             </a>

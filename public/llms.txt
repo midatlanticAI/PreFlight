@@ -1,12 +1,12 @@
 # PreFlight Audit Tool
 
-> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 100 probes covering OWASP Top 10 2025 (A01-A10) and OWASP LLM Top 10 2025 (LLM01, LLM02, LLM04, LLM06, LLM07, LLM08), plus 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, multi-language adapters (Python, Go, Ruby, PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust), and conventional SAST checks. Every finding carries the OWASP category code(s) it maps to. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
+> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 117 probes covering OWASP Top 10 2025 (A01-A10) and OWASP LLM Top 10 2026 (LLM01, LLM02, LLM03, LLM08, LLM09, LLM10), plus 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, multi-language adapters (Python, Go, Ruby, PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust), and conventional SAST checks. Every finding carries the OWASP category code(s) it maps to. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
 
 The PreFlight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai). Contact: John@midatlantic.ai. License: free for individual and team use.
 
 ## What it does
 
-The tool extracts text from selected files or a public GitHub repository and runs 96 pure-function probes against the content. Each probe emits zero or more findings with severity (critical / high / medium / low / info), a CWE reference, a file path and line number, evidence, and a remediation block. Findings are aggregated into a risk score out of 100 with a tier label (LOW / MODERATE / HIGH / CRITICAL RISK), and broken out into four area scores: security, code health, accessibility, and discoverability. The headline score reflects security exposure only. Code-health, accessibility and discoverability findings are reported in full and shown on their own axis, but do not reduce it, because a security number dragged down by opinions about function shape or a missing meta tag is answering the wrong question. An area with no findings reads "clear" rather than 100, since a perfect score and an area that never applied are different claims. The tier label is additionally clamped to the worst real finding: a project with no critical and no high findings is never labelled HIGH or CRITICAL no matter how many cosmetic findings it carries.
+The tool extracts text from selected files or a public GitHub repository and runs 117 pure-function probes against the content. Each probe emits zero or more findings with severity (critical / high / medium / low / info), a CWE reference, a file path and line number, evidence, and a remediation block. Findings are aggregated into a risk score out of 100 with a tier label (LOW / MODERATE / HIGH / CRITICAL RISK), and broken out into four area scores: security, code health, accessibility, and discoverability. The headline score reflects security exposure only. Code-health, accessibility and discoverability findings are reported in full and shown on their own axis, but do not reduce it, because a security number dragged down by opinions about function shape or a missing meta tag is answering the wrong question. An area with no findings reads "clear" rather than 100, since a perfect score and an area that never applied are different claims. The tier label is additionally clamped to the worst real finding: a project with no critical and no high findings is never labelled HIGH or CRITICAL no matter how many cosmetic findings it carries.
 
 ## Input modes
 
@@ -21,80 +21,86 @@ The tool extracts text from selected files or a public GitHub repository and run
 - Baseline diff vs. prior scan of the same source (introduced / fixed / persisted findings, score delta).
 - Diagnostics drawer with structured logs (debug / info / warn / error filterable, copy / save / clear).
 
-## The 100 probes
+## The 117 probes
 
-Three layers:
+Two groups:
 
-1. **v0.4 baseline** (33 probes, items 1-33 below). Architecture classifier through Package Manager Hardening — the original JavaScript / TypeScript / Python / SQL / config-file probe set.
-2. **v0.5 OWASP-framed additions** (10 probes, items 34-43). Wave 1 — SQL Injection, Path Traversal, Weak Randomness, Stack Trace Leaks, Subresource Integrity. Wave 2 — Source Map Exposure, Iframe Sandbox, Security Logging, RAG Ingestion, Vector Embedding Weaknesses.
-3. **v0.5 multi-language adapters** (53 probes, items 44-96). Per-language coverage of the four cross-language failure shapes (Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret) plus selective XL-013 JWT-signature checks. Languages: Python, Rust, Go, Java, C, C++, C#, Kotlin, Swift, Ruby, PHP, Scala, Elixir, Dart.
+1. **Core probes** (51, items 1-51). JavaScript / TypeScript / Python / SQL / config-file analysis, AI-tooling and supply-chain checks, plus two dataflow probes (intra-file and cross-file taint). Run regardless of language.
+2. **Multi-language adapters** (66, items 52-117). Per-language coverage of the cross-language failure shapes (Unsafe / Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret) plus XL-013 JWT signature verification. Every one of the 15 languages now ships the JWT check. Languages: Python, JavaScript/TypeScript, Rust, Go, Java, C, C++, C#, Kotlin, Swift, Ruby, PHP, Scala, Elixir, Dart.
 
 In registry order (matches `src/lib/probes.js` PROBES array):
 
-1. **Architecture** — classifies the project shape (monolithic-SPA / static-HTML / SSR / SSG / monorepo / CLI / mobile / desktop / notebook) and emits informational findings tailored to that shape.
-2. **Secret Scanner** — AWS keys, Stripe keys (live + test), OpenAI, Anthropic, Google, GitHub PAT, Slack tokens, SendGrid, Hugging Face, Replicate, Groq, Perplexity, generic hardcoded secrets, database connection URLs with credentials, private key blocks.
-3. **NEXT_PUBLIC_ Misuse** — server secrets exposed via `NEXT_PUBLIC_` prefix in Next.js apps.
-4. **Supabase RLS** — tables created without `ENABLE ROW LEVEL SECURITY`; permissive `USING (true)` policies. Case-insensitive table-name matching.
-5. **Firebase Rules** — `allow read: if true`, storage rules that allow any authenticated user.
-6. **Package.json** — suspicious postinstall hooks (curl/wget), non-registry dependencies (git+ / http: / file:), floating versions (* / latest).
-7. **Env File Hygiene** — `.env` files tracked in repo (vs. `.env.example`).
-8. **Auth Weakness** — JWT `algorithm: none` (quoted or unquoted), `jwt.verify` without a secret argument, `eval()`, `dangerouslySetInnerHTML`. Comment-aware (won't fire on `// TODO: never use eval()`).
-9. **Admin Route Exposure** — admin / dashboard / internal routes relying on client-only auth hooks (`useUser`, `useSession`). Excludes marketing-preview paths.
-10. **Security Headers** — missing `headers()` function in `next.config`, missing `headers` array in `vercel.json`.
-11. **CORS** — wildcard `Access-Control-Allow-Origin: *`.
-12. **LLM Security** (OWASP LLM Top 10 2025) — prompt injection (user input interpolated into prompts), LLM API calls from client components (key exposure / LLM02), LLM output rendered as raw HTML (LLM05), dangerous LangChain tools (`PythonREPL`, `ShellTool`, `RequestsTool` — LLM06), destructively-named tools, system prompts embedded in client bundles (LLM07), unbounded `max_tokens` (LLM10).
-13. **Webhook Validation** — Stripe webhooks without `constructEvent` signature verification, GitHub webhooks without `X-Hub-Signature-256` HMAC check.
-14. **GitHub Actions** — `pull_request_target` workflows that check out untrusted PR code (privilege-escalation pattern), actions pinned to mutable refs (branches/tags) instead of SHA.
-15. **Client Auth Storage** — auth / JWT / session / access_token / refresh_token stored in `localStorage`.
-16. **SSRF / Open Redirect** — redirect target from user input (CWE-601), server-side fetch with user-controlled URL (CWE-918).
-17. **Cookie Security** — auth cookies missing `httpOnly`, `secure`, or `sameSite` attributes.
-18. **API Route Auth** — sensitive API routes without auth-function call; destructive HTTP handlers (DELETE/PUT/PATCH) without auth check. Recognizes only `jwt.verify(token, secret)` with 2+ args as actual auth (lone `jwt.verify(token)` is flagged).
-19. **Compromised Packages** — known-malicious versions from 2025–2026, ~170+ entries hard-coded against named incidents: Axios 1.14.1 / 0.30.4 (Sapphire Sleet DPRK, March 2026), Bitwarden CLI 2026.4.0 (April 2026), Intercom-client 7.0.4-7.0.5 (Mini Shai-Hulud SAP, April 2026), and the May 11, 2026 Mini Shai-Hulud "TheBeautifulSandsOfTime" worm by TeamPCP — 42 @tanstack/* packages (router, react-router, vue-router, solid-router, start, devtools, plugins; @tanstack/react-router alone has 12M+ weekly downloads), @mistralai/mistralai, @mistralai/mistralai-azure, @mistralai/mistralai-gcp, @opensearch-project/opensearch, the entire @squawk/* and @uipath/* scopes, @beproduct/nestjs-auth, @tallyui/*, @mesadev/*, plus unscoped victims (cmux-agent-mcp, git-branch-selector, ts-dna, etc.). Plus @cap-js/sqlite, @cap-js/db-service, lightning 2.6.2-2.6.3 (PyPI variant), plain-crypto-js (any version).
-20. **Slopsquat / Typosquat** — LLM-hallucinated and typosquatted package names (`lodahs`, `expreess`, `reactt`, etc.) plus generic-shape heuristic for `auth-tool` / `api-helper` patterns common in AI hallucinations.
-21. **MCP Security** — Model Context Protocol servers spawning shell interpreters (`bash -c`, `sh -e`, `powershell -Command`), `mcp-server-git` versions pre-Dec 2025 (indirect prompt injection via README/issue), MCP servers binding to 0.0.0.0 or `::` (independent research, April 2026: ~200K MCP servers internet-exposed with command-execution flaws). Traverses `mcpServers`, `servers`, `tools`, and nested `mcp.servers` config keys.
-22. **Trojan Source** — bidirectional Unicode control characters (U+202A-U+202E, U+2066-U+2069; CVE-2021-42574).
-23. **AI Rules Files** — hidden bidi Unicode in `.cursorrules` / `.cursor/rules/*` / `.windsurfrules` / `CLAUDE.md` (the 2026 "rules file backdoor" attacks against Cursor and GitHub Copilot demonstrated by Pillar Security); instruction-override language (`ignore previous instructions`, `disregard system`).
-24. **Malicious Artifacts** — post-infection IOCs from the May 11, 2026 Mini Shai-Hulud TanStack worm. Flags `.claude/router_runtime.js`, `.claude/setup.mjs`, `.vscode/setup.mjs`, `tanstack_runner.js`, `router_init.js` as critical drop-files (the worm writes itself there to survive `npm uninstall`); flags content IOCs in any scanned file: `__DAEMONIZED` guard, `filev2.getsession.org` / `seed{1,2,3}.getsession.org` Session-messenger exfil endpoints, `gh-token-monitor` dead-man-switch handler (`com.user.gh-token-monitor` LaunchAgent / systemd user service that runs `rm -rf ~/` if the stolen GitHub token returns 40x), spoofed `claude@users.noreply.github.com` commit author, and the malicious `@tanstack/setup` commit-SHA pin.
-25. **AI Code Smells** — empty `catch {}` blocks (industry studies: ~45% of AI code samples introduce OWASP Top 10 issues), heavy `any` type usage (correlates with missing input validation).
-26. **URL Reputation** — extracts external HTTP/HTTPS URLs from source, applies heuristics (raw IP, suspicious TLDs like .tk/.xyz/.gq, URL shorteners, http-only), produces info/low/medium findings with click-through links to VirusTotal, urlhaus.abuse.ch, and whois lookups.
-27. **HTML Hygiene** — inline event handlers (`onclick=`), `target="_blank"` without `rel="noopener"` (tabnabbing), mixed-content `http://` scripts on HTTPS pages, `eval()` / `new Function()` inside `<script>`, forms posting over HTTP, inline `<script>` without a CSP meta tag.
-28. **SEO Hygiene** — missing canonical / OG / Twitter meta tags, missing JSON-LD schema, robots.txt drift, sitemap.xml drift.
-29. **GEO Hygiene** (Generative-Engine Optimization) — missing AI-bot allowlist in robots.txt (GPTBot / ClaudeBot / PerplexityBot / etc.), missing llms.txt for AI-search indexing.
-30. **A11y Landmarks** — WCAG 2.2 landmark / target-size / focus-indicator drift on rendered HTML.
-31. **Code Quality** — `console.log` in production paths, oversized source files, unhandled promise rejections, `async` without `try`.
-32. **Code Correctness** — AST-based undeclared-identifier check using acorn + acorn-jsx. Walks each `.js` / `.jsx` / `.mjs` / `.cjs` file's syntax tree, collects every name with a binding in this file (imports, var/let/const, function/class decls, params, destructuring, catch clauses, re-exports), then flags identifier references that aren't in the bindings set or the built-in / browser / Node / test-runner / React globals allowlist. Catches the class of bug that ships when a refactor leaves a dangling reference (`return urlHighlight;` with no `urlHighlight` declared anywhere). v1 skips `.ts` / `.tsx` (separate parser needed; deferred to v0.5).
-33. **Package Manager Hardening** — missing `.npmrc`, missing `min-release-age` cooldown directive (recommended ≥7 days after Shai-Hulud, Axios, and Mini Shai-Hulud worm windows).
+1. **Architecture** — classifies project shape and emits informational findings tailored to it.
+2. **Secret Scanner** — provider API keys (AWS, Stripe, OpenAI, Anthropic, Google, GitHub, Slack, and more), generic hardcoded secrets, DB connection URLs with credentials, private key blocks.
+3. **NEXT_PUBLIC_ Misuse** — server secrets exposed via the `NEXT_PUBLIC_` client-bundle prefix.
+4. **Supabase RLS** — tables without row-level security enabled; permissive `USING (true)` policies.
+5. **Firebase Rules** — `allow read/write: if true`, rules granting any authenticated user full access.
+6. **Package.json** — suspicious postinstall hooks, non-registry dependencies, floating versions.
+7. **Env File Hygiene** — `.env` files tracked in the repo.
+8. **Auth Weakness** — JWT `algorithm: none`, `jwt.verify` without a secret, `eval`, `dangerouslySetInnerHTML`. Comment-aware.
+9. **Python Security** — Python-specific dangerous patterns (shell injection, unsafe YAML, weak hashing in a credential context).
+10. **Weak Cryptography** — MD5/SHA1 for credentials, static IVs, missing KDF parameters, weak cipher modes.
+11. **Admin Route Exposure** — admin surfaces gated only by client-side auth hooks.
+12. **Security Headers** — missing security response headers in `next.config` / host config.
+13. **CORS** — wildcard `Access-Control-Allow-Origin`.
+14. **LLM Security** (OWASP LLM Top 10 2026) — prompt injection, LLM calls from client code (key exposure), LLM output rendered as HTML, dangerous agent tools, destructively-named tools, system prompts in client bundles, unbounded `max_tokens`.
+15. **Webhook Validation** — Stripe / GitHub webhooks without signature verification.
+16. **GitHub Actions** — `pull_request_target` checking out untrusted code, actions pinned to mutable refs.
+17. **Client Auth Storage** — auth tokens in `localStorage`.
+18. **SSRF / Open Redirect** — redirect targets and server-side fetches driven by user input.
+19. **Cookie Security** — auth cookies missing `httpOnly` / `secure` / `sameSite`.
+20. **API Route Auth** — sensitive / destructive API routes with no auth check.
+21. **Compromised Packages** — known-malicious dependency versions from 2025-2026 supply-chain incidents, by exact version.
+22. **Slopsquat / Typosquat** — typosquatted and LLM-hallucinated package names.
+23. **MCP Security** — MCP servers spawning shell interpreters, `mcp-server-git` pre-Dec-2025, servers bound to 0.0.0.0.
+24. **Trojan Source** — bidirectional-control-character Unicode attacks in source.
+25. **AI Rules Files** — `.cursorrules` / `.cursor/rules` / `.windsurfrules` / `CLAUDE.md` with bidi control chars or instruction-override phrasing.
+26. **Malicious Artifacts** — post-infection indicators of compromise dropped on disk by known worms.
+27. **Agent Config Backdoor** — `.claude/settings*.json` hooks on auto-firing events, `.vscode/tasks.json` tasks with `runOn: folderOpen`.
+28. **AI Code Smells** — the tells of code generated and shipped without a read-through.
+29. **URL Reputation** — raw IPs, shorteners, suspicious TLDs, HTTP-only hosts in source.
+30. **HTML Hygiene** — unsafe HTML patterns and missing hardening attributes.
+31. **Reflected XSS** — user input reaching the DOM without escaping.
+32. **SEO Hygiene** — discoverability metadata (informational, does not affect the security score).
+33. **GEO Hygiene** — generative-engine-optimization metadata (informational).
+34. **A11y Landmarks** — accessibility landmark checks (informational).
+35. **Code Quality** — maintainability and error-handling hygiene (health axis).
+36. **Code Correctness** — AST-based scope-validity checks (undeclared identifiers).
+37. **Package Manager Hardening** — lockfile / install-script hardening advice.
+38. **SQL Injection** — string-interpolated SQL in JavaScript / TypeScript.
+39. **Path Traversal** — user input reaching filesystem paths.
+40. **Weak Randomness** — `Math.random` used for security-bearing values.
+41. **Stack Trace Leaks** — stack traces returned to clients.
+42. **Subresource Integrity** — third-party scripts without SRI.
+43. **Source Map Exposure** — source maps shipped to production.
+44. **Iframe Sandbox** — iframes without a restrictive `sandbox` attribute.
+45. **Security Logging** — auth events with no logging hooks.
+46. **RAG Ingestion** — user-supplied content ingested into a vector store without provenance.
+47. **Vector Embedding Weaknesses** — vector search without a per-tenant scope filter.
+48. **Taint Flow** — intra-file dataflow from a user-input source to a dangerous sink (AST-based).
+49. **Cross-File Taint** — a source in one file reaching a sink in another through an imported function (function-summary dataflow).
+50. **Host Detection** — attributes which AI build tool produced the repo (classifier, informational).
+51. **AI Codegen Bloat** — the tells of un-read AI-generated code (maintainability, informational).
 
-### v0.5 OWASP-framed additions (34-43)
+### Multi-language adapters (52-117)
 
-34. **SQL Injection** — template-literal interpolation into SQL strings, string-concat into queries, `query()` calls with unsanitized variables.
-35. **Path Traversal** — user-controlled path segments without `path.normalize` / scope check; `..` sequences reaching outside intended root.
-36. **Weak Randomness** — `Math.random()` used for tokens, session IDs, password reset URLs, or any security-sensitive value.
-37. **Stack Trace Leaks** — error responses that surface stack traces or framework internals to the client.
-38. **Subresource Integrity** — external scripts loaded without an `integrity` attribute.
-39. **Source Map Exposure** — `.map` files served alongside production bundles.
-40. **Iframe Sandbox** — `<iframe>` without a `sandbox` attribute, or with `allow-scripts allow-same-origin` (defeats the purpose).
-41. **Security Logging** — auth events / token operations with no logging hooks (OWASP A09).
-42. **RAG Ingestion** — vector ingestion that takes user-uploaded content without provenance tagging (indirect prompt injection at the data layer).
-43. **Vector Embedding Weaknesses** — vector similarity search without per-tenant scope filter (OWASP LLM08).
+Every language ships some combination of Unsafe / Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, and XL-013 JWT Signature Verification. All 15 languages now carry the JWT check.
 
-### v0.5 multi-language adapters (44-96)
-
-Each language ships some combination of: Unsafe / Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret. C# and Kotlin additionally ship XL-013 JWT-signature checks.
-
-- **Python** (44-47): Unsafe Deserialization (`pickle.loads` on untrusted input), Raw SQL Interpolation (f-strings into `cursor.execute`), TLS Verification Disabled (`verify=False` on `requests` / `httpx`), Hardcoded Secret.
-- **Rust** (48-51): Untrusted Deserialization (`bincode::deserialize` / `serde_pickle`), Raw SQL Interpolation, TLS Verification Disabled (`danger_accept_invalid_certs(true)`), Hardcoded Secret.
-- **Go** (52-55): Untrusted Deserialization (`gob.Decode` / `json.Unmarshal` into `interface{}`), Raw SQL Interpolation (`fmt.Sprintf` into `db.Query`), TLS Verification Disabled (`InsecureSkipVerify: true`), Hardcoded Secret.
-- **Java** (56-59): Unsafe Deserialization (`ObjectInputStream.readObject`), Raw SQL Interpolation, TLS Verification Disabled (trust-all `TrustManager`), Hardcoded Secret.
-- **C** (60-62): Raw SQL Interpolation (`sprintf` into `sqlite3_exec`), TLS Verification Disabled (`SSL_VERIFY_NONE`), Hardcoded Secret.
-- **C++** (63-65): Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret.
-- **C#** (66-70): Unsafe Deserialization (`BinaryFormatter` / `XmlSerializer`), Raw SQL Interpolation, TLS Verification Disabled (`ServerCertificateValidationCallback => true`), Hardcoded Secret, JWT Token Validation Disabled (XL-013).
-- **Kotlin** (71-74): Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified (XL-013).
-- **Swift** (75-77): Raw SQL Interpolation, TLS Verification Disabled (URLSession trust-all challenge handler), Hardcoded Secret.
-- **Ruby** (78-81): Unsafe Deserialization (`Marshal.load`), Raw SQL Interpolation (string-interp in ActiveRecord), TLS Verification Disabled (`OpenSSL::SSL::VERIFY_NONE`), Hardcoded Secret.
-- **PHP** (82-85): Unsafe Deserialization (`unserialize` on untrusted input), Raw SQL Interpolation, TLS Verification Disabled (`CURLOPT_SSL_VERIFYPEER => 0`), Hardcoded Secret.
-- **Scala** (86-89): Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret.
-- **Elixir** (90-93): Unsafe Deserialization (`:erlang.binary_to_term` on user input), Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret.
+- **Python** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **JavaScript / TypeScript** — TLS Verification Disabled (the SQL, secret, and auth shapes for JS/TS are covered by the core probes above).
+- **Rust** — Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **Go** — Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **Java** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **C** — Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **C++** — Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **C#** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Token Validation Disabled.
+- **Kotlin** — Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **Swift** — Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **Ruby** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **PHP** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **Scala** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **Elixir** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **Dart** — Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
 - **Dart** (94-96): Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret.
 
 ## What it does NOT do
@@ -116,7 +122,7 @@ Each language ships some combination of: Unsafe / Untrusted Deserialization, Raw
 
 ## Architecture
 
-Single-page React 18 application, Vite-built, react-router-dom v6 for routing, no backend. `App.jsx` (~950 lines) orchestrates state; the probe registry lives in `src/lib/probes.js` and aggregates 96 pure-function probes across dedicated modules: v0.4 baseline probes in-file, AST-based Code Correctness probe under `src/lib/probes/code-correctness.js`, v0.5 OWASP-framed additions under `src/lib/probes/v05.js` + `v05b.js`, and the per-language adapters under `src/lib/probes/v05-phase3-*`. Learn content lives under `src/learn/{patterns,incidents,shapes}/*.md` (YAML frontmatter + Markdown body, parsed at runtime). 3,477 tests across 94 files covering probes, formatters, history, scoring, snippet rendering, logger behavior, Learn content shape, suppression workflow, .preflight.yml schema, the AST probe, and the v0.5 adversarial / false-positive suite per language.
+Single-page React 18 application, Vite-built, react-router-dom v6 for routing, no backend. `App.jsx` (~950 lines) orchestrates state; the probe registry lives in `src/lib/probes.js` and aggregates 117 pure-function probes across dedicated modules: v0.4 baseline probes in-file, AST-based Code Correctness probe under `src/lib/probes/code-correctness.js`, v0.5 OWASP-framed additions under `src/lib/probes/v05.js` + `v05b.js`, and the per-language adapters under `src/lib/probes/v05-phase3-*`. Learn content lives under `src/learn/{patterns,incidents,shapes}/*.md` (YAML frontmatter + Markdown body, parsed at runtime). 4,027 tests across 116 files covering probes, formatters, history, scoring, snippet rendering, logger behavior, Learn content shape, suppression workflow, .preflight.yml schema, the AST probe, and the v0.5 adversarial / false-positive suite per language.
 
 Stack:
 - React 18 + Vite 5
@@ -138,7 +144,7 @@ Stack:
 ## Versioning + freshness
 
 - Schema version: `midatlantic-audit/v1` (JSON export).
-- Probe set last expanded: 2026-05-16 (v0.5 phase-3 multi-language adapters merged — 53 per-language probes across Python, Rust, Go, Java, C, C++, C#, Kotlin, Swift, Ruby, PHP, Scala, Elixir, Dart).
+- Probe set last expanded: 2026-08-27 (XL-013 JWT signature verification completed across all 15 languages, cross-file taint analysis added).
 - Threat intel last updated: 2026-05-12 (Mini Shai-Hulud TanStack "TheBeautifulSandsOfTime" campaign by TeamPCP — 170+ packages across @tanstack, @mistralai, @opensearch-project, @uipath, @squawk, and unscoped victims).
 - Brand: Mid-Atlantic AI — palette navy `#0a1226` / orange `#f26b1f` / mint `#9fe5dd`.
 
@@ -148,7 +154,7 @@ Stack:
 - GTIG (Google Threat Intelligence Group) / Mandiant: https://cloud.google.com/blog/topics/threat-intelligence
 - Microsoft Threat Intelligence: https://www.microsoft.com/en-us/security/blog/threat-intelligence/
 - OWASP Top 10 (2025): https://owasp.org/Top10/
-- OWASP LLM Top 10 (2025): https://genai.owasp.org/llm-top-10/
+- OWASP LLM Top 10 (2026): https://genai.owasp.org/llm-top-10/
 - MITRE / CWE: https://cwe.mitre.org/
 - Pillar Security "rules file backdoor": https://www.pillar.security/blog
 - Vendor official security advisories (npm, PyPI, Stripe, GitHub Security Advisory database, etc.) cited per-incident in the corresponding Field Report under `/learn/incidents`.

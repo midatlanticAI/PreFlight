@@ -59,7 +59,7 @@ const SECTIONS = [
         note: 'The ten highest-prevalence application-security risks. Each entry has a "what to do about it" section.',
       },
       {
-        title: 'OWASP LLM Top 10 (2025)',
+        title: 'OWASP LLM Top 10 (2026)',
         url: 'https://genai.owasp.org/llm-top-10/',
         note: 'The LLM-specific equivalent. Covers prompt injection, sensitive information disclosure, agent autonomy, and seven more.',
       },

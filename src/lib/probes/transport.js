@@ -390,7 +390,7 @@ export function probeCORS(files) {
 // MODERN ATTACK SURFACE PROBES (May 2026)
 // ==========================================================================
 
-// --- LLM / AI Application Security (OWASP LLM Top 10 2025) ---
+// --- LLM / AI Application Security (OWASP LLM Top 10 2026) ---
 
 export function probeSSRFOpenRedirect(files) {
   const findings = [];

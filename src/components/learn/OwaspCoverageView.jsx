@@ -1,7 +1,7 @@
 // src/components/learn/OwaspCoverageView.jsx
 //
 // The "OWASP" sub-tab under /learn. Maps every PreFlight probe to the OWASP
-// Top 10 2025 and OWASP LLM Top 10 2025 categories it covers. The mapping
+// Top 10 2025 and OWASP LLM Top 10 2026 categories it covers. The mapping
 // data lives in src/lib/stable-id.js (PROBE_OWASP_MAP + OWASP_LABELS); this
 // component just renders it.
 //
@@ -282,7 +282,7 @@ export function OwaspCoverageView() {
             rel="noopener noreferrer"
             style={{ color: T.accent }}
           >
-            OWASP LLM Top 10 2025
+            OWASP LLM Top 10 2026
           </a>
         </span>
       </div>

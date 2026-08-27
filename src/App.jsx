@@ -658,7 +658,7 @@ export default function App() {
       //
       // The loop has to yield: without it React never paints the progress line
       // and the tab locks up for the whole scan. It used to yield with a flat
-      // 60ms sleep after each probe, which is 104 probes x 60ms = 6.2 seconds
+      // 60ms sleep after each probe, which is 117 probes x 60ms = 7.0 seconds
       // of deliberate waiting on EVERY scan, whatever the project size. On a
       // small project that sleep was the scan: the probes themselves finish in
       // a fraction of it, so the tool looked slow at exactly the moment it had

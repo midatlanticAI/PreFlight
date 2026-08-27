@@ -170,8 +170,8 @@ export function AuditView({
               fontFamily: fontMono,
             }}
           >
-            <time dateTime="2026-05-16">Updated 2026-05-16</time> · {PROBES.length} probes · v0.5 ·
-            OWASP Top 10 2025 + OWASP LLM Top 10 2025 · Free, no signup
+            <time dateTime="2026-08-27">Updated 2026-08-27</time> · {PROBES.length} probes · v0.5 ·
+            OWASP Top 10 2025 + OWASP LLM Top 10 2026 · Free, no signup
           </p>
         </header>
       )}

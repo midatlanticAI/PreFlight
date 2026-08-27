@@ -7,7 +7,7 @@ draft: false
 related_probe_ids:
   - LLM Security
 sources:
-  - title: OWASP LLM Top 10 2025
+  - title: OWASP LLM Top 10 2026
     url: https://genai.owasp.org/llm-top-10/
   - title: 'OWASP LLM01 — Prompt Injection'
     url: https://genai.owasp.org/llmrisk/llm01-prompt-injection/
@@ -135,4 +135,4 @@ For agentic systems, add prompt-injection-aware tool authorization: a tool that 
 
 ## Sources
 
-The OWASP LLM Top 10 (2025 edition) is the authoritative reference; each LLM01-LLM10 entry maps cleanly to one of the failure shapes above.
+The OWASP LLM Top 10 (2026 edition) is the authoritative reference; each LLM01-LLM10 entry maps cleanly to one of the failure shapes above.

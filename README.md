@@ -16,7 +16,7 @@ The full philosophy is at [`src/learn/manifesto.md`](./src/learn/manifesto.md) a
 
 ## What it does
 
-100 probes covering OWASP Top 10 2025, OWASP LLM Top 10 2025, and current threat intel:
+117 probes covering OWASP Top 10 2025, OWASP LLM Top 10 2026, and current threat intel:
 
 Every finding carries the OWASP category code(s) it maps to. The full mapping is at [`/learn/owasp`](https://preflight.midatlantic.ai/learn/owasp) in the deployed app, with the source-of-truth dictionary in [`src/lib/stable-id.js`](./src/lib/stable-id.js).
 
@@ -153,7 +153,7 @@ Any feature that would weaken this requires deliberately breaking the manifesto,
 ```bash
 npm ci
 npm run dev               # vite dev server on :5173
-npm test                  # vitest run (3,477 tests across 94 files)
+npm test                  # vitest run (4,027 tests across 116 files)
 npm run test:self-audit   # dogfood: PreFlight scans its own dist/
 npm run build             # production build → dist/
 npm run preview           # preview the built dist
@@ -179,7 +179,7 @@ If PreFlight doesn't pass its own audit, CI fails. Dogfooding is non-negotiable.
 
 ## Test coverage
 
-3,477 tests across 94 files, full run in seconds:
+4,027 tests across 116 files, full run in seconds:
 
 | Layer                        | Coverage                                                                                                                                                       |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -220,7 +220,7 @@ src/
 │   ├── learn/              ← LearnPage, IndexView, EntryView, ManifestoView
 │   └── settings/           ← SettingsPage + GeneralTab, ExplainVerifyTab, PrivateReposTab, DiagnosticsTab, AboutTab
 ├── lib/
-│   ├── probes.js           ← probe registry hub (100 probes across v0.4 + v0.5 phase-1/2/3) + threat-intel re-exports
+│   ├── probes.js           ← probe registry hub (117 probes across v0.4 + v0.5 phase-1/2/3) + threat-intel re-exports
 │   ├── probes/
 │   │   ├── code-correctness.js   ← acorn + acorn-jsx AST probe (undeclared identifiers)
 │   │   ├── web.js                ← URL reputation, HTML hygiene, SEO, GEO, A11y landmarks
@@ -254,7 +254,7 @@ src/
 │   ├── patterns/*.md
 │   ├── incidents/*.md
 │   └── shapes/*.md
-└── test/                   ← 3,477 tests across 94 files (vitest + jsdom)
+└── test/                   ← 4,027 tests across 116 files (vitest + jsdom)
 
 public/
 ├── maai-logo.svg

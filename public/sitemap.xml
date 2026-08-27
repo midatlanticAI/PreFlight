@@ -3,7 +3,7 @@
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://preflight.midatlantic.ai/</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://preflight.midatlantic.ai/" />
@@ -11,91 +11,91 @@
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/patterns</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/incidents</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/shapes</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/resources</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/social</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/owasp</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/how-it-works</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/the-climb</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/flight-school</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/tools</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/glossary</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/breakers</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/privacy</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/terms</loc>
-    <lastmod>2026-07-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
@@ -203,7 +203,7 @@
   </url>
   <url>
     <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-soc2</loc>
-    <lastmod>2026-05-15</lastmod>
+    <lastmod>2026-08-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -298,8 +298,20 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/python-security</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://preflight.midatlantic.ai/learn/patterns/rag-ingestion</loc>
     <lastmod>2026-05-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/reflected-xss</loc>
+    <lastmod>2026-07-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -388,6 +400,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/weak-cryptography</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://preflight.midatlantic.ai/learn/patterns/weak-randomness</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
@@ -430,8 +448,20 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/agent-approval-gates-2026-08</loc>
+    <lastmod>2026-08-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://preflight.midatlantic.ai/learn/incidents/intercom-client-bitwarden-cli-2026-04</loc>
     <lastmod>2026-05-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/mini-shai-hulud-keyv-2026-08</loc>
+    <lastmod>2026-08-07</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -448,6 +478,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/nextjs-rce-pair-2026-08</loc>
+    <lastmod>2026-08-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://preflight.midatlantic.ai/learn/incidents/sapphire-sleet-axios-2026-03</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
@@ -456,6 +492,12 @@
   <url>
     <loc>https://preflight.midatlantic.ai/learn/incidents/unconfirmed-npm-window-2026-07</loc>
     <lastmod>2026-07-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/vm2-two-waves-2026-08</loc>
+    <lastmod>2026-08-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>

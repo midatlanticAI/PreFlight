@@ -15,7 +15,7 @@ const RESOURCES = [
   { label: 'Glossary', url: '/learn/glossary' },
   { label: 'Resources & best practices', url: '/learn/resources' },
   { label: 'OWASP Top 10 2025', url: 'https://owasp.org/Top10/' },
-  { label: 'OWASP LLM Top 10 2025', url: 'https://genai.owasp.org/llm-top-10/' },
+  { label: 'OWASP LLM Top 10 2026', url: 'https://genai.owasp.org/llm-top-10/' },
   { label: 'GitHub repo (MIT)', url: 'https://github.com/midatlanticAI/PreFlight' },
 ];
 
