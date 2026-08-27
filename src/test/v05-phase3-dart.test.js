@@ -17,7 +17,7 @@ import { runShadow } from '../lib/probes/v05/shadow.js';
 import { getBySlug } from '../lib/learn-content.js';
 import { PROBES } from '../App.jsx';
 
-const IDS = ['DA-SECRETS-001', 'DA-SQL-RAW-001', 'DA-TLS-VERIFY-001'];
+const IDS = ['DA-SECRETS-001', 'DA-SQL-RAW-001', 'DA-TLS-VERIFY-001', 'DA-AUTH-001'];
 const ENTRIES = Object.values(PROBE_MANIFEST_V05).filter((e) => IDS.includes(e.probe_id));
 const byId = (id) => PROBE_MANIFEST_V05[id];
 

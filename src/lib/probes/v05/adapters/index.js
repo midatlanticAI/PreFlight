@@ -63,6 +63,20 @@ import { EX_SECRETS_001 } from './elixir/ex-secrets-001-hardcoded.js';
 import { DA_SQL_RAW_001 } from './dart/da-sql-raw-001-rawquery.js';
 import { DA_TLS_VERIFY_001 } from './dart/da-tls-verify-001-badcert.js';
 import { DA_SECRETS_001 } from './dart/da-secrets-001-hardcoded.js';
+// XL-013 across the rest of the language set. Auth existed only for JS, C# and
+// Kotlin, which left twelve languages with no token-verification probe at all.
+import { PY_AUTH_001 } from './python/py-auth-001-token-verification.js';
+import { GO_AUTH_001 } from './go/go-auth-001-token-verification.js';
+import { JV_AUTH_001 } from './java/jv-auth-001-token-verification.js';
+import { SC_AUTH_001 } from './scala/sc-auth-001-token-verification.js';
+import { RB_AUTH_001 } from './ruby/rb-auth-001-token-verification.js';
+import { PHP_AUTH_001 } from './php/php-auth-001-token-verification.js';
+import { RS_AUTH_001 } from './rust/rs-auth-001-token-verification.js';
+import { EX_AUTH_001 } from './elixir/ex-auth-001-token-verification.js';
+import { SW_AUTH_001 } from './swift/sw-auth-001-token-verification.js';
+import { DA_AUTH_001 } from './dart/da-auth-001-token-verification.js';
+import { C_AUTH_001 } from './c/c-auth-001-token-verification.js';
+import { CPP_AUTH_001 } from './cpp/cpp-auth-001-token-verification.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -123,4 +137,16 @@ export const ADAPTERS = [
   DA_SQL_RAW_001,
   DA_TLS_VERIFY_001,
   DA_SECRETS_001,
+  PY_AUTH_001,
+  GO_AUTH_001,
+  JV_AUTH_001,
+  SC_AUTH_001,
+  RB_AUTH_001,
+  PHP_AUTH_001,
+  RS_AUTH_001,
+  EX_AUTH_001,
+  SW_AUTH_001,
+  DA_AUTH_001,
+  C_AUTH_001,
+  CPP_AUTH_001,
 ];

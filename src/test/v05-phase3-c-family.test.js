@@ -20,8 +20,8 @@ import { runShadow } from '../lib/probes/v05/shadow.js';
 import { getBySlug } from '../lib/learn-content.js';
 import { PROBES } from '../App.jsx';
 
-const C_IDS = ['CC-SECRETS-001', 'CC-SQL-RAW-001', 'CC-TLS-VERIFY-001'];
-const CPP_IDS = ['CPP-SECRETS-001', 'CPP-SQL-RAW-001', 'CPP-TLS-VERIFY-001'];
+const C_IDS = ['CC-AUTH-001', 'CC-SECRETS-001', 'CC-SQL-RAW-001', 'CC-TLS-VERIFY-001'];
+const CPP_IDS = ['CPP-AUTH-001', 'CPP-SECRETS-001', 'CPP-SQL-RAW-001', 'CPP-TLS-VERIFY-001'];
 const ALL = [...C_IDS, ...CPP_IDS];
 const ENTRIES = Object.values(PROBE_MANIFEST_V05).filter((e) => ALL.includes(e.probe_id));
 
@@ -29,8 +29,9 @@ const SLUG = {
   'SQL-RAW': 'xl-raw-query-interpolation',
   'TLS-VERIFY': 'xl-tls-verification-disabled',
   SECRETS: 'xl-hardcoded-secrets',
+  AUTH: 'xl-auth-token-verification',
 };
-const XL = { 'SQL-RAW': 'XL-002', 'TLS-VERIFY': 'XL-004', SECRETS: 'XL-006' };
+const XL = { 'SQL-RAW': 'XL-002', 'TLS-VERIFY': 'XL-004', SECRETS: 'XL-006', AUTH: 'XL-013' };
 const familyKey = (id) => id.replace(/^(?:CC|CPP)-/, '').replace(/-001$/, '');
 
 describe('Phase 3 (C family): manifest shape', () => {

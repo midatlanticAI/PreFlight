@@ -19,7 +19,13 @@ import { runShadow } from '../lib/probes/v05/shadow.js';
 import { getBySlug } from '../lib/learn-content.js';
 import { PROBES } from '../App.jsx';
 
-const PHASE3_IDS = ['RS-DESERIALIZE-001', 'RS-SECRETS-001', 'RS-SQL-RAW-001', 'RS-TLS-VERIFY-001'];
+const PHASE3_IDS = [
+  'RS-DESERIALIZE-001',
+  'RS-SECRETS-001',
+  'RS-SQL-RAW-001',
+  'RS-TLS-VERIFY-001',
+  'RS-AUTH-001',
+];
 const ENTRIES = Object.values(PROBE_MANIFEST_V05).filter((e) => PHASE3_IDS.includes(e.probe_id));
 const byId = (id) => PROBE_MANIFEST_V05[id];
 

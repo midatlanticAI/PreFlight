@@ -21,6 +21,7 @@ const PHASE3_JV_IDS = [
   'JV-SECRETS-001',
   'JV-SQL-RAW-001',
   'JV-TLS-VERIFY-001',
+  'JV-AUTH-001',
 ];
 const ENTRIES = Object.values(PROBE_MANIFEST_V05).filter((e) => PHASE3_JV_IDS.includes(e.probe_id));
 const byId = (id) => PROBE_MANIFEST_V05[id];

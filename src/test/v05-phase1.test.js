@@ -23,7 +23,13 @@ import { PROBES } from '../App.jsx';
 // Phase 1 = the four Python adapters. The manifest also carries Phase 2+
 // adapters now, so scope every Phase 1 assertion to these ids rather than
 // the whole manifest.
-const PHASE1_IDS = ['PY-DESERIALIZE-001', 'PY-SECRETS-001', 'PY-SQL-RAW-001', 'PY-TLS-VERIFY-001'];
+const PHASE1_IDS = [
+  'PY-DESERIALIZE-001',
+  'PY-SECRETS-001',
+  'PY-SQL-RAW-001',
+  'PY-TLS-VERIFY-001',
+  'PY-AUTH-001',
+];
 const ENTRIES = Object.values(PROBE_MANIFEST_V05).filter((e) => PHASE1_IDS.includes(e.probe_id));
 
 describe('Phase 1: manifest shape', () => {

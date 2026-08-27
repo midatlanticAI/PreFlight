@@ -22,6 +22,7 @@ const PHASE3_GO_IDS = [
   'GO-SECRETS-001',
   'GO-SQL-RAW-001',
   'GO-TLS-VERIFY-001',
+  'GO-AUTH-001',
 ];
 const ENTRIES = Object.values(PROBE_MANIFEST_V05).filter((e) => PHASE3_GO_IDS.includes(e.probe_id));
 const byId = (id) => PROBE_MANIFEST_V05[id];
