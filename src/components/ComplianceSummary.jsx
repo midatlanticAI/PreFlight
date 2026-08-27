@@ -6,7 +6,11 @@
 // expanding 40 cards.
 //
 // Safety / honesty contract:
-//   - Renders nothing unless >=1 finding carries a scan-scope mapping.
+//   - Declare nothing, get nothing: with no declared scope this renders
+//     nothing at all, which is the un-regulated default.
+//   - Declare a regime and map nothing, and it says so explicitly rather
+//     than disappearing. A vanished panel is indistinguishable from a
+//     broken one, and an absent regulatory report reads as a clean one.
 //   - Preserves direct|indicative; never states a violation.
 //   - Carries the not-a-certification / not-legal-advice disclaimer and
 //     the scan-scope-vs-education line inline.
@@ -30,7 +34,54 @@ export function ComplianceSummary({ findings, scope, scannedAt }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  if (!summary || summary.mappedFindingCount === 0) return null;
+  // How many of the MAPPED findings are critical or high. Counted over the same
+  // scope filter the summary uses, so the badge and the roll-up never disagree.
+  const severeMappedCount = useMemo(() => {
+    const inScope = new Set(Array.isArray(scope) ? scope : []);
+    if (inScope.size === 0) return 0;
+    return (findings || []).filter(
+      (f) =>
+        (f?.severity === 'critical' || f?.severity === 'high') &&
+        Array.isArray(f?.compliance_refs) &&
+        f.compliance_refs.some((r) => r && inScope.has(r.framework))
+    ).length;
+  }, [findings, scope]);
+
+  // Declared a regime and nothing mapped: SAY SO. Rendering nothing here is the
+  // same failure as a mapping filed under a name that never fires, one layer up
+  // in the UI. The user selected SOC2, the panel vanished, and there is no way
+  // to tell "no findings mapped" apart from "the feature is broken". Silence
+  // reads as a clean result, which is the one thing this panel must never imply.
+  const declared = summary?.declaredScope || [];
+  if (!summary || summary.mappedFindingCount === 0) {
+    if (declared.length === 0) return null; // un-regulated default: no output at all
+    return (
+      <section
+        aria-label="Regulatory mapping summary"
+        className="ap-card"
+        style={{ padding: '12px 16px', marginBottom: 16, border: `1px solid ${T.border}` }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: fontMono }}>
+          <ShieldCheck size={15} style={{ color: T.textDim }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>Regulatory mapping</span>
+          <span className="ap-mono" style={{ fontSize: 11, color: T.textMuted }}>
+            {declared.join(', ')} declared · nothing mapped
+          </span>
+        </div>
+        <div style={{ fontSize: 12, color: T.textDim, lineHeight: 1.6, marginTop: 8 }}>
+          No finding in this scan maps to a scan-scope clause for{' '}
+          {declared.length === 1 ? 'this regime' : 'these regimes'}. That is not a clean compliance
+          result. PreFlight reads code, so it sees a narrow set of technical safeguards and cannot
+          observe access decisions made at runtime, infrastructure policy, or anything about how the
+          organisation operates.{' '}
+          <Link to="/learn/patterns" style={{ color: T.accentAlt }}>
+            Compliance Learn pages
+          </Link>
+          .
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -61,6 +112,24 @@ export function ComplianceSummary({ findings, scope, scannedAt }) {
           {summary.mappedFindingCount} finding{summary.mappedFindingCount === 1 ? '' : 's'} ·{' '}
           {summary.frameworks.map((f) => f.framework).join(', ')}
         </span>
+        {/* Collapsed, "6 findings · SOC2" reads the same whether those six are
+            informational or six criticals. The severity is the part that decides
+            whether this panel is worth opening before an audit. */}
+        {severeMappedCount > 0 && (
+          <span
+            className="ap-mono"
+            style={{
+              fontSize: 10,
+              color: T.sev?.critical?.fg || T.textDim,
+              border: `1px solid ${T.sev?.critical?.fg || T.border}`,
+              borderRadius: 2,
+              padding: '1px 6px',
+              letterSpacing: '0.04em',
+            }}
+          >
+            {severeMappedCount} CRITICAL/HIGH
+          </span>
+        )}
         <span style={{ marginLeft: 'auto', color: T.textMuted }}>
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>

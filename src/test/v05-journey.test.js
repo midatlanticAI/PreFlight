@@ -72,19 +72,32 @@ describe('journey: vibe coder / un-regulated app — zero compliance noise', () 
     expect(html).toBe(''); // ...but the lens stays silent
   });
 
-  it('findings with no scan-scope mapping render NO lens even if scope declared', () => {
+  it('a DECLARED regime with nothing mapped says so instead of vanishing', () => {
+    // Changed deliberately. The old contract rendered nothing here, which made
+    // "no finding mapped" indistinguishable from "the panel is broken", and an
+    // absent regulatory report reads as a clean one. The zero-noise principle
+    // is carried entirely by the test above: declare nothing, get nothing. Once
+    // a user declares a regime they have asked a question, and the honest reply
+    // to "does anything map" is "no", not silence.
     const findings = [
       { probe: 'Env File Hygiene', file: '.env', line: 1, title: 't', severity: 'low' },
     ];
     attachProbeMeta(findings);
     const html = render(React.createElement(ComplianceSummary, { findings, scope: ['HIPAA'] }));
-    expect(html).toBe('');
+    expect(html).not.toBe('');
+    expect(html).toMatch(/HIPAA/);
+    expect(html).toMatch(/nothing mapped/i);
+    // ...and it must not let that read as a pass.
+    expect(html).toMatch(/not a clean compliance result/i);
   });
 
-  it('an empty scan renders no lens', () => {
-    expect(render(React.createElement(ComplianceSummary, { findings: [], scope: ['HIPAA'] }))).toBe(
-      ''
-    );
+  it('an empty scan with a declared regime still reports nothing mapped', () => {
+    const html = render(React.createElement(ComplianceSummary, { findings: [], scope: ['HIPAA'] }));
+    expect(html).toMatch(/nothing mapped/i);
+  });
+
+  it('an empty scan with NO declared regime renders no lens', () => {
+    expect(render(React.createElement(ComplianceSummary, { findings: [], scope: [] }))).toBe('');
   });
 });
 
