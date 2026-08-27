@@ -34,3 +34,8 @@ docs/claudelanguageagnostic.md
 *.njsproj
 *.sln
 *.sw?
+
+# Local scratch for drafts and working artifacts. Nothing in here is reviewed,
+# and a discarded draft that failed fact-checking must never be one `git add .`
+# away from being published. Keep it out of the tree entirely.
+.scratch/
