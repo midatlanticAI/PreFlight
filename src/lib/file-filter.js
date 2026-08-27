@@ -211,6 +211,32 @@ export const FILE_INCLUDE = [
   /\.rb$/,
   /\.php$/,
   /\.java$/,
+  // The rest of the v0.5 language set. Their adapters shipped and their
+  // fixtures pass, but every one of these extensions was missing here, so
+  // shouldScanFile() rejected the files before a probe ever saw them: 33
+  // probes across 9 languages that could not fire on a real scan, while the
+  // FAQ advertised all of them by name. A probe that cannot reach a file is
+  // not a probe. A test now pins every adapter's scope glob to this list.
+  /\.rs$/,
+  /\.kt$/,
+  /\.kts$/,
+  /\.swift$/,
+  /\.scala$/,
+  /\.sc$/,
+  /\.ex$/,
+  /\.exs$/,
+  /\.dart$/,
+  /\.cs$/,
+  // C and C++. `.h` is claimed by the C scope helper and `.hpp`/`.hxx`/`.hh`
+  // by the C++ one, so the two partition cleanly rather than double-reporting.
+  /\.c$/,
+  /\.h$/,
+  /\.cpp$/,
+  /\.cc$/,
+  /\.cxx$/,
+  /\.hpp$/,
+  /\.hh$/,
+  /\.hxx$/,
   /\.html?$/i,
   /\.vue$/,
   /\.svelte$/,
@@ -271,6 +297,18 @@ export const FILE_EXCLUDE = [
   /(^|\/)vendored\//,
   /(^|\/)third[-_]party\//,
   /(^|\/)bower_components\//,
+  // The C / C++ / JVM conventions for the same thing. Admitting C-family
+  // extensions to FILE_INCLUDE without these would report vendored libraries
+  // as the author's own code: jwt-cpp's own example carries
+  // `jwt::algorithm::none{}`, and CMake FetchContent and git submodules land
+  // in exactly these directories rather than in `vendor/`.
+  /(^|\/)3rd[-_]?party\//i,
+  /(^|\/)external\//,
+  /(^|\/)extern\//,
+  /(^|\/)deps\//,
+  /(^|\/)contrib\//,
+  /(^|\/)subprojects\//,
+  /(^|\/)submodules\//,
   // Vendored as a FILE rather than a directory. `server/src/vendor-html2canvas.js`
   // is a bundled third-party library living beside first-party code, and it
   // carried 60 of one project's 163 code-health findings — 37% of the debt
