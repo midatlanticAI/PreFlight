@@ -313,9 +313,18 @@ export function getManifesto() {
 }
 
 export function getByType(type) {
-  return LEARN_ENTRIES.filter((e) => e.type === type).sort((a, b) =>
-    a.title.localeCompare(b.title)
-  );
+  const entries = LEARN_ENTRIES.filter((e) => e.type === type);
+  // Field reports read as a timeline: newest incident first, by when it
+  // happened (attack_date), falling back to last_updated. Patterns and shapes
+  // are reference material with no inherent order, so they stay alphabetical.
+  if (type === 'incident') {
+    const when = (e) => e.attack_date || e.last_updated || '';
+    return entries.sort((a, b) => {
+      const cmp = when(b).localeCompare(when(a)); // descending = newest first
+      return cmp !== 0 ? cmp : a.title.localeCompare(b.title);
+    });
+  }
+  return entries.sort((a, b) => a.title.localeCompare(b.title));
 }
 
 export function getBySlug(slug) {
