@@ -30,6 +30,8 @@ export const STATIC_ROUTES = [
   { path: '/learn/breakers', priority: '0.6', changefreq: 'monthly' },
   { path: '/privacy', priority: '0.3', changefreq: 'yearly' },
   { path: '/terms', priority: '0.3', changefreq: 'yearly' },
+  { path: '/owasp-llm-2026', priority: '0.8', changefreq: 'monthly' },
+  { path: '/owasp-agentic-2026', priority: '0.8', changefreq: 'monthly' },
 ];
 
 const CONTENT_DIRS = [

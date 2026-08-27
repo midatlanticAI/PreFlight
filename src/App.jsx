@@ -265,6 +265,14 @@ const OwaspCoverageView = lazyNamed(
 const GlossaryView = lazyNamed(() => import('./components/learn/GlossaryView.jsx'), 'GlossaryView');
 const PrivacyView = lazyNamed(() => import('./components/PrivacyView.jsx'), 'PrivacyView');
 const TermsView = lazyNamed(() => import('./components/TermsView.jsx'), 'TermsView');
+const OwaspLlm2026View = lazyNamed(
+  () => import('./components/learn/OwaspLlm2026View.jsx'),
+  'OwaspLlm2026View'
+);
+const OwaspAgentic2026View = lazyNamed(
+  () => import('./components/learn/OwaspAgentic2026View.jsx'),
+  'OwaspAgentic2026View'
+);
 const BreakersInfoView = lazyNamed(
   () => import('./components/learn/BreakersInfoView.jsx'),
   'BreakersInfoView'
@@ -1035,6 +1043,8 @@ export default function App() {
             <Route path="/sandbox" element={<SandboxView />} />
             <Route path="/privacy" element={<PrivacyView />} />
             <Route path="/terms" element={<TermsView />} />
+            <Route path="/owasp-llm-2026" element={<OwaspLlm2026View />} />
+            <Route path="/owasp-agentic-2026" element={<OwaspAgentic2026View />} />
             <Route path="*" element={<NotFoundView />} />
           </Routes>
         </React.Suspense>
