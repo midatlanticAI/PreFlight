@@ -193,6 +193,31 @@ export function OwaspCoverageView() {
       >
         OWASP coverage
       </h1>
+      {/* Links to the 2026 explainer pages so they are reachable from the Learn
+          nav rather than being orphaned at their own top-level urls. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, margin: '10px 0 14px' }}>
+        {[
+          { href: '/owasp-llm-2026', title: 'LLM Top 10: 2025 → 2026 shift' },
+          { href: '/owasp-agentic-2026', title: 'Agentic Top 10 (ASI01–ASI10)' },
+        ].map((e) => (
+          <a
+            key={e.href}
+            href={e.href}
+            style={{
+              fontFamily: fontMono,
+              fontSize: 12.5,
+              fontWeight: 600,
+              textDecoration: 'none',
+              color: T.accent,
+              border: `1px solid ${T.border}`,
+              borderRadius: 6,
+              padding: '7px 12px',
+            }}
+          >
+            New for 2026: {e.title} →
+          </a>
+        ))}
+      </div>
       <p
         style={{
           color: T.textMuted,

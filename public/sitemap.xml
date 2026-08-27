@@ -10,583 +10,595 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://preflight.midatlantic.ai/" />
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn</loc>
+    <loc>https://preflight.midatlantic.ai/learn/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/incidents</loc>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/resources</loc>
+    <loc>https://preflight.midatlantic.ai/learn/resources/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/social</loc>
+    <loc>https://preflight.midatlantic.ai/learn/social/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/owasp</loc>
+    <loc>https://preflight.midatlantic.ai/learn/owasp/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/how-it-works</loc>
+    <loc>https://preflight.midatlantic.ai/learn/how-it-works/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/the-climb</loc>
+    <loc>https://preflight.midatlantic.ai/learn/the-climb/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/flight-school</loc>
+    <loc>https://preflight.midatlantic.ai/learn/flight-school/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/tools</loc>
+    <loc>https://preflight.midatlantic.ai/learn/tools/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/glossary</loc>
+    <loc>https://preflight.midatlantic.ai/learn/glossary/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/breakers</loc>
+    <loc>https://preflight.midatlantic.ai/learn/breakers/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/privacy</loc>
+    <loc>https://preflight.midatlantic.ai/privacy/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/terms</loc>
+    <loc>https://preflight.midatlantic.ai/terms/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/a11y-landmarks</loc>
+    <loc>https://preflight.midatlantic.ai/owasp-llm-2026/</loc>
+    <lastmod>2026-08-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://preflight.midatlantic.ai/owasp-agentic-2026/</loc>
+    <lastmod>2026-08-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/a11y-landmarks/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/admin-route-exposure</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/admin-route-exposure/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/ai-code-smells</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/ai-code-smells/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/ai-codegen-bloat</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/ai-codegen-bloat/</loc>
     <lastmod>2026-07-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/ai-rules-files</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/ai-rules-files/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/api-route-auth</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/api-route-auth/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/auth-weakness</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/auth-weakness/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/client-auth-storage</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/client-auth-storage/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/code-correctness</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/code-correctness/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/code-quality</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/code-quality/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-eu-ai-act</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-eu-ai-act/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-fda</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-fda/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-ferpa</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-ferpa/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-ftc</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-ftc/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-gdpr</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-gdpr/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-hipaa</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-hipaa/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-pci-dss</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-pci-dss/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-soc2</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-soc2/</loc>
     <lastmod>2026-08-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-sox</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/compliance-sox/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/cookie-security</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/cookie-security/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/cors</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/cors/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/env-file-hygiene</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/env-file-hygiene/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/firebase-rules</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/firebase-rules/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/geo-hygiene</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/geo-hygiene/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/github-actions</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/github-actions/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/html-hygiene</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/html-hygiene/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/iframe-sandbox</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/iframe-sandbox/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/llm-security</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/llm-security/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/malicious-artifacts</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/malicious-artifacts/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/mcp-security</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/mcp-security/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/next-public-misuse</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/next-public-misuse/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/package-json-supply-chain</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/package-json-supply-chain/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/path-traversal</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/path-traversal/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/python-security</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/python-security/</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/rag-ingestion</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/rag-ingestion/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/reflected-xss</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/reflected-xss/</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/secret-scanner</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/secret-scanner/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/security-headers</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/security-headers/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/security-logging</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/security-logging/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/seo-hygiene</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/seo-hygiene/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/slopsquat-typosquat</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/slopsquat-typosquat/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/source-map-exposure</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/source-map-exposure/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/sql-injection</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/sql-injection/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/ssrf-open-redirect</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/ssrf-open-redirect/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/stack-trace-leaks</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/stack-trace-leaks/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/subresource-integrity</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/subresource-integrity/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/supabase-rls</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/supabase-rls/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/trojan-source</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/trojan-source/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/url-reputation</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/url-reputation/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/vector-embedding-weaknesses</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/vector-embedding-weaknesses/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/weak-cryptography</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/weak-cryptography/</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/weak-randomness</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/weak-randomness/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/webhook-validation</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/webhook-validation/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/xl-auth-token-verification</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/xl-auth-token-verification/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/xl-hardcoded-secrets</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/xl-hardcoded-secrets/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/xl-raw-query-interpolation</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/xl-raw-query-interpolation/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/xl-tls-verification-disabled</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/xl-tls-verification-disabled/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/patterns/xl-unsafe-deserialization</loc>
+    <loc>https://preflight.midatlantic.ai/learn/patterns/xl-unsafe-deserialization/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/incidents/agent-approval-gates-2026-08</loc>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/agent-approval-gates-2026-08/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/incidents/intercom-client-bitwarden-cli-2026-04</loc>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/intercom-client-bitwarden-cli-2026-04/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/incidents/mini-shai-hulud-keyv-2026-08</loc>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/mini-shai-hulud-keyv-2026-08/</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/incidents/mini-shai-hulud-sap-npm-2026-04</loc>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/mini-shai-hulud-sap-npm-2026-04/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/incidents/mini-shai-hulud-tanstack-2026-05</loc>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/mini-shai-hulud-tanstack-2026-05/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/incidents/nextjs-rce-pair-2026-08</loc>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/nextjs-rce-pair-2026-08/</loc>
     <lastmod>2026-08-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/incidents/sapphire-sleet-axios-2026-03</loc>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/sapphire-sleet-axios-2026-03/</loc>
     <lastmod>2026-05-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/incidents/unconfirmed-npm-window-2026-07</loc>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/unconfirmed-npm-window-2026-07/</loc>
     <lastmod>2026-07-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/incidents/vm2-two-waves-2026-08</loc>
+    <loc>https://preflight.midatlantic.ai/learn/incidents/vm2-two-waves-2026-08/</loc>
     <lastmod>2026-08-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/backend-api</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/backend-api/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/cli-ink</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/cli-ink/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/cli</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/cli/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/desktop-electron</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/desktop-electron/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/desktop-tauri</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/desktop-tauri/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/library</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/library/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/mobile</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/mobile/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/modular-spa</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/modular-spa/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/monolithic-spa</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/monolithic-spa/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/monorepo</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/monorepo/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/notebook</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/notebook/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/python-project</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/python-project/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/ssg</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/ssg/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/ssr</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/ssr/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://preflight.midatlantic.ai/learn/shapes/static-html-build</loc>
+    <loc>https://preflight.midatlantic.ai/learn/shapes/static-html-build/</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

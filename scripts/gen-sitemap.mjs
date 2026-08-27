@@ -17,7 +17,10 @@ const xmlEscape = (s) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 function urlBlock({ path, priority, changefreq, lastmod, alternates }) {
-  const loc = `${BASE}${path}`;
+  // Trailing slash for non-root, to match the url Cloudflare Pages actually
+  // serves 200 for (and the canonical in seo.js). A sitemap loc that 308s is a
+  // wasted crawl and a canonical mismatch.
+  const loc = `${BASE}${path === '/' ? '/' : path.replace(/\/$/, '') + '/'}`;
   const alt = alternates
     ? `\n    <xhtml:link rel="alternate" hreflang="en" href="${loc}" />` +
       `\n    <xhtml:link rel="alternate" hreflang="x-default" href="${loc}" />`

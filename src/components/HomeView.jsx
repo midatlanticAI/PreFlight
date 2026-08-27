@@ -8,12 +8,56 @@
 // Each block keeps its own `{!results && ...}` gate internally so behavior matches the
 // pre-extraction version exactly. The parent App passes `results` so the gates still work.
 
+import { Link } from 'react-router-dom';
 import { Github, Folder, History, Clock, RefreshCw, Trash2, Eye } from 'lucide-react';
+
 import { T, riskTier } from '../lib/theme.js';
 import { SEV_ORDER } from '../lib/scoring.js';
 import { HISTORY_MAX } from '../lib/history.js';
 import { timeAgo } from '../lib/clipboard.js';
 import { PROBES } from '../lib/probes.js';
+
+// Homepage-featured content, newest first. Kept as a small static list on
+// purpose: learn-content.js globs all 82 markdown files and is lazy-loaded on
+// /learn to keep the main bundle small, so importing it here would pull every
+// report into the initial load. This surfaces the deep content from the
+// highest-authority page (internal links Google follows, and a path a visitor
+// can actually find). Update when a new field report ships; the "see all" link
+// always shows the complete, current list.
+const FEATURED_REPORTS = [
+  {
+    slug: 'nextjs-rce-pair-2026-08',
+    title: 'Two unauthenticated RCEs in Next.js, and the audit that said clean',
+    date: '2026-08-25',
+  },
+  {
+    slug: 'vm2-two-waves-2026-08',
+    title: 'vm2 3.11.6 was the fix, and then it was the target',
+    date: '2026-08-17',
+  },
+  {
+    slug: 'agent-approval-gates-2026-08',
+    title: 'The approval prompt is the whole security model, and it kept not firing',
+    date: '2026-08-11',
+  },
+  {
+    slug: 'mini-shai-hulud-keyv-2026-08',
+    title: 'Mini Shai-Hulud takes the keyv and Cacheable families',
+    date: '2026-08-04',
+  },
+];
+const FEATURED_EXPLAINERS = [
+  {
+    to: '/owasp-llm-2026',
+    title: 'The OWASP LLM Top 10 shift',
+    note: '2025 → 2026, as a slopegraph',
+  },
+  {
+    to: '/owasp-agentic-2026',
+    title: 'The OWASP Agentic Top 10',
+    note: 'ASI01–ASI10, in plain terms',
+  },
+];
 
 export function HomeView({
   results,
@@ -333,6 +377,123 @@ export function HomeView({
             but should be verified manually before treating as confirmed vulnerabilities.
           </div>
         </div>
+      )}
+
+      {/* FROM THE FIELD — links the newest field reports and the OWASP explainers
+            from the homepage, so the deep content is reachable in one click and Google
+            has internal links to follow into it. */}
+      {!results && (
+        <section
+          aria-labelledby="field-heading"
+          className="ap-card"
+          style={{ padding: 28, marginTop: 16 }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 8,
+            }}
+          >
+            <h2
+              id="field-heading"
+              className="ap-mono"
+              style={{
+                margin: 0,
+                fontSize: 13,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: T.textMuted,
+              }}
+            >
+              From the field
+            </h2>
+            <Link
+              to="/learn/incidents"
+              style={{ fontSize: 13, color: T.accent, textDecoration: 'none' }}
+            >
+              See all field reports →
+            </Link>
+          </div>
+          <p
+            style={{
+              margin: '10px 0 18px',
+              fontSize: 14,
+              color: T.textDim,
+              maxWidth: '68ch',
+              lineHeight: 1.6,
+            }}
+          >
+            Plain-language write-ups of real supply-chain and AI-tooling incidents, verified against
+            primary sources. The same failure modes PreFlight scans for, explained.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {FEATURED_REPORTS.map((r) => (
+              <Link
+                key={r.slug}
+                to={`/learn/incidents/${r.slug}`}
+                style={{
+                  display: 'flex',
+                  gap: 14,
+                  alignItems: 'baseline',
+                  textDecoration: 'none',
+                  color: T.text,
+                  borderLeft: `2px solid ${T.border}`,
+                  paddingLeft: 14,
+                }}
+              >
+                <span
+                  className="ap-mono"
+                  style={{
+                    fontSize: 12,
+                    color: T.textMuted,
+                    whiteSpace: 'nowrap',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {r.date}
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 500 }}>{r.title}</span>
+              </Link>
+            ))}
+          </div>
+          <div
+            style={{
+              marginTop: 18,
+              paddingTop: 16,
+              borderTop: `1px solid ${T.border}`,
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 10,
+            }}
+          >
+            {FEATURED_EXPLAINERS.map((e) => (
+              <Link
+                key={e.to}
+                to={e.to}
+                style={{
+                  flex: '1 1 240px',
+                  textDecoration: 'none',
+                  color: T.text,
+                  border: `1px solid ${T.border}`,
+                  borderRadius: 6,
+                  padding: '12px 14px',
+                }}
+              >
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: T.accent }}>
+                  {e.title}
+                </span>
+                <span
+                  style={{ display: 'block', fontSize: 12.5, color: T.textMuted, marginTop: 2 }}
+                >
+                  {e.note}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* VISIBLE FAQ — mirrors JSON-LD FAQPage schema (Google 2026 anti-schema-drift guidance).

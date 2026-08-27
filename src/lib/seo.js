@@ -111,7 +111,12 @@ const SLUG_ROUTE = /^\/learn\/(patterns|incidents|shapes)\/([a-z0-9-]+)\/?$/;
  */
 export function getRouteMeta(pathname) {
   const path = pathname !== '/' && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-  const canonical = `${BASE}${path === '/' ? '/' : path}`;
+  // Cloudflare Pages serves each prerendered `path/index.html` at the
+  // TRAILING-SLASH url and 308-redirects the no-slash form to it. The canonical
+  // must name the url that actually returns 200, or every deep page declares a
+  // canonical that immediately redirects, and Google declines to index it. Root
+  // stays "/".
+  const canonical = `${BASE}${path === '/' ? '/' : path + '/'}`;
 
   let title;
   let description;
