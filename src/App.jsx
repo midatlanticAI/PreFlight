@@ -654,6 +654,23 @@ export default function App() {
 
       const allFindings = [];
       const probeFailures = [];
+      // Yield to the event loop on a TIME BUDGET rather than after every probe.
+      //
+      // The loop has to yield: without it React never paints the progress line
+      // and the tab locks up for the whole scan. It used to yield with a flat
+      // 60ms sleep after each probe, which is 104 probes x 60ms = 6.2 seconds
+      // of deliberate waiting on EVERY scan, whatever the project size. On a
+      // small project that sleep was the scan: the probes themselves finish in
+      // a fraction of it, so the tool looked slow at exactly the moment it had
+      // the least work to do.
+      //
+      // Yielding whenever 16ms has passed keeps the same guarantee (the main
+      // thread is never held longer than about one frame) and costs nothing
+      // when the probes are fast. Fast probes now run several per frame instead
+      // of one per 60ms; slow ones still yield after each. Progress updates
+      // land at roughly 60fps, which is more than a reader can follow anyway.
+      const FRAME_BUDGET_MS = 16;
+      let lastYield = performance.now();
       for (let i = 0; i < PROBES.length; i++) {
         const probe = PROBES[i];
         safeSetProgress({ stage: probe.name, current: i + 1, total: PROBES.length });
@@ -678,7 +695,12 @@ export default function App() {
             ms: Math.round(performance.now() - tProbe),
           });
         }
-        await new Promise((r) => setTimeout(r, 60));
+        if (performance.now() - lastYield >= FRAME_BUDGET_MS) {
+          // setTimeout rather than a microtask: a microtask does not let the
+          // browser paint, so the progress line would still not move.
+          await new Promise((r) => setTimeout(r, 0));
+          lastYield = performance.now();
+        }
       }
       safeSetProbeErrors(probeFailures);
 
