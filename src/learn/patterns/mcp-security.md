@@ -66,7 +66,7 @@ The MCP server is literally a shell interpreter the assistant calls with arbitra
 }
 ```
 
-`0.0.0.0` binds the server to every network interface. Per OX Security's April 2026 advisory, ~200,000 MCP servers were internet-exposed with command-execution flaws. The pattern produces a remote-code-execution endpoint anyone on the network can hit.
+`0.0.0.0` binds the server to every network interface. Independent research published in April 2026 found roughly 200,000 MCP servers internet-exposed with command-execution flaws. The pattern produces a remote-code-execution endpoint anyone on the network can hit.
 
 **Vulnerable `mcp-server-git`:** versions prior to December 2025 were susceptible to indirect prompt injection via README and issue content. The assistant reads a repo's README, the README contains hidden instructions, the assistant follows them.
 

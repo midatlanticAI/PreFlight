@@ -286,7 +286,7 @@ export function probeMCPSecurity(files) {
             line: 1,
             evidence: argStr.slice(0, 200),
             remediation:
-              'Researchers identified ~200K MCP servers internet-exposed on 0.0.0.0 with command-execution flaws. Bind to 127.0.0.1 unless deliberately publishing the server with authentication. (April 2026 OX Security advisory)',
+              'Researchers identified ~200K MCP servers internet-exposed on 0.0.0.0 with command-execution flaws. Bind to 127.0.0.1 unless deliberately publishing the server with authentication. (Independent research, April 2026.)',
           });
         }
       });
