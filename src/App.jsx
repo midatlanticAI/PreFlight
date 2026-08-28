@@ -918,6 +918,8 @@ export default function App() {
             <img
               src="/maai-logo.svg"
               alt="Mid-Atlantic AI"
+              width={252}
+              height={144}
               style={{ height: 36, width: 'auto', display: 'block' }}
             />
             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
