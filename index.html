@@ -35,7 +35,7 @@
          instead of here — browsers ignore that directive when set via a <meta> element. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.mistral.ai https://api.deepseek.com https://api.groq.com https://openrouter.ai https://api.cohere.ai https://generativelanguage.googleapis.com https://cloudflareinsights.com; base-uri 'self'; form-action 'self'; object-src 'none';"
+      content="default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.mistral.ai https://api.deepseek.com https://api.groq.com https://openrouter.ai https://api.cohere.ai https://generativelanguage.googleapis.com https://cloudflareinsights.com; base-uri 'self'; form-action 'self'; object-src 'none';"
     />
 
     <!-- Canonical -->
@@ -90,17 +90,45 @@
       content="PreFlight — An educational audit tool for vibers building vibeware."
     />
 
-    <!-- Brand fonts: preconnect to cut connection-setup latency, then a regular stylesheet
-         link. The non-blocking preload-swap pattern requires an inline event handler, which
-         conflicts with our strict CSP. With preconnect already in place plus font-display
-         swap baked into the URL, the perceived render cost is small: fallback text shows
-         immediately, then re-flows when Rubik / Roboto land. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Roboto:ital,wght@0,400;0,500;0,700;1,400&family=Roboto+Condensed:wght@400;500;700&display=swap"
-    />
+    <!-- Brand fonts, self-hosted. Previously loaded from fonts.googleapis.com,
+         which was a render-blocking request to a third party (a cost on first
+         paint, and a request to Google that a privacy-first tool should not
+         need to make). Now four variable woff2 files served first-party, with
+         the two used above the fold preloaded so they arrive before first
+         paint. font-display:swap plus the metric-matched fallbacks below means
+         no blocking and no layout shift. -->
+    <link rel="preload" href="/fonts/rubik-var.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/roboto-var.woff2" as="font" type="font/woff2" crossorigin />
+    <style>
+      @font-face {
+        font-family: 'Rubik';
+        font-style: normal;
+        font-weight: 300 900;
+        font-display: swap;
+        src: url('/fonts/rubik-var.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Roboto';
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+        src: url('/fonts/roboto-var.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Roboto';
+        font-style: italic;
+        font-weight: 100 900;
+        font-display: swap;
+        src: url('/fonts/roboto-italic-var.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Roboto Condensed';
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+        src: url('/fonts/roboto-condensed-var.woff2') format('woff2');
+      }
+    </style>
 
     <!-- JSON-LD: SoftwareApplication + Organization + WebSite + FAQPage -->
     <script type="application/ld+json">
