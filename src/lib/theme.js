@@ -44,8 +44,11 @@ export const T = {
   },
 };
 
-export const fontDisplay = "'Rubik', 'Helvetica Neue', Helvetica, Arial, sans-serif";
-export const fontUI = "'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+// The '-fallback' faces (defined in index.html) are Arial re-scaled to the web
+// fonts' metrics, so the swap when Rubik/Roboto load does not shift layout.
+export const fontDisplay =
+  "'Rubik', 'Rubik-fallback', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+export const fontUI = "'Roboto', 'Roboto-fallback', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 export const fontCondensed = "'Roboto Condensed', 'Roboto', 'Helvetica Neue', Arial, sans-serif";
 export const fontEyebrow = "'Impact', 'Haettenschweiler', 'Arial Narrow Bold', sans-serif";
 export const fontMono = "ui-monospace, 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace";

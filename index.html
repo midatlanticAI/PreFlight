@@ -234,6 +234,31 @@
         ]
       }
     </script>
+    <!-- Metric-matched fallback faces. font-display:swap on the Google Fonts made
+         the hero wordmark and heading reflow when Rubik/Roboto landed, which showed
+         up as POOR Cumulative Layout Shift for ~75% of real users (field CrUX). These
+         fallbacks (local Arial, re-scaled to Rubik/Roboto metrics) occupy the same
+         space before the web fonts load, so the swap no longer moves layout. The
+         brand font still renders; the shift does not. local() uses no network, so
+         the strict font-src CSP is unaffected. -->
+    <style>
+      @font-face {
+        font-family: 'Rubik-fallback';
+        src: local('Arial');
+        ascent-override: 92.66%;
+        descent-override: 25.7%;
+        line-gap-override: 0%;
+        size-adjust: 95%;
+      }
+      @font-face {
+        font-family: 'Roboto-fallback';
+        src: local('Arial');
+        ascent-override: 92.77%;
+        descent-override: 24.41%;
+        line-gap-override: 0%;
+        size-adjust: 100.06%;
+      }
+    </style>
   </head>
   <body>
     <a href="#main" class="ap-skip-link">Skip to main content</a>
