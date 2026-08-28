@@ -90,15 +90,18 @@
       content="PreFlight — An educational audit tool for vibers building vibeware."
     />
 
-    <!-- Brand fonts, self-hosted. Previously loaded from fonts.googleapis.com,
-         which was a render-blocking request to a third party (a cost on first
-         paint, and a request to Google that a privacy-first tool should not
-         need to make). Now four variable woff2 files served first-party, with
-         the two used above the fold preloaded so they arrive before first
-         paint. font-display:swap plus the metric-matched fallbacks below means
-         no blocking and no layout shift. -->
-    <link rel="preload" href="/fonts/rubik-var.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/roboto-var.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- Brand fonts, self-hosted (four variable woff2 files, first-party). Was
+         fonts.googleapis.com: a render-blocking third-party request a
+         privacy-first tool should not need.
+
+         Deliberately NOT preloaded. The metric-matched fallbacks below let the
+         hero text paint instantly in a same-metrics fallback (that paint IS the
+         LCP, with zero layout shift on swap). Preloading the fonts made it worse
+         on throttled mobile: 78KB of high-priority font bytes competed for the
+         slow connection and pushed the LCP paint back to 4.1s. Without the
+         preload the fonts load at normal priority, after the text is already
+         visible, so LCP is the fast fallback paint and the real font swaps in as
+         progressive enhancement. -->
     <style>
       @font-face {
         font-family: 'Rubik';
