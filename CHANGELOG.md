@@ -6,6 +6,18 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-09-01 — RLS enabled in a loop read as no RLS at all
+
+A schema with a dozen tenant-scoped tables does not write the same statement a dozen times. It writes a `do $$` block that loops an array of table names and calls `execute format('alter table %I enable row level security', t)`. The probe matched the literal statement only, so every table in that list came back missing RLS.
+
+On a real production schema that was eleven critical findings and a security score of zero, for a database where all nineteen tables had RLS on with policies attached, confirmed against the live catalog. Eight more high findings said those same tables were read from the client and nothing protected them. Nineteen findings, every one wrong, on the check that carries the most weight in the report. A clean schema reported as a total breach is the output that stops the reader looking, which is the same failure the Python round described from the other direction.
+
+The probe now resolves the loop, scoped to the block that does the enabling. A table array in one block does not vouch for another block's tables, and a list that is never fed to an enable statement vouches for nothing. The concatenated `'alter table ' || t || ' enable ...'` form is covered alongside `format()`, and named dollar-quote tags alongside `$$`.
+
+SQL had no comment masking anywhere in the codebase. `maskCommentsForPath` returned `.sql` content untouched, so a commented-out enable statement counted as protection, and that direction fails open. There is now a quote-aware SQL masker: it blanks `--` and block comments, treats a doubled quote as an escape, and copies dollar-quoted bodies through intact, because that is where PL/pgSQL keeps the code a probe needs to read. It preserves length, so match offsets and the line numbers derived from them still point at real source.
+
+Ten tests carry it, weighted to the side that matters. Four say the loop is credited. Four say it cannot be used to look protected, including a commented-out loop and a list in a block that enables nothing. Two say the masking does not eat real statements, one of them a `--` inside a string literal.
+
 ### 2026-08-07 — the August 4 keyv wave, read off the advisories
 
 On August 4 a hijacked maintainer account published malicious versions across the keyv and cacheable families, and the Shai-Hulud worm rode two billion monthly downloads into 444 package names. The manifest now carries the wave: 22 packages, 24 versions, every one read directly off its own OSV malware advisory and cross-checked against the registry, where each flagged version no longer resolves and each package's latest sits immediately below it.

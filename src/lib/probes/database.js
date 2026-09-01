@@ -9,6 +9,7 @@
 // every probe function from its new family file.
 
 import { isTestFile } from '../file-filter.js';
+import { maskSqlComments } from './_internal/masking.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Client-side reads of tables this repo never protects
@@ -72,16 +73,52 @@ function collectSupabaseHandles(files) {
   return { handles, isSupabaseProject };
 }
 
+// RLS switched on inside a PL/pgSQL block instead of one statement per table:
+//
+//   do $$ declare t text; begin
+//     foreach t in array array['sites','vehicles'] loop
+//       execute format('alter table %I enable row level security', t);
+//
+// The literal-statement regex cannot see through `execute format(...)`, so
+// every table in the list came back "missing RLS". On a real schema that is
+// eleven criticals and a security score of zero for a database that is
+// correctly locked down, which is the kind of noise that teaches people to
+// stop reading the tool.
+//
+// Resolution is scoped to the block that does the enabling. A table array in
+// one DO block must not vouch for tables in another, and a list that is never
+// fed to an enable statement vouches for nothing.
+function dynamicallyEnabledTables(maskedSql) {
+  const out = new Set();
+  for (const block of String(maskedSql || '').matchAll(/\bdo\s+(\$[A-Za-z_]*\$)([\s\S]*?)\1/gi)) {
+    const body = block[2];
+    // Covers both `execute format('alter table %I enable ...', t)` and the
+    // concatenated `execute 'alter table ' || t || ' enable ...'`.
+    const enables =
+      /\bexecute\b[\s\S]{0,400}?alter\s+table[\s\S]{0,160}?enable\s+row\s+level\s+security/i.test(
+        body
+      );
+    if (!enables) continue;
+    for (const arr of body.matchAll(/\barray\s*\[([^\]]*)\]/gi))
+      for (const lit of arr[1].matchAll(/'([A-Za-z_][\w]*)'/g)) out.add(lit[1].toLowerCase());
+  }
+  return out;
+}
+
 function collectProtectedTables(files) {
   const protectedTables = new Set();
   let sawMigration = false;
   for (const file of files || []) {
     if (!/\.sql$/i.test(file?.path || '')) continue;
     sawMigration = true;
-    for (const m of (file.content || '').matchAll(
+    // Comments are masked first: a commented-out enable statement must not
+    // vouch for a live table, and that mistake fails OPEN.
+    const masked = maskSqlComments(file.content || '');
+    for (const m of masked.matchAll(
       /alter\s+table\s+(?:[a-z_][\w]*\.)?["`]?([A-Za-z_][\w]*)["`]?\s+enable\s+row\s+level\s+security/gi
     ))
       protectedTables.add(m[1].toLowerCase());
+    for (const t of dynamicallyEnabledTables(masked)) protectedTables.add(t);
   }
   return { protectedTables, sawMigration };
 }
@@ -145,7 +182,11 @@ export function probeSupabaseRLS(files) {
   const findings = probeSupabaseClientReads(files);
   files.forEach((file) => {
     if (!/\.sql$/.test(file.path)) return;
-    const content = file.content;
+    // Masked view for every match below. maskSqlComments preserves length, so
+    // match offsets and the line numbers derived from them stay accurate.
+    const content = maskSqlComments(file.content || '');
+    // Tables whose RLS is turned on by a loop rather than a literal statement.
+    const dynamic = dynamicallyEnabledTables(content);
     // Allow case-insensitive identifier capture (Supabase + Postgres allow "Users" etc).
     const tableMatches = [
       ...content.matchAll(
@@ -159,7 +200,7 @@ export function probeSupabaseRLS(files) {
         `alter\\s+table\\s+(?:[a-z_][\\w]*\\.)?["\`]?${tableName}["\`]?\\s+enable\\s+row\\s+level\\s+security`,
         'i'
       );
-      if (!enableRegex.test(content)) {
+      if (!enableRegex.test(content) && !dynamic.has(tableName.toLowerCase())) {
         findings.push({
           id: `rls-${file.path}-${tableName}`,
           probe: 'Supabase RLS Check',

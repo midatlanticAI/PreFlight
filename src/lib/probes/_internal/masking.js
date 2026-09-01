@@ -351,6 +351,66 @@ function maskHashComments(content) {
 //
 // HTML deliberately gets no masking: it has no `//` comment form, and bare
 // `https://` in markup would be read as one.
+// `--` to end of line plus block comments, for SQL. Quote-aware for the same
+// reason the other walkers are: `'--'` inside a string literal is two hyphens,
+// and a migration that builds SQL through `format('... %I ...')` keeps real
+// statements inside quotes. Dollar-quoted bodies ($$ ... $$, $tag$ ... $tag$)
+// are copied through intact: that is where PL/pgSQL keeps the code a probe
+// needs to read. Length-preserving, so match offsets still point at real source.
+function maskSqlComments(content) {
+  if (typeof content !== 'string' || content.length === 0) return content || '';
+  const out = [];
+  const len = content.length;
+  let i = 0;
+  while (i < len) {
+    const c = content[i];
+    if (c === '$') {
+      const tag = /^\$[A-Za-z_]\w*\$|^\$\$/.exec(content.slice(i));
+      if (tag) {
+        const end = content.indexOf(tag[0], i + tag[0].length);
+        const stop = end === -1 ? len : end + tag[0].length;
+        for (let j = i; j < stop; j++) out.push(content[j]);
+        i = stop;
+        continue;
+      }
+    }
+    if (c === "'" || c === '"') {
+      out.push(c);
+      let j = i + 1;
+      while (j < len) {
+        if (content[j] === c && content[j + 1] === c) {
+          out.push(content[j], content[j + 1]);
+          j += 2;
+          continue;
+        }
+        if (content[j] === c) break;
+        out.push(content[j]);
+        j++;
+      }
+      if (j < len) out.push(content[j]);
+      i = j + 1;
+      continue;
+    }
+    if (c === '-' && content[i + 1] === '-') {
+      while (i < len && content[i] !== '\n') {
+        out.push(' ');
+        i++;
+      }
+      continue;
+    }
+    if (c === '/' && content[i + 1] === '*') {
+      const end = content.indexOf('*/', i + 2);
+      const stop = end === -1 ? len : end + 2;
+      for (let j = i; j < stop; j++) out.push(content[j] === '\n' ? '\n' : ' ');
+      i = stop;
+      continue;
+    }
+    out.push(c);
+    i++;
+  }
+  return out.join('');
+}
+
 const SLASH_COMMENT_LANGS = /\.(?:[jt]sx?|mjs|cjs|go|java|c|h|cpp|cs|swift|kt|scala|rs)$/i;
 const HASH_COMMENT_LANGS = /\.(?:py|rb|sh|bash|zsh|ya?ml|toml|tf|pl)$/i;
 
@@ -359,10 +419,13 @@ const HASH_COMMENT_LANGS = /\.(?:py|rb|sh|bash|zsh|ya?ml|toml|tf|pl)$/i;
  * String and template contents survive. Returns `content` unchanged for file
  * types with no supported line-comment form.
  */
+export { maskSqlComments };
+
 export function maskCommentsForPath(path, content) {
   const p = typeof path === 'string' ? path : '';
   if (SLASH_COMMENT_LANGS.test(p)) return maskCommentsOnly(content);
   if (HASH_COMMENT_LANGS.test(p)) return maskHashComments(content);
+  if (/[.]sql$/i.test(p)) return maskSqlComments(content);
   // PHP takes both forms.
   if (/\.php$/i.test(p)) return maskHashComments(maskCommentsOnly(content));
   return typeof content === 'string' ? content : '';
