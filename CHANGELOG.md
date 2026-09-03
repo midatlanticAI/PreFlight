@@ -6,6 +6,18 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-09-03 — the keys-and-passwords precision campaign, three adversarial gates deep
+
+The complaint that started it: the scanner kept calling things keys and passwords that were neither. Thirty of thirty-six suspected false-positive classes reproduced live against the full registry before a line was changed. A signup form's `password !== confirmPassword` fired critical. An i18n label fired critical. A CSS class starting `sk-` fired critical as an OpenAI key, twice. Cache keys, translation keys, route keys and query keys fired critical across ten languages. `TOKENIZER` read as a token, `keyboard_map` as a key, `author` as auth.
+
+The structural cause was name-matching by substring, in three drifting styles across fourteen adapters and three v0.4 probes, with no value-shape analysis anywhere. The replacement is one shared discipline in `_internal/credential-shape.js`: identifiers are read as segments, a strong credential segment (secret, token, password, api_key) asserts the value is a credential, and only weak bare-`key` names get the identifier-shape value rejections that separate `apiKey = "sk-…"` from `cacheKey = "user:profile:v2"`.
+
+Three sequential contextless gates attacked the result, each finding re-verified by an independent second checker before any fix. Fifty-three confirmed findings across the three rounds, zero surviving. The gates earned their keep in both directions. Precision: hangman's `secret_word`, a typing tutor's `keyName`, Spring's `@db.password@` references, docker-compose stock defaults, Firebase client keys, and `Contraseña` (the title-case guard was ASCII-only, so precision varied by the user's natural language) all stopped firing. Recall the gates caught the pass itself costing, restored before commit: one hyphen flipped a Django `SECRET_KEY` from critical to silent, Telegram bot tokens vanished into a colon rejection, `$`-containing database passwords went invisible, `password: 123456` fell to a numeric skip, and a decoy GitHub URL smuggled real exfiltration past the workflow probe. That last check lost its destination allowlist entirely after failing adversarial review three times, and now reads the line with auth headers blanked instead, since a token in an Authorization header is authentication and a token in the data position is the leak.
+
+The manifest also caught up with 2026: Supabase `sb_secret_` and legacy `service_role` JWTs, Stripe restricted keys, xAI keys, Discord webhooks, and credentialed Redis/AMQP URLs, including the username-less `redis://:password@host` form. Deliberate downgrades, not suppressions: compose stock defaults and localhost dev database URLs teach at low with rewritten remediation; a Firebase client `apiKey` teaches restriction instead of rotation, consistently across all fifteen languages. Evidence now redacts the credential value in every finding class this pass touched.
+
+One hundred four regression pins carry all of it. Both corpus canaries held finding-for-finding flat through every round, and a Gate-3 performance audit killed a quadratic scan the pass had briefly introduced before it ever shipped.
+
 ### 2026-09-01 — RLS enabled in a loop read as no RLS at all
 
 A schema with a dozen tenant-scoped tables does not write the same statement a dozen times. It writes a `do $$` block that loops an array of table names and calls `execute format('alter table %I enable row level security', t)`. The probe matched the literal statement only, so every table in that list came back missing RLS.

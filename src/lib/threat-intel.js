@@ -49,11 +49,80 @@ export const SECRET_PATTERNS = [
     cwe: 'CWE-798',
   },
   {
+    // Restricted keys are scoped live-money credentials Stripe actively
+    // recommends over sk_live; a leak still reads/writes whatever it was
+    // scoped to. Gate-2 2026-09-03: rk_live_ in the identical line as
+    // sk_live_ was silent at every severity.
+    name: 'Stripe Restricted Live Key',
+    regex: /\brk_live_[A-Za-z0-9]{20,}\b/g,
+    severity: 'critical',
+    category: 'Data Breach',
+    cwe: 'CWE-798',
+  },
+  {
+    name: 'Stripe Restricted Test Key',
+    regex: /\brk_test_[A-Za-z0-9]{20,}\b/g,
+    severity: 'high',
+    category: 'Data Breach',
+    cwe: 'CWE-798',
+  },
+  {
+    // Supabase's post-2025 secret key format (replacing the service_role
+    // JWT; legacy keys deprecated end of 2026 per supabase.com/changelog).
+    // Bypasses RLS entirely: whoever reads the repo owns the database —
+    // the canonical vibe-coder leak class. Gate-2 2026-09-03.
+    name: 'Supabase Secret Key',
+    regex: /\bsb_secret_[A-Za-z0-9_-]{20,}\b/g,
+    severity: 'critical',
+    category: 'Data Breach',
+    cwe: 'CWE-798',
+  },
+  {
+    // Legacy Supabase service_role JWT: an eyJ token whose payload carries
+    // "role":"service_role". The three alternates are the three base64
+    // phase-alignments of the substring 'service_role', so the match works
+    // wherever the claim lands in the payload segment.
+    name: 'Supabase service_role Key',
+    regex:
+      /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]*(?:c2VydmljZV9yb2xl|NlcnZpY2Vfcm9sZ|zZXJ2aWNlX3JvbGU)[A-Za-z0-9_-]*\.[A-Za-z0-9_-]{10,}/g,
+    severity: 'critical',
+    category: 'Data Breach',
+    cwe: 'CWE-798',
+  },
+  {
+    // xai- was already in all 14 language adapters and the NEXT_PUBLIC
+    // danger values, but absent here — so a Grok key in .env (the one file
+    // where keys live) was silent. Drift, not curation. Gate-2 2026-09-03.
+    name: 'xAI API Key',
+    regex: /\bxai-[A-Za-z0-9]{20,}\b/g,
+    severity: 'critical',
+    category: 'Data Breach',
+    cwe: 'CWE-798',
+  },
+  {
+    // A Discord webhook URL is a bearer credential: anyone who reads the
+    // repo can post, impersonate, and delete in the channel. Same threat
+    // model the Slack pattern already encodes. Gate-2 2026-09-03.
+    name: 'Discord Webhook URL',
+    regex:
+      /https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d{15,21}\/[A-Za-z0-9_-]{60,80}/g,
+    severity: 'high',
+    category: 'Data Breach',
+    cwe: 'CWE-798',
+  },
+  {
     // Pattern page (secret-scanner.md) specifies `sk-[A-Za-z0-9]{20,}` or
     // `sk-proj-...`. The previous 40-char floor was more conservative than
     // the spec and missed shorter modern OpenAI keys. Spec-honoring 20.
+    //
+    // Two guards added after live FP verification 2026-09-03: (1) the tail
+    // must contain a digit — 'sk-flow-editor-container' and SpinKit-style
+    // 'sk-chase-dot-before-animation' CSS identifiers fired as critical
+    // keys, while a real key without a single digit is a ~1-in-70 outlier;
+    // (2) sk-ant- is Anthropic's prefix and was double-firing every
+    // Anthropic-shaped string as an OpenAI key too.
     name: 'OpenAI API Key',
-    regex: /\bsk-(?:proj-)?[A-Za-z0-9_\-]{20,}\b/g,
+    regex: /\bsk-(?!ant-)(?:proj-)?(?=[A-Za-z0-9_\-]*\d)[A-Za-z0-9_\-]{20,}\b/g,
     severity: 'critical',
     category: 'Data Breach',
     cwe: 'CWE-798',
@@ -140,9 +209,22 @@ export const SECRET_PATTERNS = [
   },
   // ReDoS-safe: each segment forbids ':' and '@' so the user / pass / host parts can't ambiguously overlap.
   {
+    // The password segment excludes braces so `postgresql://app:${DB_PASSWORD}@db`
+    // — compose-file env interpolation, the fix not the finding — cannot
+    // match. Bare `$` stays LEGAL in the password: it is an RFC 3986
+    // sub-delim and common in real passwords, and excluding it made
+    // `app:Sup3r$ecret@prod-host` invisible at every severity (Gate-1
+    // confirmed recall bug, 2026-09-03).
+    // redis(s)/amqp(s) added Gate-2 2026-09-03: an Upstash/Redis Cloud URL
+    // (`rediss://default:<password>@…upstash.io`) is full read/write on the
+    // store that typically holds sessions — session forgery in one hop —
+    // and was silent because only SQL/Mongo schemes were enumerated.
+    // The user segment is * not + — Gate-3: Redis AUTH pre-ACL has no
+    // username, so `redis://:password@host` (the single most common
+    // credentialed Redis URL) was invisible with a mandatory user part.
     name: 'Database Connection URL with Credentials',
     regex:
-      /(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?):\/\/[^\s"'<>:@/]+:[^\s"'<>:@/]+@[^\s"'<>/]+/g,
+      /(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|rediss?|amqps?):\/\/[^\s"'<>:@/]*:[^\s"'<>:@/{}]+@[^\s"'<>/]+/g,
     severity: 'critical',
     category: 'Data Breach',
     cwe: 'CWE-798',

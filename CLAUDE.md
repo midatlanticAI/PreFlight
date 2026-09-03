@@ -85,7 +85,7 @@ Wired today: Sam SNIPPET is the system prompt for `formatAgentPrompt` (Copy Agen
 ```bash
 npm install            # install dependencies
 npm run dev            # vite dev server on :5173
-npm test               # vitest run (3942 tests across 112 files on main)
+npm test               # vitest run (4141 tests across 118 files on main)
 npm run lint           # eslint
 npm run lint:fix       # eslint --fix
 npm run format         # prettier write
@@ -106,13 +106,13 @@ Architecturally enforced, not promised. If you ever build a backend, you break t
 - Analytics is counters-only in localStorage. No remote SDK, no fetch beacons.
 - Suppression + history state live in localStorage. No sync, no cloud.
 
-## Counts (as of 2026-08-27)
+## Counts (as of 2026-09-03)
 
 - 117 probes (51 core + 66 language adapters; XL-013 JWT signature verification now covers all 15 languages, cross-file taint added)
 - OWASP Top 10 2025 (web, A01-A10) + OWASP LLM Top 10 2026 (LLM01/02/03/08/09/10 mapped). The LLM list renumbered in 2026, so per-finding citations note the prior 2025 id where the slot moved. Intentionally unmapped: SEO, GEO, A11y (discoverability/accessibility), Code Quality / AI Code Smells / AI Codegen Bloat (maintainability), Architecture / Host Detection (classifiers).
 - 58 published Learn patterns, 9 published field reports, 15 published architecture shapes (no drafts)
 - 9 BYOK providers
-- 4027 tests across 116 files on `main`, lint clean, self-audit 9/9
+- 4141 tests across 118 files on `main`, lint clean, self-audit 9/9
 - Breakers v1 hardening suite merged into `main`
 - v2 build in progress: F0 context detectors and F7 AI Codegen Bloat have landed. See `docs/preflight-v2-spec.md` for the remaining family roster, and `CHANGELOG.md` for what shipped when.
 

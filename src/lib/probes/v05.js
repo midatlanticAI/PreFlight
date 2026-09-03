@@ -385,8 +385,93 @@ const UI_CONTEXT_RE =
 // assignment whose LHS name contains a security keyword, fire regardless of
 // surrounding context. This catches `const apiKey = Math.random()...` even
 // in files with no other security words.
-const LHS_SECURITY_NAME_RE =
-  /(?:const|let|var)\s+(\w*(?:token|secret|password|nonce|csrf|otp|key|salt|iv|hash|uuid|pin|api[_-]?key|jwt|sid|bearer|magic|invite|session|access[_-]?code|coupon[_-]?code|discount[_-]?code)\w*)\s*[:=]/i;
+// LHS names are matched as identifier SEGMENTS, not substrings — the
+// substring form read `archived` as iv, `pinned` as pin, and `keyframes` as
+// key, each firing high on plain animation code (verified live, FP triage
+// 2026-09-03). The capture is segment-checked in code below.
+const LHS_BINDING_RE = /(?:const|let|var)\s+(\w+)\s*[:=]/i;
+const LHS_SECURITY_SEGMENTS = new Set([
+  'token',
+  'secret',
+  'password',
+  'nonce',
+  'csrf',
+  'otp',
+  'key',
+  'apikey',
+  'salt',
+  'iv',
+  'hash',
+  'uuid',
+  'pin',
+  'jwt',
+  'sid',
+  'bearer',
+  'magic',
+  'invite',
+  'session',
+  'accesscode',
+  'couponcode',
+  'discountcode',
+]);
+// A qualifier AFTER the security segment that reassigns its sense: keyCode /
+// keyName / keySignature are keyboard and music vocabulary, secretNumber /
+// secretWord are game state (Gate-1 2026-09-03 — a typing tutor and a
+// hangman clone both drew high findings whose remediation asserted the
+// value 'will be used as an authenticator').
+const LHS_BENIGN_QUALIFIERS = new Set([
+  'name',
+  // 'code' is NOT here: it was added for keyCode but demoted otpCode /
+  // pinCode / inviteCode — the canonical weak-OTP one-liners this probe
+  // exists for (Gate-3 confirmed). keyCode/charCode are handled as merged
+  // benign pairs below instead.
+  'char',
+  'signature',
+  'index',
+  'down',
+  'up',
+  'press',
+  'frames',
+  'board',
+  'stroke',
+  'map',
+  'cap',
+  'word',
+  'number',
+  'answer',
+  'note',
+  'chord',
+  'binding',
+  'label',
+  'width',
+  'height',
+  'color',
+]);
+// Whole names that are benign despite a security-vocabulary segment: DOM
+// keyboard identifiers. Checked before the segment walk so 'code' stays a
+// live qualifier for otp/pin/invite (Gate-3).
+const LHS_BENIGN_MERGED = new Set(['keycode', 'charcode', 'keyup', 'keydown', 'keypress']);
+const lhsNameIsSecurity = (line) => {
+  const m = line.match(LHS_BINDING_RE);
+  if (!m) return false;
+  if (LHS_BENIGN_MERGED.has(m[1].toLowerCase())) return false;
+  const segs = m[1]
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(/[^A-Za-z0-9]+| /)
+    .filter(Boolean)
+    .map((x) => x.toLowerCase());
+  for (let i = 0; i < segs.length; i++) {
+    const merged = segs[i + 1] ? segs[i] + segs[i + 1] : null;
+    let hitLen = 0;
+    if (LHS_SECURITY_SEGMENTS.has(segs[i])) hitLen = 1;
+    else if (merged && LHS_SECURITY_SEGMENTS.has(merged)) hitLen = 2;
+    if (hitLen === 0) continue;
+    const after = segs[i + hitLen];
+    if (after && LHS_BENIGN_QUALIFIERS.has(after)) continue;
+    return true;
+  }
+  return false;
+};
 const LHS_UI_NAME_RE =
   /(?:const|let|var)\s+(\w*(?:width|height|opacity|hue|tone|jitter|wobble|bucket|sample|delay|fade|chart|axis|mesh|particle|bullet|color)\w*)\s*[:=]/i;
 
@@ -431,14 +516,32 @@ export function probeWeakRandomness(files) {
       // Depth round 2: LHS identifier is the strongest signal. Use it as
       // the primary classifier. UI-named LHS suppresses; security-named
       // LHS forces fire regardless of surrounding context.
-      const lhsSecurity = LHS_SECURITY_NAME_RE.test(line);
+      const lhsSecurity = lhsNameIsSecurity(line);
       const lhsUi = LHS_UI_NAME_RE.test(line);
 
       if (lhsUi) return; // animation / preview LHS; suppress.
 
       if (!lhsSecurity) {
-        // Fall back to the original window check.
-        const ctx = lines.slice(Math.max(0, i - 3), Math.min(lines.length, i + 4)).join(' ');
+        // Fall back to the original window check — with the line's own LHS
+        // identifier removed first. lhsNameIsSecurity already adjudicated
+        // that name as benign (secretNumber, keyName), and leaving it in
+        // the window let its substring re-supply the 'security context' the
+        // segment check had just rejected (Gate-1 2026-09-03).
+        const windowLines = lines.slice(Math.max(0, i - 3), Math.min(lines.length, i + 4));
+        let ctx = windowLines.join(' ');
+        for (const wl of windowLines) {
+          const wm = wl.match(LHS_BINDING_RE);
+          // Word-boundary removal, names ≥3 chars only — Gate-3: scrubbing
+          // `let e` as a raw substring deleted the letter e from the whole
+          // window, destroying 'verification'/'reset' and silencing real
+          // findings beside any short loop variable.
+          if (wm && wm[1].length >= 3 && !lhsNameIsSecurity(wl)) {
+            ctx = ctx.replace(
+              new RegExp(`\\b${wm[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'),
+              ' '
+            );
+          }
+        }
         if (UI_CONTEXT_RE.test(ctx)) return; // animation / preview use; fine
         if (!SECURITY_CONTEXT_RE.test(ctx)) return;
       }

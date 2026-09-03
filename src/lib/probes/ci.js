@@ -293,12 +293,40 @@ export function probeGitHubActions(files) {
         /\b(?:curl|wget)\b.*\s(?:-d|-F|--data(?:-binary|-raw)?|--form|--upload-file)(?=\s|=|"|')/i.test(
           stepLine
         );
+      // The 2026-09-03 FP was the standard release upload: `curl -F
+      // file=@dist.zip -H "Authorization: token $GITHUB_TOKEN"
+      // https://uploads.github.com/…`. Three rounds of destination
+      // ALLOWLISTING failed adversarial review — decoy literals, lowercase
+      // variables, ${{ }} expressions and bare hosts each bought silence
+      // for real exfil (Gates 1–3). The attacker writes this line; a list
+      // of safe destinations is inherently their evasion surface. So no
+      // allowlist. Instead: a token inside an -H/--header argument is
+      // normal API authentication, not the payload — the secretRef test
+      // reads the line with header arguments blanked, so the finding
+      // requires the secret in the DATA position (or the env dump pipe),
+      // which is what exfiltration actually is. Destinations are
+      // deliberately not consulted at all: exfil to api.github.com
+      // (Shai-Hulud published stolen secrets as public repos) is as
+      // critical as exfil to a C2 host.
+      const stepLineNoHeaders = stepLine.replace(
+        /(?:-H|--header)(?:\s+|=)(?:"[^"]*"|'[^']*'|[^\s"']+)/gi,
+        '-H <hdr>'
+      );
       const secretRef =
-        /\$\{\{\s*secrets\./i.test(stepLine) ||
-        /\$\{?GITHUB_TOKEN\}?/.test(stepLine) ||
-        /\b[A-Z][A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|APIKEY|API_KEY)\b/.test(stepLine) ||
-        /\$\([^)]+\)|`[^`]+`/.test(stepLine); // command substitution as the payload
-      if (!envDumpToNet && !(dataFlag && secretRef)) return;
+        /\$\{\{\s*secrets\./i.test(stepLineNoHeaders) ||
+        /\$\{?GITHUB_TOKEN\}?/.test(stepLineNoHeaders) ||
+        /\b[A-Z][A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|APIKEY|API_KEY)\b/.test(stepLineNoHeaders) ||
+        /\$\([^)]+\)|`[^`]+`/.test(stepLineNoHeaders); // command substitution as the payload
+      // A pipe feeding curl's stdin-data is an exfil channel regardless of
+      // what named the bytes: `trufflehog … | curl --data-binary @- URL`.
+      const stdinDataPipe =
+        /\|[^|\n]*\bcurl\b[^|\n]*(?:-d|--data(?:-binary|-raw)?)(?:\s+|=)@-/.test(stepLine);
+      // Known limit, stated on purpose: a FILE-reference payload with the
+      // token only in the auth header (`--data @/tmp/x.json` +
+      // `-H "…token"`) is statically indistinguishable from release
+      // automation on one line; the multi-step chain that fills that file
+      // belongs to workflow-level analysis, not this line probe.
+      if (!envDumpToNet && !stdinDataPipe && !(dataFlag && secretRef)) return;
       const ln = c.slice(0, m.index).split('\n').length;
       findings.push({
         id: `gha-secret-exfil-${file.path}-${m.index}`,

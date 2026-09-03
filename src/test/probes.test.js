@@ -165,7 +165,10 @@ describe('probeGitHubActions credential exfil', () => {
 const FAKE_AWS = 'AKIA' + '1234567890ABCDEF';
 const FAKE_STRIPE_LIVE = 'sk_li' + 've_' + 'abcdefghijklmnopqrstuvwx';
 const FAKE_STRIPE_LIVE_LONG = 'sk_li' + 've_' + 'a'.repeat(24);
-const FAKE_OPENAI = 'sk-pr' + 'oj-' + 'a'.repeat(50);
+// Real OpenAI keys mix digits into the tail; the probe requires one since
+// the 2026-09-03 precision pass (digit-free sk-… identifiers are CSS
+// classes, not keys), so the fixture carries digits too.
+const FAKE_OPENAI = 'sk-pr' + 'oj-' + 'a1'.repeat(25);
 const FAKE_ANTHROPIC = 'sk-' + 'ant-' + 'a'.repeat(50);
 // Full PEM block (BEGIN + body + END). The BEGIN line alone is now
 // correctly suppressed by probeSecrets as a framing-only reference (real

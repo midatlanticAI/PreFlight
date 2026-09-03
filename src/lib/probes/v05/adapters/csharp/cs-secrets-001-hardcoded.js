@@ -5,12 +5,13 @@
 // read from Environment.GetEnvironmentVariable / IConfiguration.
 
 import { csharpFiles, isCsCommentLine } from '../../shared-detectors/csharp-scope.js';
+import { credentialAssignmentIsReal } from '../../../_internal/credential-shape.js';
 
 const PROBE_NAME = 'C# Hardcoded Secret';
 
 const KEY_PATTERNS = [
   new RegExp('\\bsk-' + 'ant-' + '[a-zA-Z0-9_-]{40,}'),
-  new RegExp('\\bsk-' + '(?:proj-)?' + '[a-zA-Z0-9_-]{20,}'),
+  new RegExp('\\bsk-' + '(?!ant-)(?:proj-)?' + '(?=[a-zA-Z0-9_-]*[0-9])[a-zA-Z0-9_-]{20,}'),
   new RegExp('\\bAIza' + '[0-9A-Za-z_-]{35}\\b'),
   new RegExp('\\bxai-' + '[a-zA-Z0-9]{20,}'),
   new RegExp('\\bgsk_' + '[a-zA-Z0-9]{30,}'),
@@ -65,12 +66,19 @@ export const CS_SECRETS_001 = {
   detect(files) {
     const findings = [];
     for (const f of csharpFiles(files)) {
+      // Firebase client config context: the AIza apiKey member is taught at
+      // low by the Secret Scanner; a critical here contradicted it on the
+      // same line in Swift/Kotlin (Gate-3 cross-language parity).
+      const firebaseCtx = /firebaseapp\.com|FlutterFire/i.test(f.content);
       const lines = f.content.split('\n');
       lines.forEach((line, i) => {
         if (isCsCommentLine(line)) return;
         if (PLACEHOLDER_RE.test(line)) return;
+        if (firebaseCtx && /\bAIza/.test(line) && /api[_-]?key/i.test(line)) return;
         const keyShape = KEY_PATTERNS.some((re) => re.test(line));
-        const assignLiteral = ASSIGN_LITERAL_RE.test(line) && !ENV_REF_RE.test(line);
+        const am = ENV_REF_RE.test(line) ? null : line.match(ASSIGN_LITERAL_RE);
+        // Shared name-segment + value-shape adjudication — FP triage 2026-09-03.
+        const assignLiteral = am !== null && credentialAssignmentIsReal(am[0]);
         if (!keyShape && !assignLiteral) return;
         findings.push({
           id: `cs-secret-${f.path}-${i}`,

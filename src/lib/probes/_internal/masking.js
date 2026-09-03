@@ -412,7 +412,12 @@ function maskSqlComments(content) {
 }
 
 const SLASH_COMMENT_LANGS = /\.(?:[jt]sx?|mjs|cjs|go|java|c|h|cpp|cs|swift|kt|scala|rs)$/i;
-const HASH_COMMENT_LANGS = /\.(?:py|rb|sh|bash|zsh|ya?ml|toml|tf|pl)$/i;
+// The env family and Dockerfiles comment with # too — Gate-1 2026-09-03:
+// they were missing from this gate, so a commented-out secret example in
+// .env (the file where commented-out secrets are most common, and the named
+// motivation for probeSecrets' masked view) still fired critical.
+const HASH_COMMENT_LANGS =
+  /\.(?:py|rb|sh|bash|zsh|ya?ml|toml|tf|pl|env(?:\.\w+)*)$|(?:^|\/)\.env(?:\.\w+)?$|(?:^|\/)(?:Dockerfile|Containerfile)(?:\.\w+)?$/i;
 
 /**
  * Blank comment bodies using the comment syntax of `path`'s language.
@@ -420,6 +425,17 @@ const HASH_COMMENT_LANGS = /\.(?:py|rb|sh|bash|zsh|ya?ml|toml|tf|pl)$/i;
  * types with no supported line-comment form.
  */
 export { maskSqlComments };
+
+// Evidence hygiene: never echo a credential value back in a finding —
+// evidence text lands on screen and in exported reports, and half the stack
+// already honors this (Secret Scanner masks, every v0.5 adapter redacts).
+// Gate-3 audited 31 planted secrets and found the other half echoing them
+// verbatim; the finding sites now route their evidence through this.
+export function redactValueInEvidence(evidence, value) {
+  const v = String(value ?? '');
+  if (v.length < 6) return evidence;
+  return String(evidence).split(v).join('<redacted>');
+}
 
 export function maskCommentsForPath(path, content) {
   const p = typeof path === 'string' ? path : '';

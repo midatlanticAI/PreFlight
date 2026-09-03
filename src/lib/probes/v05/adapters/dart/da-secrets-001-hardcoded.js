@@ -5,12 +5,13 @@
 // read from Platform.environment / String.fromEnvironment / dotenv.
 
 import { dartFiles, isDartCommentLine } from '../../shared-detectors/dart-scope.js';
+import { credentialAssignmentIsReal } from '../../../_internal/credential-shape.js';
 
 const PROBE_NAME = 'Dart Hardcoded Secret';
 
 const KEY_PATTERNS = [
   new RegExp('\\bsk-' + 'ant-' + '[a-zA-Z0-9_-]{40,}'),
-  new RegExp('\\bsk-' + '(?:proj-)?' + '[a-zA-Z0-9_-]{20,}'),
+  new RegExp('\\bsk-' + '(?!ant-)(?:proj-)?' + '(?=[a-zA-Z0-9_-]*[0-9])[a-zA-Z0-9_-]{20,}'),
   new RegExp('\\bAIza' + '[0-9A-Za-z_-]{35}\\b'),
   new RegExp('\\bxai-' + '[a-zA-Z0-9]{20,}'),
   new RegExp('\\bgsk_' + '[a-zA-Z0-9]{30,}'),
@@ -65,12 +66,24 @@ export const DA_SECRETS_001 = {
   detect(files) {
     const findings = [];
     for (const f of dartFiles(files)) {
+      // flutterfire-generated client config: Firebase API keys are
+      // identifiers delivered to every client, committed per Firebase's own
+      // workflow. The Secret Scanner teaches key-restriction at low. Scope:
+      // the generated FILE is skipped whole; in any other Dart file only the
+      // firebase `apiKey:`+AIza LINE is skipped — a whole-file /FlutterFire/
+      // sniff let one comment word disable the probe for a config.dart that
+      // also held real tokens (Gate-2 confirmed, 2026-09-03).
+      if (/firebase_options\.dart$/i.test(f.path)) continue;
+      const firebaseCtx = /firebaseapp\.com|FlutterFire/i.test(f.content);
       const lines = f.content.split('\n');
       lines.forEach((line, i) => {
         if (isDartCommentLine(line)) return;
         if (PLACEHOLDER_RE.test(line)) return;
+        if (firebaseCtx && /\bapiKey\s*[:=]/.test(line) && /\bAIza/.test(line)) return;
         const keyShape = KEY_PATTERNS.some((re) => re.test(line));
-        const assignLiteral = ASSIGN_LITERAL_RE.test(line) && !ENV_REF_RE.test(line);
+        const am = ENV_REF_RE.test(line) ? null : line.match(ASSIGN_LITERAL_RE);
+        // Shared name-segment + value-shape adjudication — FP triage 2026-09-03.
+        const assignLiteral = am !== null && credentialAssignmentIsReal(am[0]);
         if (!keyShape && !assignLiteral) return;
         findings.push({
           id: `da-secret-${f.path}-${i}`,

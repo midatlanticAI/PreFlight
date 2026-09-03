@@ -19,7 +19,7 @@ const PROBE_NAME = 'Python Hardcoded Secret';
 // Scanner would otherwise flag the scanner).
 const KEY_PATTERNS = [
   new RegExp('\\bsk-' + 'ant-' + '[a-zA-Z0-9_-]{40,}'), // Anthropic (check before generic sk-)
-  new RegExp('\\bsk-' + '(?:proj-)?' + '[a-zA-Z0-9_-]{20,}'), // OpenAI
+  new RegExp('\\bsk-' + '(?!ant-)(?:proj-)?' + '(?=[a-zA-Z0-9_-]*[0-9])[a-zA-Z0-9_-]{20,}'), // OpenAI
   new RegExp('\\bAIza' + '[0-9A-Za-z_-]{35}\\b'), // Google / Gemini
   new RegExp('\\bxai-' + '[a-zA-Z0-9]{20,}'), // xAI
   new RegExp('\\bgsk_' + '[a-zA-Z0-9]{30,}'), // Groq
@@ -29,10 +29,17 @@ const KEY_PATTERNS = [
 const API_KEY_LITERAL_RE = /\bapi_key\s*=\s*["'][^"']{20,}["']/;
 
 // Placeholder / non-secret substrings — exclude these.
-const PLACEHOLDER_RE = /your[_-]?key|xxx+|\.\.\.|EXAMPLE|changeme|placeholder|<[^>]+>|sk-\.\.\./i;
+// Exported so python.js's adapter-ownership handoff can test the SAME
+// accept decision this adapter makes — Gate-3: skipping on regex shape
+// alone created a joint blind spot when a trailing `# TODO: move to
+// os.environ` comment made this adapter refuse the line.
+export const PY_SECRETS_PLACEHOLDER_RE =
+  /your[_-]?key|xxx+|\.\.\.|EXAMPLE|changeme|placeholder|<[^>]+>|sk-\.\.\./i;
+const PLACEHOLDER_RE = PY_SECRETS_PLACEHOLDER_RE;
 
 // Env-loaded reference: not a literal. os.environ / getenv / settings.
-const ENV_REF_RE = /os\.environ|os\.getenv|getenv\s*\(|settings\.|config\(/;
+export const PY_SECRETS_ENV_RE = /os\.environ|os\.getenv|getenv\s*\(|settings\.|config\(/;
+const ENV_REF_RE = PY_SECRETS_ENV_RE;
 
 export const PY_SECRETS_001 = {
   probe_id: 'PY-SECRETS-001',
@@ -76,10 +83,15 @@ export const PY_SECRETS_001 = {
   detect(files) {
     const findings = [];
     for (const f of pythonFiles(files)) {
+      // Firebase client config context: the AIza apiKey member is taught at
+      // low by the Secret Scanner; a critical here contradicted it on the
+      // same line in Swift/Kotlin (Gate-3 cross-language parity).
+      const firebaseCtx = /firebaseapp\.com|FlutterFire/i.test(f.content);
       const lines = f.content.split('\n');
       lines.forEach((line, i) => {
         if (isPythonCommentLine(line)) return;
         if (PLACEHOLDER_RE.test(line)) return;
+        if (firebaseCtx && /\bAIza/.test(line) && /api[_-]?key/i.test(line)) return;
         const keyShape = KEY_PATTERNS.some((re) => re.test(line));
         const apiKeyLiteral = API_KEY_LITERAL_RE.test(line) && !ENV_REF_RE.test(line);
         if (!keyShape && !apiKeyLiteral) return;

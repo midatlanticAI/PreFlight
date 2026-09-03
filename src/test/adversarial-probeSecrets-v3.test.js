@@ -41,7 +41,11 @@ const STRIPE_LIVE = 'sk_live_4eC39HqLyjWDarjtT1zd';
 const STRIPE_TEST = 'sk_test_4eC39HqLyjWDarjtT1zd';
 const OPENAI_CLASSIC = 'sk-9aZbYcXdWeVfUgThSiRjQkPlOnMm';
 const OPENAI_PROJ = 'sk-proj-9aZbYcXdWeVfUgThSiRjQkPlOnMm';
-const ANTHROPIC_KEY = 'sk-ant-9aZbYcXdWeVfUgThSiRjQkPlOnMm01';
+// Real Anthropic keys run sk-ant-api03-… with 90+ tail characters; the
+// probe's 40-char floor is honest to that. The old 30-char fixture was
+// only ever detected by the OpenAI pattern over-matching the sk-ant-
+// prefix — the exact double-fire the 2026-09-03 precision pass removed.
+const ANTHROPIC_KEY = 'sk-ant-api03-9aZbYcXdWeVfUgThSiRjQkPlOnMm0123456789AbCdEf';
 const GOOGLE_KEY = 'AIzaSyA0123456789abcdefghijklmnopqrstuvw';
 const GITHUB_CLASSIC = 'ghp_abcdefghijklmnopqrstuvwz0123456789ABCD'; // 36 after prefix
 const GITHUB_OAUTH = 'gho_abcdefghijklmnopqrstuvwz0123456789ABCD';

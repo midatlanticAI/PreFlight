@@ -22,7 +22,16 @@
 // is a known limit, not an oversight.
 
 import { isTestFile, isScannerSelfSource } from '../file-filter.js';
-import { maskCommentsForPath } from './_internal/masking.js';
+import { maskCommentsForPath, redactValueInEvidence } from './_internal/masking.js';
+import {
+  nameIsCredentialish,
+  nameAssertsCredential,
+  valueLooksLikeSecret,
+} from './_internal/credential-shape.js';
+import {
+  PY_SECRETS_PLACEHOLDER_RE,
+  PY_SECRETS_ENV_RE,
+} from './v05/adapters/python/py-secrets-001-hardcoded-key.js';
 
 // Request-derived values across the frameworks people actually use: Flask /
 // Quart (`request.args|form|json|values|data|files|cookies|headers`), Django
@@ -210,9 +219,31 @@ export function probePythonSecurity(files) {
       }
 
       // --- Plaintext password comparison.
+      // Confirm-password pairs are two request-derived inputs compared to
+      // each other — `password1 == password2` is Django's UserCreationForm
+      // naming and `password == confirm_password` is every Flask signup
+      // tutorial. The JS probe got this suppression in the 2026-09-03 pass;
+      // Gate-1 confirmed Python was left firing critical on the same shape.
+      // Perf + positional discipline mirror the JS twin (both Gate-3):
+      // bounded operands with a substring pre-gate (the unbounded form was
+      // O(n²) and worse on embedded base64 blobs), and the qualifier must
+      // directly follow the password token within one identifier segment —
+      // `user2.password` and `password_sha256` are not confirm pairs.
+      const pyConfirmPair = (() => {
+        if (!/password|passwd|pwd/i.test(line)) return false;
+        const cm = line.match(
+          /([\w.]{0,80}?(?:password|passwd|pwd)[\w.]{0,80})\s*[!=]=\s*([\w.]{0,80}?(?:password|passwd|pwd)[\w.]{0,80})/i
+        );
+        if (!cm) return false;
+        const QUAL_SEG =
+          /(?:^|_)(?:confirm|repeat|verify|verification|retype|reenter|second)\w*(?:password|passwd|pwd)$|(?:password|passwd|pwd)(?:_?(?:confirm|confirmation|repeat|again|verify|verification|retype|reenter|check|match)\w*|_?2|_?two)$/i;
+        const opQualified = (op) => op.split('.').some((seg) => QUAL_SEG.test(seg));
+        return opQualified(cm[1]) || opQualified(cm[2]);
+      })();
       if (
         /==/.test(line) &&
         PW_NAME.test(line) &&
+        !pyConfirmPair &&
         !/\b(?:check_password|verify|compare_digest|checkpw)\s*\(/.test(line) &&
         !/\b(?:test|dummy|mock|sample|expected|fake|placeholder)_?(?:password|passwd|pwd)\b/i.test(
           line
@@ -242,7 +273,47 @@ export function probePythonSecurity(files) {
         // the finding. Placeholders are documentation.
         const PLACEHOLDER =
           /^(?:x{3,}|\.{3,}|<[^>]+>|\{\{.*\}\}|your[-_ ]|change[-_ ]?me|replace[-_ ]?me|placeholder|example|dummy|test|sample|todo|none|null|password|secret|123456)/i;
-        if (m && !PLACEHOLDER.test(m[3]) && !/^\s*#/.test(line)) {
+        // Name and value discipline, FP triage 2026-09-03 — all three
+        // verified firing critical: `TOKENIZER = "bert-base-uncased"` (the
+        // substring match read 'token' inside 'tokenizer' — endemic in ML
+        // code), `TOKEN_URL = "https://…"` (metadata about the token, and a
+        // URL value), `password_field = "user_password_input"` (form meta).
+        // nameIsCredentialish reads identifier segments; valueLooksLikeSecret
+        // rejects URLs, dotted ids and digit-free word chains. Django's
+        // `SECRET_KEY = "django-insecure-…"` deliberately KEEPS firing: that
+        // marker is Django saying the key is not production-grade, and
+        // committing it is the leak this probe exists for.
+        // PY-SECRETS-001 (the live v0.5 adapter) owns the exact
+        // `api_key = "<20+ chars>"` shape; skipping it here ends the
+        // two-criticals-for-one-line double fire.
+        // Case-SENSITIVE on purpose: PY-SECRETS-001's regex only matches
+        // lowercase `api_key`, so a case-insensitive handoff here dropped
+        // `API_KEY = "…"` — the conventional uppercase Python constant —
+        // from critical to nothing (Gate-1 confirmed recall bug).
+        // Gate-3: the handoff must mirror the adapter's ACTUAL accept
+        // decision, tested on the RAW line the adapter reads — its gates
+        // are line-level, so a trailing `# TODO: move to os.environ`
+        // comment made the adapter refuse while this probe still skipped:
+        // a joint blind spot on a real hardcoded key.
+        const rawForAdapter = rawLines[i] ?? line;
+        const adapterOwned =
+          m &&
+          m[1] === 'api_key' &&
+          m[3].length >= 20 &&
+          !PY_SECRETS_PLACEHOLDER_RE.test(rawForAdapter) &&
+          !PY_SECRETS_ENV_RE.test(rawForAdapter);
+        if (
+          m &&
+          !PLACEHOLDER.test(m[3]) &&
+          !/^\s*#/.test(line) &&
+          !adapterOwned &&
+          nameIsCredentialish(m[1]) &&
+          // SECRET_KEY / BOT_TOKEN / any strong credential segment asserts
+          // the value; only weak bare-'key' names get the identifier-shape
+          // value rejections (Gate-2: SECRET_KEY = "this-is-my-secret-key"
+          // was completely silent, and one hyphen flipped critical→nothing).
+          valueLooksLikeSecret(m[3], { passwordNamed: nameAssertsCredential(m[1]) })
+        ) {
           push({
             id: `py-hardcoded-${file.path}-${ln}`,
             title: `Hardcoded credential in "${m[1]}"`,
@@ -250,7 +321,7 @@ export function probePythonSecurity(files) {
             category: 'Auth & Access',
             cwe: 'CWE-798',
             line: ln,
-            evidence,
+            evidence: redactValueInEvidence(evidence, m[3]),
             remediation:
               'A credential in source is a credential in every clone, every fork, and the whole git history — deleting the line does not remove it from the repository. Read it from the environment (os.environ["ADMIN_PASSWORD"]) or a secret manager, and rotate this value now, because it should be treated as public from the moment it was committed.',
           });

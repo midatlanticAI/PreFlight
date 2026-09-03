@@ -25,6 +25,8 @@ import {
   isMatchInsideComment,
   isPEMBodyPlaceholderOrHeaderOnly,
   isMatchInsideTemplateLiteral,
+  maskCommentsForPath,
+  redactValueInEvidence,
 } from './_internal/masking.js';
 
 // Preventive check: does the project's .gitignore actually have a pattern that
@@ -68,8 +70,22 @@ export function probeSecrets(files) {
     // relative to documentation references to the shape; the FP cost of
     // scanning README/docs is far higher than the FN cost of skipping them.
     if (isDocumentationMarkdownFile(file.path)) return;
+    // Match against the language-aware comment-blind view, not raw content.
+    // isMatchInsideComment below understands only JS `//` and `/* */`, so a
+    // documented example in a Python/YAML/#-commented .env line fired as a
+    // real credential — verified live, FP triage 2026-09-03. The mask is
+    // length-preserving, so every index below still maps to real source.
+    const matchView = maskCommentsForPath(file.path, file.content);
+    // Firebase CLIENT config: Google's own docs state Firebase web/app API
+    // keys are identifiers delivered to every client, not access-control
+    // secrets — flutterfire emits firebase_options.dart to be committed.
+    // Gate-1 2026-09-03: every Flutter+Firebase app fired critical on its
+    // generated config. Teach key-restriction at low instead.
+    const isFirebaseClientConfig =
+      /firebase_options\.dart$/i.test(file.path) ||
+      /firebaseapp\.com|FlutterFire/i.test(file.content);
     SECRET_PATTERNS.forEach((pat) => {
-      const matches = [...file.content.matchAll(pat.regex)];
+      const matches = [...matchView.matchAll(pat.regex)];
       matches.forEach((m) => {
         const idx = m.index ?? 0;
         // Suppress matches whose value is an obvious placeholder. The check
@@ -93,7 +109,20 @@ export function probeSecrets(files) {
         // PEM detection. PEM cases fall through to the body-placeholder /
         // header-only check below.
         if (pat.name !== 'Private Key Block' && isMatchInsideTemplateLiteral(file.content, idx)) {
-          return;
+          // Gate-2 2026-09-03, calibrated against the earlier template
+          // pins: a documentation template is multi-line, interpolates, or
+          // nests the key in inner quotes (code-as-string:
+          // `apiKey: 'sk-…'`). A PASTED key is the opposite on all three —
+          // Authorization: `Bearer sk-proj-…` is single-line, bare, and
+          // uninterpolated, and it was invisible stack-wide.
+          const prevTick = file.content.lastIndexOf('`', idx);
+          const nextTick = file.content.indexOf('`', idx + m[0].length);
+          const span =
+            prevTick >= 0 && nextTick > prevTick ? file.content.slice(prevTick, nextTick + 1) : '';
+          const wrappedInInnerQuotes = /['"]/.test(file.content[idx - 1] || '');
+          const docLike =
+            span === '' || span.includes('${') || span.includes('\n') || wrappedInInnerQuotes;
+          if (docLike) return;
         }
         // For PEM blocks specifically, two suppressions: (a) the placeholder
         // lives in the body, e.g. `-----BEGIN ... -----\n  REPLACE_WITH ... \n-----END`;
@@ -104,17 +133,59 @@ export function probeSecrets(files) {
         const lineNum = file.content.slice(0, idx).split('\n').length;
         const line = file.content.split('\n')[lineNum - 1] || '';
         const masked = m[0].length > 12 ? m[0].slice(0, 6) + '...' + m[0].slice(-4) : m[0];
+        // postgres://postgres:postgres@localhost is the documented local-dev
+        // idiom, not a breach — verified firing critical on a stock dev
+        // .env, FP triage 2026-09-03. A loopback/compose-network host with a
+        // stock default password teaches at low; the same URL with a
+        // real-shaped password, or any remote host, stays critical.
+        let devDefaultDbUrl = false;
+        if (pat.name === 'Database Connection URL with Credentials') {
+          const urlParts = m[0].match(/^[a-z+]+:\/\/([^:]+):([^@]+)@([^\s"'<>/:]+)/i);
+          if (urlParts) {
+            const [, dbUser, dbPass, dbHost] = urlParts;
+            const localHost =
+              /^(?:localhost|127\.0\.0\.1|0\.0\.0\.0|host\.docker\.internal|db|database|postgres|mysql|mariadb|mongo|mongodb|redis)$/i.test(
+                dbHost
+              );
+            const stockPass =
+              dbPass === dbUser ||
+              /^(?:postgres|mysql|mariadb|root|admin|password|example|secret|changeme|dev|devpassword|local|test)$/i.test(
+                dbPass
+              );
+            devDefaultDbUrl = localHost && stockPass;
+          }
+        }
+        // Scoped to the config-object member `apiKey:` on the MATCHED LINE —
+        // a file-level sniff downgraded a Gemini key (GEMINI_API_KEY, a
+        // billing-bearing server secret) to low just for sharing a file with
+        // firebaseConfig (Gate-2 confirmed, 2026-09-03).
+        const firebaseClientKey =
+          isFirebaseClientConfig &&
+          (pat.name === 'Google API Key' || pat.name === 'Generic Hardcoded Secret') &&
+          /\bapiKey\s*[:=]/.test(line);
+        // One key, one card: the Google pattern carries the Firebase
+        // teaching; the Generic pattern rebadged to an identical twin card
+        // on the same line (Gate-3 duplicate audit).
+        if (firebaseClientKey && pat.name === 'Generic Hardcoded Secret') return;
         findings.push({
           id: `secret-${file.path}-${pat.name}-${idx}`,
           probe: 'Secret Scanner',
-          title: `${pat.name} found in source`,
-          severity: pat.severity,
+          title: devDefaultDbUrl
+            ? 'Local development database URL with stock credentials'
+            : firebaseClientKey
+              ? 'Firebase client API key without stated restrictions'
+              : `${pat.name} found in source`,
+          severity: devDefaultDbUrl || firebaseClientKey ? 'low' : pat.severity,
           category: pat.category,
           cwe: pat.cwe,
           file: file.path,
           line: lineNum,
           evidence: line.replace(m[0], masked).trim().slice(0, 200),
-          remediation: `Remove this credential from source immediately. Rotate it in the issuing service. Move to a server-only environment variable (no NEXT_PUBLIC_ prefix). If this file is committed to git, the secret is permanently in history — rotation is the only fix.`,
+          remediation: devDefaultDbUrl
+            ? 'A stock local database URL is fine while the database only listens on your machine. Keep it out of the file anyway — reference it as ${DATABASE_URL} from an uncommitted .env — so the day this config reaches a real server, the real credentials do not ride along.'
+            : firebaseClientKey
+              ? 'A Firebase client API key is an identifier, not an access-control secret — it ships to every client by design, so committing it is normal. What protects you is restriction, not secrecy: in the Google Cloud console, restrict this key to your app identifiers and the Firebase APIs it needs, and enforce access with Security Rules, not the key.'
+              : `Remove this credential from source immediately. Rotate it in the issuing service. Move to a server-only environment variable (no NEXT_PUBLIC_ prefix). If this file is committed to git, the secret is permanently in history — rotation is the only fix.`,
         });
       });
     });
@@ -145,6 +216,16 @@ export function probeNextPublic(files) {
       // fire on Supabase ANON keys (eyJ-shaped) just because the value pattern
       // matches a JWT shape.
       if (/ANON|PUBLISHABLE|PUBLIC_KEY|CLIENT_ID/i.test(varName)) return;
+      // Two more public-by-design conventions, verified firing critical on
+      // an intentionally-public Mapbox token, FP triage 2026-09-03: site
+      // keys (Turnstile/reCAPTCHA SITE_KEY — the secret half is named
+      // SECRET_KEY), and values with the pk. / pk_ publishable prefix
+      // (Mapbox pk., Stripe pk_ — their secret halves are sk./sk_).
+      // SITE must be its own segment: the unanchored form treated
+      // NEXT_PUBLIC_WEBSITE_KEY / WEBSITE_TOKEN as captcha site keys and
+      // suppressed a real bundle-inlined secret (Gate-1 confirmed).
+      if (/(?:^|_)SITE_?(?:KEY|TOKEN)$/i.test(varName)) return;
+      if (/^pk[._]/.test(value.trim())) return;
       const dangerName = NEXT_PUBLIC_DANGER_NAMES.test(varName);
       const dangerValue = NEXT_PUBLIC_DANGER_VALUES.test(value.trim());
       if (dangerName || dangerValue) {
@@ -157,7 +238,7 @@ export function probeNextPublic(files) {
           cwe: 'CWE-200',
           file: file.path,
           line: i + 1,
-          evidence: line.trim().slice(0, 200),
+          evidence: redactValueInEvidence(line.trim(), value.trim()).slice(0, 200),
           remediation: `${prefix} variables are inlined into the client bundle. This secret is visible to every visitor. Remove the public prefix and access only from server-side code (Server Components, API routes, route handlers, server actions). Rotate the credential since it has been public.`,
         });
       }

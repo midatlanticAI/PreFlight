@@ -30,8 +30,14 @@ import {
   maskCommentsAndStringsFromContent,
   maskCommentsForPath,
   maskCommentsOnly,
+  redactValueInEvidence,
 } from './_internal/masking.js';
 import { lineIsProseString } from './_internal/prose.js';
+import {
+  nameAssertsCredential,
+  storageKeyIsAuthish,
+  valueLooksLikeSecret,
+} from './_internal/credential-shape.js';
 
 // Strip a single line of `// ...` comments and `/* ... */` (within-line) before testing for code patterns.
 // Heuristic — won't fool template literals or strings containing //, but kills the common false-positive
@@ -84,18 +90,55 @@ export function probeAuthWeakness(files) {
         if (/^(?:\$\{|process\.env\.)/.test(value)) return;
         // skip comment-only lines in YAML/TOML/.env
         if (/^\s*[#;]/.test(rawLine)) return;
+        // Config values that are not credentials at all. All verified firing
+        // critical, FP triage 2026-09-03: schema/feature flags
+        // (`"password": true`), numeric settings (`secret: 300`), redacted
+        // fixtures (`password: "****"`), and secret-manager references,
+        // which are the fix this probe's own remediation recommends.
+        // Gate-1 correction, narrowed again by Gate-2: the all-digit skip
+        // applies ONLY to a bare `secret:` key (a numeric setting under a
+        // generic name, like `secret: 300` for a TTL). A password-family
+        // key holding `123456` is the most common real weak credential, and
+        // a QUALIFIED secret (`jwt_secret: 123456`) is a
+        // brute-forceable-in-seconds signing key, not a timeout.
+        if (/^(?:true|false|null|yes|no|on|off)$/i.test(value)) return;
+        if (/^\d+$/.test(value) && m[1].toLowerCase() === 'secret') return;
+        if (/^[*•]{3,}/.test(value)) return;
+        // Spring Boot / Maven resource filtering: `password=@db.password@` is
+        // a build-time reference expanded by the largest Java framework's
+        // default toolchain (Gate-1 2026-09-03).
+        if (/^@[\w.-]+@$/.test(value)) return;
+        if (
+          /^(?:op:\/\/|vault:|secretref:|arn:aws:secretsmanager|projects\/[\w-]+\/secrets\/)/i.test(
+            value
+          )
+        )
+          return;
+        // docker-compose with a stock image default (POSTGRES_PASSWORD:
+        // postgres) is the documented local-dev idiom, not a leak — but it
+        // becomes one the day the compose file is reused in production, so
+        // it teaches at low instead of alarming at critical.
+        const isComposeFile = /(?:^|\/)(?:docker-)?compose[^/]*\.ya?ml$/i.test(file.path);
+        const isStockDefault =
+          /^(?:postgres|mysql|mariadb|root|admin|password|example|secret|changeme|dev|devpassword|local|test)$/i.test(
+            value
+          );
+        const composeDevDefault = isComposeFile && isStockDefault;
         findings.push({
           id: `auth-hardcodedpwd-config-${file.path}-${i}`,
           probe: 'Auth Weakness',
-          title: 'Hardcoded password in config file',
-          severity: 'critical',
+          title: composeDevDefault
+            ? 'Stock default credential in compose file'
+            : 'Hardcoded password in config file',
+          severity: composeDevDefault ? 'low' : 'critical',
           category: 'Auth & Access',
           cwe: 'CWE-798',
           file: file.path,
           line: i + 1,
-          evidence: rawLine.trim().slice(0, 200),
-          remediation:
-            'Configs checked into git ship with the password. Use env interpolation (${DB_PASSWORD}), a secret manager reference, or move the secret out of the config entirely. Rotate the leaked value.',
+          evidence: redactValueInEvidence(rawLine.trim(), value).slice(0, 200),
+          remediation: composeDevDefault
+            ? 'A stock image default (postgres/postgres) is fine for a laptop database that only listens on localhost. It stops being fine the moment this compose file starts a server anyone else can reach. Use an env-file reference (${POSTGRES_PASSWORD}) so the same file works in both places.'
+            : 'Configs checked into git ship with the password. Use env interpolation (${DB_PASSWORD}), a secret manager reference, or move the secret out of the config entirely. Rotate the leaked value.',
         });
       });
       return;
@@ -376,6 +419,40 @@ export function probeAuthWeakness(files) {
       const pwdSpellingOnly = !/\b\w*(?:password|passwd)\b/i.test(wideLine);
       const namesAPath =
         /\b\w*(?:dir|directory|folder|cwd|path|filename|filepath|workspace)\w*\b/i.test(wideLine);
+      // Confirm-password pairs: `password !== confirmPassword` is two user
+      // inputs compared to each other — the signup and change-password form
+      // in nearly every app — not a plaintext credential read back from
+      // storage. Verified firing critical on a plain signup validator, FP
+      // triage 2026-09-03. Suppress only when BOTH operands are
+      // password-flavored and at least one carries a confirm-class
+      // qualifier. Deliberately excluded from the qualifier list: new, old,
+      // current, prev — `oldPassword === user.password` is a genuine
+      // plaintext-storage comparison and must keep firing.
+      // The suffix qualifier is POSITIONAL: it must directly follow the
+      // password token ('password2', 'password_confirm'). Gate-3 found the
+      // anywhere-in-operand form read `user.password_sha256` and
+      // `oauth2_creds.password` as confirm pairs — a digit in a hash-suffix
+      // or namespace segment says nothing about confirm semantics.
+      const CONFIRM_QUALIFIER_RE =
+        /\b\w*(?:confirm|repeat|verify|verification|retype|reenter|re_enter|second)\w*(?:password|passwd|pwd)\b|\b\w*(?:password|passwd|pwd)(?:_?(?:confirm|confirmation|repeat|again|verify|verification|retype|reenter|check|match)\w*|_?2|_?two)\b/i;
+      // Operands accept the vocab word MID-identifier — Gate-1 2026-09-03
+      // found the trailing \b made the qualifier-after alternation of
+      // CONFIRM_QUALIFIER_RE unreachable: `password !== password2` (Django's
+      // own UserCreationForm naming) never captured and still fired.
+      // Perf contract (Gate-3): the unbounded [\w.]* operands were O(n²)
+      // on any long identifier run — 3.5s on a 100KB line, minutes on an
+      // embedded base64 blob, with no password required in the input. The
+      // cheap substring pre-gate skips the regex entirely on the common
+      // path, and the bounded {0,80} operands cap backtracking on the rest.
+      const confirmPairMatch = !/password|passwd|pwd/i.test(wideLine)
+        ? null
+        : wideLine.match(
+            /([\w.]{0,80}?(?:password|passwd|pwd)[\w.]{0,80})\s*[!=]==?\s*([\w.]{0,80}?(?:password|passwd|pwd)[\w.]{0,80})/i
+          );
+      const isConfirmPair =
+        confirmPairMatch !== null &&
+        (CONFIRM_QUALIFIER_RE.test(confirmPairMatch[1]) ||
+          CONFIRM_QUALIFIER_RE.test(confirmPairMatch[2]));
       if (
         (/(?:\b\w*(?:password|passwd|pwd)\b)\s*[!=]==?\s*(?!(?:null|undefined|true|false)\b)\w+(?:\.\w+)*\b/i.test(
           wideLine
@@ -383,6 +460,7 @@ export function probeAuthWeakness(files) {
           /(?<!\.)\b(?!(?:null|undefined|true|false)\b)\w+(?:\.\w+)*\s*[!=]==?\s*\b\w*(?:password|passwd|pwd)\b/i.test(
             wideLine
           )) &&
+        !isConfirmPair &&
         !(pwdSpellingOnly && namesAPath) &&
         // Self-test / fixture values: `retrieved === testPassword` in a
         // keychain round-trip check is not an auth path. FP triage 2026-07.
@@ -462,10 +540,29 @@ export function probeAuthWeakness(files) {
       // signal in AI-generated code. Match the pattern as a kv-pair where the
       // key is admin/root/test/user/etc. and the value is the same word, a
       // single digit, or a known weak default.
+      // The pair regex also matches structures that share the vocabulary —
+      // `const roles = ['user', 'admin']` (comma form), role-label maps
+      // `'admin': 'Admin'`, and stage maps `'test': 'test'` (colon form) all
+      // fired critical; `const authRoles = […]` defeated the first context
+      // fix because `auth\w*` matched the assignment target itself (all
+      // Gate-1 confirmed, 2026-09-03). Both forms now require explicit
+      // login/password vocabulary on the line — auth-PREFIXED identifiers
+      // don't count — or a value that IS a known weak password in lowercase
+      // ('Admin' is a display label, 'password1' is a credential).
+      const pairMatch = line.match(
+        /(['"])(admin|root|test|user|guest)\1\s*([,:])\s*(['"])(\2|admin|root|password|123456|test123|password1|guest)\4/i
+      );
+      const pairValueIsWeakPassword =
+        pairMatch !== null &&
+        ['password', '123456', 'test123', 'password1', 'admin123'].includes(pairMatch[5]);
+      const pairHasCredContext =
+        pairMatch !== null &&
+        (pairValueIsWeakPassword ||
+          /\b(?:login|log_?in|signin|sign_?in|auth\s*\(|authenticate|credentials?\s*[:=({]|password|passwd|pwd|basic)\b/i.test(
+            line
+          ));
       if (
-        /(['"])(admin|root|test|user|guest)\1\s*[,:]\s*(['"])(\2|admin|root|password|123456|test123|password1|guest)\3/i.test(
-          line
-        ) ||
+        pairHasCredContext ||
         /(?:user(?:name)?|login)\s*[:=]\s*['"](?:admin|root|test)['"][\s\S]{0,40}?(?:password|pass|pwd)\s*[:=]\s*['"](?:admin|root|password|123456|test123|password1)['"]/i.test(
           line
         )
@@ -528,15 +625,42 @@ export function probeAuthWeakness(files) {
       // config object. Match the key-value pair on a single line. (Multi-line
       // is handled by the whole-content pass below.)
       {
-        const objLiteralCred = /\b(?:password|passwd|pwd|pass|secret)\s*:\s*(['"])([^'"\n]{3,})\1/i;
+        const objLiteralCred = /\b(password|passwd|pwd|pass|secret)\s*:\s*(['"])([^'"\n]{3,})\2/i;
         const m = proseLine ? null : line.match(objLiteralCred);
         if (m) {
-          const value = m[2];
+          const value = m[3];
+          // Every key this branch matches (password/passwd/pwd/pass/secret)
+          // asserts the value IS a credential, so the identifier-shape value
+          // rejections are skipped — a diceware passphrase is a word chain
+          // (Gate-1), and `secret: "super-secret-signing-key"` is a signing
+          // secret, not an identifier (Gate-2).
+          const passwordNamed = true;
           const matchIdx = file.content.indexOf(realLine);
           const inPlaceholderCtx =
             matchIdx >= 0 && isMatchInPlaceholderNamedAssignment(file.content, matchIdx);
           const valueIsPlaceholder = SECRET_VALUE_PLACEHOLDER_RE.test(value);
-          if (!inPlaceholderCtx && !valueIsPlaceholder) {
+          // String catalogs and form metadata, not credentials. All four
+          // verified firing critical, FP triage 2026-09-03:
+          //   password: 'Enter your password'   (i18n message — has spaces)
+          //   password: 'required|min:8'        (validation rule chain)
+          //   pass: 'current-password'          (autocomplete/input token)
+          //   src/i18n/en.js                    (a locale file is a catalog)
+          // valueLooksLikeSecret rejects prose, rule chains, and digit-free
+          // word chains; real literals like 'hunter2!' and 'admin123' pass
+          // it and keep firing.
+          const inStringCatalogFile =
+            /(?:^|\/)(?:i18n|locales?|lang|translations?|messages)\//i.test(file.path);
+          const valueIsUiToken =
+            /^(?:password|text|email|tel|number|hidden|search|current-password|new-password|one-time-code)$/i.test(
+              value
+            );
+          if (
+            !inPlaceholderCtx &&
+            !valueIsPlaceholder &&
+            !inStringCatalogFile &&
+            !valueIsUiToken &&
+            valueLooksLikeSecret(value, { passwordNamed })
+          ) {
             findings.push({
               id: `auth-objpwd-${file.path}-${i}`,
               probe: 'Auth Weakness',
@@ -546,7 +670,7 @@ export function probeAuthWeakness(files) {
               cwe: 'CWE-798',
               file: file.path,
               line: i + 1,
-              evidence: realLine.trim().slice(0, 200),
+              evidence: redactValueInEvidence(realLine.trim(), value).slice(0, 200),
               remediation:
                 'Object-literal passwords (auth: { user, pass: "literal" }) ship with the repo. Use env vars (process.env.SMTP_PASSWORD), a secret manager reference, or runtime injection. Rotate the leaked value.',
             });
@@ -559,7 +683,14 @@ export function probeAuthWeakness(files) {
       // 'Basic Authentication'), not a base64 credential — base64 of any
       // user:pass starts lowercase or mixes in digits/+/=. FP triage 2026-07.
       const basicTok = codeLine.match(/['"]Basic\s+([A-Za-z0-9+/=]{8,})['"]/);
-      const basicIsProse = basicTok !== null && /^[A-Z][a-z]+$/.test(basicTok[1]);
+      // Prose after 'Basic': a single Title-case word ('Basic Controls') or a
+      // single all-lowercase word ('Basic authentication', 'Basic
+      // understanding' — both verified firing critical, FP triage
+      // 2026-09-03). Base64 of any real user:pass mixes case or brings
+      // digits/+/= within the first characters; a pure one-case dictionary
+      // word does not.
+      const basicIsProse =
+        basicTok !== null && (/^[A-Z][a-z]+$/.test(basicTok[1]) || /^[a-z]+$/.test(basicTok[1]));
       if (
         /Buffer\.from\s*\(\s*['"][^'"\n]+:[^'"\n]+['"]\s*\)\s*\.\s*toString\s*\(\s*['"]base64/i.test(
           codeLine
@@ -623,7 +754,25 @@ export function probeAuthWeakness(files) {
           const inPlaceholderCtx =
             matchIdx >= 0 && isMatchInPlaceholderNamedAssignment(file.content, matchIdx);
           const valueIsPlaceholder = SECRET_VALUE_PLACEHOLDER_RE.test(value);
-          if (!inPlaceholderCtx && !valueIsPlaceholder) {
+          // UI-metadata constants that borrow the vocabulary: LABEL_PASSWORD
+          // = 'Password', INPUT_PASSWORD = 'password-input'. Both verified
+          // firing critical, FP triage 2026-09-03. The prefix names the
+          // constant as being ABOUT the password control, and the value
+          // shape (title-case word, digit-free kebab token) confirms it.
+          const uiMetaPrefix =
+            /^(?:LABEL|INPUT|FIELD|PLACEHOLDER|BTN|BUTTON|ARIA|TITLE|HINT|TEXT|MSG|MESSAGE|ERROR|FORM|TYPE|NAME|CLASS|SELECTOR|ID|TESTID|DATA)_/.test(
+              varName
+            );
+          if (
+            !inPlaceholderCtx &&
+            !valueIsPlaceholder &&
+            !uiMetaPrefix &&
+            // PASSWORD/PASSWD/PWD/SECRET suffixes all assert credential —
+            // JWT_SECRET = "my-super-secret-key" lost its critical to the
+            // word-chain rejection when only password-suffixes asserted
+            // (Gate-2 confirmed recall bug).
+            valueLooksLikeSecret(value, { passwordNamed: true })
+          ) {
             findings.push({
               id: `auth-hardcodedpwd-${file.path}-${i}`,
               probe: 'Auth Weakness',
@@ -633,9 +782,51 @@ export function probeAuthWeakness(files) {
               cwe: 'CWE-798',
               file: file.path,
               line: i + 1,
-              evidence: realLine.trim().slice(0, 200),
+              evidence: redactValueInEvidence(realLine.trim(), value).slice(0, 200),
               remediation:
                 'Passwords pasted into source are committed to git history forever and shipped to every developer who clones the repo. Load from a secret manager (Doppler, 1Password, Vault, AWS Secrets Manager) or environment variable, NEVER a literal.',
+            });
+          }
+        }
+      }
+      {
+        // camelCase credential constants — the cross-language parity branch.
+        // Gate-3's severity table showed `apiKey = "<30 chars>"` critical in
+        // all 14 adapter languages and Python, but medium-or-SILENT in
+        // JS/TS, the tool's primary language, because the branch above only
+        // matches ALL-CAPS *_PASSWORD/*_SECRET names. Same segment
+        // discipline as everywhere else: a strong credential name asserts
+        // the value; weak names (cacheKey) never reach here.
+        const camelCred = line.match(
+          /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*[:=]\s*(['"])([^'"\n]{12,})\2/
+        );
+        if (camelCred) {
+          const varName = camelCred[1];
+          const value = camelCred[3];
+          const alreadyCaught =
+            /(?:const|let|var)\s+(?:[A-Z][A-Z0-9_]*_)?(?:PASSWORD|PASSWD|PWD|SECRET)\b/.test(line);
+          const matchIdx = file.content.indexOf(realLine);
+          const inPlaceholderCtx =
+            matchIdx >= 0 && isMatchInPlaceholderNamedAssignment(file.content, matchIdx);
+          if (
+            !alreadyCaught &&
+            nameAssertsCredential(varName) &&
+            !inPlaceholderCtx &&
+            !SECRET_VALUE_PLACEHOLDER_RE.test(value) &&
+            valueLooksLikeSecret(value, { passwordNamed: true })
+          ) {
+            findings.push({
+              id: `auth-hardcodedcred-${file.path}-${i}`,
+              probe: 'Auth Weakness',
+              title: `Hardcoded credential literal (${varName})`,
+              severity: 'critical',
+              category: 'Auth & Access',
+              cwe: 'CWE-798',
+              file: file.path,
+              line: i + 1,
+              evidence: redactValueInEvidence(realLine.trim(), value).slice(0, 200),
+              remediation:
+                'A credential in source is in every clone and the whole git history — deleting the line does not remove it. Load it from an environment variable or a secret manager, and rotate this value now.',
             });
           }
         }
@@ -879,12 +1070,23 @@ export function probeClientAuthStorage(files) {
     // checks below need, since a cookie name is usually built in a template
     // literal that the narrow mask blanks.
     const codeLines = maskCommentsOnly(file.content).split('\n');
-    // Common auth-name regex for storage keys. The keyword family must
-    // appear as a substring inside a quoted key. Underscored forms
-    // (auth_token, access_token) and camelCase forms (authToken) both
-    // match without imposing word-boundary constraints.
-    const AUTH_KEY_RE =
-      /['"`][^'"`]*(?:token|jwt|auth|session|bearer|access_?token|refresh_?token|api[_-]?key)[^'"`]*['"`]/i;
+    // Auth-name check for storage keys, by identifier segment rather than
+    // substring. The substring form read 'author' as auth and 'tokenCount'
+    // (an LLM usage counter, common in this audience's apps) as a token —
+    // both verified firing live, FP triage 2026-09-03. Underscored forms
+    // (auth_token) and camelCase forms (authToken) still match as segments;
+    // a trailing bookkeeping qualifier ('sessionTheme') marks the key as
+    // about-the-thing, not the thing.
+    const QUOTED_KEY_RE = /['"`]([^'"`\n]{1,80})['"`]/g;
+    const lineHasAuthishStorageKey = (line) => {
+      let qm;
+      QUOTED_KEY_RE.lastIndex = 0;
+      while ((qm = QUOTED_KEY_RE.exec(line)) !== null) {
+        if (storageKeyIsAuthish(qm[1])) return true;
+      }
+      return false;
+    };
+    const AUTH_KEY_RE = { test: lineHasAuthishStorageKey };
     // Build a tiny constant-fold map for the common obfuscation shape
     // `const KEY = 'tok' + 'en';` (or 'au' + 'th', etc.) and check whether
     // the folded value contains an auth keyword. Then when
@@ -1019,13 +1221,15 @@ export function probeClientAuthStorage(files) {
       // cookies set by middleware should be using res.cookie, not
       // document.cookie — but Koa ctx.cookies.set with httpOnly=true is
       // server-side, so check the ctx.cookies form).
+      // Cookie NAMES go through the same segment discipline as storage keys —
+      // Gate-1 2026-09-03: the substring form here read Cookies.set('author')
+      // as auth and a 'sessionTheme' cookie as a session credential, one
+      // screen below the storage-key check that was already fixed.
+      const docCookieName = codeLine.match(/document\.cookie\s*=\s*['"`]([^='"`\n]{1,80})=/i);
+      const jsCookieName = codeLine.match(/\bCookies\.set\s*\(\s*['"`]([^'"`\n]{1,80})['"`]/i);
       const cookieAuthShape =
-        /document\.cookie\s*=\s*['"`][^=]*?(?:token|jwt|auth|session|bearer|access[_-]?token|refresh[_-]?token)/i.test(
-          codeLine
-        ) ||
-        /\bCookies\.set\s*\(\s*['"`][^'"`]*(?:token|jwt|auth|session|bearer|access[_-]?token|refresh[_-]?token)/i.test(
-          codeLine
-        );
+        (docCookieName !== null && storageKeyIsAuthish(docCookieName[1])) ||
+        (jsCookieName !== null && storageKeyIsAuthish(jsCookieName[1]));
       // Koa / Express ctx.cookies.set + httpOnly is SERVER-SIDE and correct;
       // do not flag this shape under the client-side rule.
       const isServerSideCtxCookies = /\bctx\.cookies\.set\b|\bres\.cookie\b/i.test(codeLine);
@@ -1186,13 +1390,28 @@ export function probeCookieFlags(files) {
       if (!isCookieSet) return;
       // A sentence about caching auth headers is not a Set-Cookie call.
       if (lineIsProseString(line)) return;
-      // Auth-cookie name signal widened: connect.sid, PHPSESSID, JSESSIONID,
-      // __Host-*, __Secure-*, oauth/sso/bearer/sid/uid/login/account/
-      // remember/appSession/sb-access-token (Supabase) / clerk-session.
-      const isAuthNamed =
-        /(?:session|auth|token|jwt|csrf|connect\.sid|PHPSESSID|JSESSIONID|__Host-|__Secure-|sb-(?:access|refresh)-token|appSession|clerk-session|remember|access[_-]?code|bearer|sso)/i.test(
+      // Auth-cookie name signal. When the cookie NAME is extractable it goes
+      // through the same segment discipline as storage keys — Gate-3 found
+      // this branch still substring-matching one screen below the fixed
+      // check, so a Cookies.set('author') preference cookie and a
+      // 'sessionTheme' cookie drew the auth-cookie card. Well-known session
+      // cookie names and framework prefixes stay as line-level signals, and
+      // an unextractable (dynamically built) name falls back to the old
+      // line test rather than losing recall.
+      const cookieNameM =
+        line.match(
+          /(?:setCookie|setSignedCookie|cookies\.set|cookies\(\)\.set|res\.cookie|response\.cookie|reply\.setCookie|reply\.cookie|Astro\.cookies\.set|ctx\.cookies\.set|event\.cookies\.set|set_cookie|Cookies\.set)\s*\(\s*['"`]([^'"`\n]{1,80})['"`]/i
+        ) || line.match(/document\.cookie\s*=\s*['"`]([^='"`\n]{1,80})=/i);
+      const wellKnownAuthCookie =
+        /(?:connect\.sid|PHPSESSID|JSESSIONID|__Host-|__Secure-|sb-(?:access|refresh)-token|appSession|clerk-session)/i.test(
           line
         );
+      const isAuthNamed = wellKnownAuthCookie
+        ? true
+        : cookieNameM !== null
+          ? storageKeyIsAuthish(cookieNameM[1]) ||
+            /(?:csrf|remember|sso|sid|uid|login|account|access[_-]?code)/i.test(cookieNameM[1])
+          : /(?:session|auth|token|jwt|csrf|remember|access[_-]?code|bearer|sso)/i.test(line);
       if (!isAuthNamed) return;
       // OAuth public-flow values (state, nonce, code_verifier) are NOT
       // credentials per RFC 7636. Skip them.
