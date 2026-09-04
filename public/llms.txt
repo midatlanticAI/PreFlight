@@ -1,6 +1,6 @@
 # PreFlight Audit Tool
 
-> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 117 probes covering OWASP Top 10 2025 (A01-A10) and OWASP LLM Top 10 2026 (LLM01, LLM02, LLM03, LLM08, LLM09, LLM10), plus 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, multi-language adapters (Python, Go, Ruby, PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust), and conventional SAST checks. Every finding carries the OWASP category code(s) it maps to. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
+> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 128 probes covering OWASP Top 10 2025 (A01-A10) and OWASP LLM Top 10 2026 (LLM01, LLM02, LLM03, LLM08, LLM09, LLM10), plus 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, multi-language adapters (Python, Go, Ruby, PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust), and conventional SAST checks. Every finding carries the OWASP category code(s) it maps to. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
 
 The PreFlight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai). Contact: John@midatlantic.ai. License: free for individual and team use.
 
@@ -31,7 +31,7 @@ The tool extracts text from selected files or a public GitHub repository and run
 - Baseline diff vs. prior scan of the same source (introduced / fixed / persisted findings, score delta).
 - Diagnostics drawer with structured logs (debug / info / warn / error filterable, copy / save / clear).
 
-## The 117 probes
+## The 128 probes
 
 Two groups:
 

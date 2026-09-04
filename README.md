@@ -16,7 +16,7 @@ The full philosophy is at [`src/learn/manifesto.md`](./src/learn/manifesto.md) a
 
 ## What it does
 
-117 probes covering OWASP Top 10 2025, OWASP LLM Top 10 2026, and current threat intel:
+128 probes covering OWASP Top 10 2025, OWASP LLM Top 10 2026, and current threat intel:
 
 Every finding carries the OWASP category code(s) it maps to. The full mapping is at [`/learn/owasp`](https://preflight.midatlantic.ai/learn/owasp) in the deployed app, with the source-of-truth dictionary in [`src/lib/stable-id.js`](./src/lib/stable-id.js).
 
@@ -220,7 +220,7 @@ src/
 │   ├── learn/              ← LearnPage, IndexView, EntryView, ManifestoView
 │   └── settings/           ← SettingsPage + GeneralTab, ExplainVerifyTab, PrivateReposTab, DiagnosticsTab, AboutTab
 ├── lib/
-│   ├── probes.js           ← probe registry hub (117 probes across v0.4 + v0.5 phase-1/2/3) + threat-intel re-exports
+│   ├── probes.js           ← probe registry hub (128 probes across v0.4 + v0.5 phase-1/2/3) + threat-intel re-exports
 │   ├── probes/
 │   │   ├── code-correctness.js   ← acorn + acorn-jsx AST probe (undeclared identifiers)
 │   │   ├── web.js                ← URL reputation, HTML hygiene, SEO, GEO, A11y landmarks

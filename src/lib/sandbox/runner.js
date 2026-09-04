@@ -39,6 +39,12 @@ import {
   probeTaintFlow,
   probeWeakCryptography,
   probeWeakRandomness,
+  probeReactHygiene,
+  probeAsyncCorrectness,
+  probeErrorHandling,
+  probeTsHygiene,
+  probePerfHazards,
+  probeA11ySemantics,
 } from '../probes.js';
 
 // The default virtual filename. `.jsx` because most of what people paste is a
@@ -66,6 +72,13 @@ export const DEFAULT_SANDBOX_FILENAME = 'sandbox.jsx';
 //   - AI Codegen Bloat measures file length and cyclomatic complexity. On a
 //     deliberately short teaching buffer that measures the exercise, not the
 //     code.
+//   - Build & Config, Database Patterns, AI Hallucinations (import lists),
+//     Data & State (duplicate-fetch) and API Patterns lean on project-level
+//     context (package.json, migrations, cross-file rate-limit search), so
+//     they stay corpus-only; their local-shape siblings below are included.
+//   - React Hygiene, Async Correctness and Error Handling ARE included:
+//     their checks are local shapes (an effect span, a catch block, a loop)
+//     that a teaching buffer exercises exactly the way real source does.
 const SANDBOX_PROBES = [
   probeCodeQuality,
   probeAICodeSmells,
@@ -85,6 +98,12 @@ const SANDBOX_PROBES = [
   probeTaintFlow,
   probeWeakCryptography,
   probeWeakRandomness,
+  probeReactHygiene,
+  probeAsyncCorrectness,
+  probeErrorHandling,
+  probeTsHygiene,
+  probePerfHazards,
+  probeA11ySemantics,
 ];
 
 /**

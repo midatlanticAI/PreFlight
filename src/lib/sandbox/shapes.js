@@ -110,9 +110,9 @@ function UserSearch({ onSelect }) {
       <input value={query} onChange={(e) => setQuery(e.target.value)} />
       {error ? <p role="alert">{error}</p> : null}
       {results.map((r) => (
-        <div key={r.id} onClick={() => onSelect(r)}>
+        <button type="button" key={r.id} onClick={() => onSelect(r)}>
           {r.name}
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -191,6 +191,9 @@ export async function login(req, res) {
   const res = await fetch('/api/invoices', {
     headers: { Authorization: 'Bearer ' + token },
   });
+  if (!res.ok) {
+    throw new Error('invoice fetch failed: ' + res.status);
+  }
   return res.json();
 }
 `,

@@ -126,6 +126,17 @@ import { probeTaintFlow } from './probes/taint-engine.js';
 import { probeCrossFileTaint } from './probes/taint-cross-file.js';
 import { probeHostDetection } from './probes/v2/context.js';
 import { probeAICodegenBloat } from './probes/v2/bloat.js';
+import { probeReactHygiene } from './probes/v2/react.js';
+import { probeAsyncCorrectness } from './probes/v2/async.js';
+import { probeErrorHandling } from './probes/v2/errors.js';
+import { probeDataState } from './probes/v2/data-state.js';
+import { probeTsHygiene } from './probes/v2/ts-hygiene.js';
+import { probePerfHazards } from './probes/v2/perf.js';
+import { probeA11ySemantics } from './probes/v2/a11y-semantics.js';
+import { probeBuildConfig } from './probes/v2/build-config.js';
+import { probeAiHallucinations } from './probes/v2/hallucinations.js';
+import { probeApiPatterns } from './probes/v2/api-patterns.js';
+import { probeDbPatterns } from './probes/v2/db-patterns.js';
 
 // 2026: agent/editor auto-execution backdoors (.claude hooks, .vscode runOn:
 // folderOpen) — the Miasma / Shai-Hulud persistence vector.
@@ -196,6 +207,19 @@ export {
   probeHostDetection,
 } from './probes/v2/context.js';
 export { probeAICodegenBloat } from './probes/v2/bloat.js';
+// v2 F1-F3: correctness families (React hygiene, async, error handling).
+export { probeReactHygiene } from './probes/v2/react.js';
+export { probeAsyncCorrectness } from './probes/v2/async.js';
+export { probeErrorHandling } from './probes/v2/errors.js';
+// v2 F4-F6, F8-F12: the remaining spec families.
+export { probeDataState } from './probes/v2/data-state.js';
+export { probeTsHygiene } from './probes/v2/ts-hygiene.js';
+export { probePerfHazards } from './probes/v2/perf.js';
+export { probeA11ySemantics } from './probes/v2/a11y-semantics.js';
+export { probeBuildConfig } from './probes/v2/build-config.js';
+export { probeAiHallucinations } from './probes/v2/hallucinations.js';
+export { probeApiPatterns } from './probes/v2/api-patterns.js';
+export { probeDbPatterns } from './probes/v2/db-patterns.js';
 export const PROBES = [
   { name: 'Architecture', fn: probeArchitecture },
   { name: 'Secret Scanner', fn: probeSecrets },
@@ -269,6 +293,18 @@ export const PROBES = [
   // v2 F7: AI Codegen Bloat — the maintainability tells of unreviewed
   // generated code. Severity ceiling is medium by design.
   { name: 'AI Codegen Bloat', fn: probeAICodegenBloat },
+  // v2 F1-F3: correctness families. Severity ceiling high; health axis.
+  { name: 'React Hygiene', fn: probeReactHygiene },
+  { name: 'Async Correctness', fn: probeAsyncCorrectness },
+  { name: 'Error Handling', fn: probeErrorHandling },
+  { name: 'Data & State', fn: probeDataState },
+  { name: 'TypeScript Hygiene', fn: probeTsHygiene },
+  { name: 'Performance Hazards', fn: probePerfHazards },
+  { name: 'A11y Semantics', fn: probeA11ySemantics },
+  { name: 'Build & Config', fn: probeBuildConfig },
+  { name: 'AI Hallucinations', fn: probeAiHallucinations },
+  { name: 'API Patterns', fn: probeApiPatterns },
+  { name: 'Database Patterns', fn: probeDbPatterns },
   // v0.5: the live (shadow:false, net-new) language-agnostic adapters,
   // projected from PROBE_MANIFEST_V05. Migration adapters are held out
   // until the v0.4 cutover (see isLiveAdapter).

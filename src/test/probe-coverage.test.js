@@ -164,6 +164,17 @@ describe('OWASP coverage mapping', () => {
       'Architecture',
       'Host Detection',
       'AI Codegen Bloat',
+      'React Hygiene',
+      'Async Correctness',
+      'Error Handling',
+      'Data & State',
+      'TypeScript Hygiene',
+      'Performance Hazards',
+      'A11y Semantics',
+      'Build & Config',
+      'AI Hallucinations',
+      'API Patterns',
+      'Database Patterns',
     ]);
     const unmapped = PROBES.filter((p) => {
       if (NON_OWASP_PROBES.has(p.name)) return false;

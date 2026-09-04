@@ -201,6 +201,10 @@ export const FILE_INCLUDE = [
   /package-lock\.json$/,
   /yarn\.lock$/,
   /pnpm-lock\.yaml$/,
+  // Gate-1 2026-09-03: bun's lockfiles were named by Build & Config but
+  // never admitted by the filter, so a bun repo could not clear the
+  // no-lockfile finding no matter what it committed.
+  /bun\.lockb?$/,
   /(^|\/)\.npmrc$/,
   /\.tsx?$/,
   /\.jsx?$/,

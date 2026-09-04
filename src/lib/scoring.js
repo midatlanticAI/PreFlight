@@ -136,6 +136,17 @@ export const SCORE_AXES = ['security', 'health', 'accessibility', 'discoverabili
 
 const AXIS_BY_PROBE = {
   'AI Codegen Bloat': 'health',
+  'React Hygiene': 'health',
+  'Data & State': 'health',
+  'TypeScript Hygiene': 'health',
+  'Performance Hazards': 'health',
+  'A11y Semantics': 'accessibility',
+  'Build & Config': 'health',
+  'AI Hallucinations': 'health',
+  'API Patterns': 'health',
+  'Database Patterns': 'health',
+  'Async Correctness': 'health',
+  'Error Handling': 'health',
   'Code Quality': 'health',
   'AI Code Smells': 'health',
   'A11y Landmarks': 'accessibility',

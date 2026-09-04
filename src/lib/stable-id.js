@@ -370,6 +370,37 @@ export const PROBE_META = {
   // detected host routes downstream copy, nothing to fix.
   'Host Detection': { confidence: 'heuristic', autofix: 'manual' },
   // v2 F7: maintainability tells of unreviewed generated code.
+  'Data & State': { confidence: 'high', autofix: 'manual', learn_more_slug: 'data-state' },
+  'TypeScript Hygiene': {
+    confidence: 'high',
+    autofix: 'manual',
+    learn_more_slug: 'typescript-hygiene',
+  },
+  'Performance Hazards': {
+    confidence: 'high',
+    autofix: 'manual',
+    learn_more_slug: 'performance-hazards',
+  },
+  'A11y Semantics': { confidence: 'high', autofix: 'manual', learn_more_slug: 'a11y-semantics' },
+  'Build & Config': { confidence: 'high', autofix: 'manual', learn_more_slug: 'build-config' },
+  'AI Hallucinations': {
+    confidence: 'high',
+    autofix: 'manual',
+    learn_more_slug: 'ai-hallucinations',
+  },
+  'API Patterns': { confidence: 'high', autofix: 'manual', learn_more_slug: 'api-patterns' },
+  'Database Patterns': {
+    confidence: 'high',
+    autofix: 'manual',
+    learn_more_slug: 'database-patterns',
+  },
+  'React Hygiene': { confidence: 'high', autofix: 'manual', learn_more_slug: 'react-hygiene' },
+  'Async Correctness': {
+    confidence: 'high',
+    autofix: 'manual',
+    learn_more_slug: 'async-correctness',
+  },
+  'Error Handling': { confidence: 'high', autofix: 'manual', learn_more_slug: 'error-handling' },
   'AI Codegen Bloat': {
     confidence: 'medium',
     autofix: 'manual',

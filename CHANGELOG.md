@@ -6,6 +6,18 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-09-03 — the v2 family build: eleven families, 117 probes to 128
+
+The spec sat in docs/preflight-v2-spec.md since July with two families built. The other eleven are now live: F1 React Hygiene, F2 Async Correctness, F3 Error Handling, F4 Data & State, F5 TypeScript Hygiene, F6 Performance Hazards, F8 A11y Semantics, F9 Build & Config, F10 AI Hallucinations, F11 API Patterns, F12 Database Patterns. Each family shipped ecosystem-complete: detection module, published Learn pattern page, family test suite with positive and negative cases per check, registry and scoring wiring, and a sandbox include-or-exclude decision with its reason written down.
+
+The rosters were built against the registry, not beside it. Every spec entry that an existing probe already owns was declined by name in the family header rather than duplicated: dangerouslySetInnerHTML belongs to Code Injection, RLS to the Supabase probe, CORS wildcards to the CORS probe, img-alt and form labels to A11y Landmarks. Entries needing type information, dataflow, or a registry snapshot were declined with that reason instead of shipping a guess. What remains is 60-plus new checks that hold on real code.
+
+Real code got a vote before the suite did. The first corpus round removed one check outright (try/finally-with-no-catch read 44 correct acquire-release-propagate idioms as defects), retuned await-in-loop to the pure fan-out shape at medium (sequential-by-design is a choice, not a bug), split catch-returns-default by whether the author explicitly discarded the error, and taught swallows-with-an-explanatory-comment to report at low. An overlap fixture caught the swallow heuristic calling res.status(500) unhandled before any corpus did.
+
+Every family caps at medium severity, deliberately matching F7: the risk tier reads the worst severity present, and a correctness finding must not brand a repo HIGH RISK. Whether health-axis findings should ever reach high is the parked class-ceiling decision; the ceilings move only when it is made. Two sandbox teaching fixes were themselves improved when new probes caught real defects in them — a clickable div in the starter fix, an unchecked response in the token fix — and three drift detectors converted from it.fails to live coverage exactly as designed.
+
+Learn grew from 58 published patterns to 69; the prerender now writes 111 routes. Probe count 117 to 128, synced across README, meta, llms.txt, personas, and the og card.
+
 ### 2026-09-03 — the keys-and-passwords precision campaign, three adversarial gates deep
 
 The complaint that started it: the scanner kept calling things keys and passwords that were neither. Thirty of thirty-six suspected false-positive classes reproduced live against the full registry before a line was changed. A signup form's `password !== confirmPassword` fired critical. An i18n label fired critical. A CSS class starting `sk-` fired critical as an OpenAI key, twice. Cache keys, translation keys, route keys and query keys fired critical across ten languages. `TOKENIZER` read as a token, `keyboard_map` as a key, `author` as auth.

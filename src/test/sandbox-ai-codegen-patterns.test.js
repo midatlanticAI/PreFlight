@@ -77,7 +77,8 @@ describe('AI-codegen patterns: currently caught by the sandbox runner', () => {
 
 describe('AI-codegen patterns: planned coverage (Phase B Top 10 drift detectors)', () => {
   // Item 4 from spec §1.6 — top of the React hygiene family per StackInsight.
-  it.fails('useEffect addEventListener with no cleanup return is not yet caught', () => {
+  // Converted 2026-09-03: React Hygiene (F1) landed and catches this.
+  it('useEffect addEventListener with no cleanup return is caught by React Hygiene', () => {
     const code = `useEffect(() => { window.addEventListener('resize', onResize); }, []);`;
     const findings = runSandboxScan(code);
     expect(has(findings, 'cleanup|removeEventListener|listener')).toBe(true);
@@ -102,7 +103,8 @@ describe('AI-codegen patterns: planned coverage (Phase B Top 10 drift detectors)
   });
 
   // Item 9 — full lodash import for a single helper.
-  it.fails('full lodash import is not yet caught', () => {
+  // Converted 2026-09-03: Performance Hazards (F6) landed and catches this.
+  it('full lodash import is caught by Performance Hazards', () => {
     const code = `import _ from 'lodash'; const a = _.cloneDeep(x);`;
     const findings = runSandboxScan(code);
     expect(has(findings, 'lodash|tree.?shake|bundle')).toBe(true);
@@ -116,7 +118,8 @@ describe('AI-codegen patterns: planned coverage (Phase B Top 10 drift detectors)
   });
 
   // Item 2 — broad catch that swallows.
-  it.fails('try/catch with only console.log of the error is not yet caught', () => {
+  // Converted 2026-09-03: Error Handling (F3) landed and catches this.
+  it('console-only catch is caught by Error Handling', () => {
     const code = `try { doThing(); } catch (e) { console.log(e); }`;
     const findings = runSandboxScan(code);
     expect(has(findings, 'catch|swallow|broad')).toBe(true);
