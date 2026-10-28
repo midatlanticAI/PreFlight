@@ -84,8 +84,20 @@ export function probeDbPatterns(files) {
         (codeLines[i + 2] || '')
       ).replace(/['"`]\s*\+\s*['"`]/g, ' ');
       const um = line.match(/['"`]\s*(UPDATE\s+\w+\s+SET\b[^'"`]*|DELETE\s+FROM\s+\w+\s*)['"`]/i);
-      const wm = stmtWindow.match(/['"`]\s*(?:UPDATE\s+\w+\s+SET|DELETE\s+FROM\s+\w+)\b([^'"`]*)/i);
-      if (!isMaintenancePath && um && wm && !/\bWHERE\b/i.test(wm[0])) {
+      // The statement runs to the quote that opened it, so a value literal
+      // inside ("UPDATE jobs SET status = 'paid' WHERE id = ?1") no longer
+      // ends the window at the inner quote and hides the WHERE (field scan
+      // 2026-10-28: one hundred all-rows writes reported on scoped updates).
+      // An unterminated template falls back to the open-ended window.
+      // Interpolations are flattened first: a column list built as
+      // `${cols.map((c, i) => `${c} = ?${i}`).join(', ')}` carries its own
+      // backticks, and the inner one ended the statement before its WHERE.
+      // Two brace levels, disjoint alternatives, linear.
+      const flat = stmtWindow.replace(/\$\{(?:[^{}]|\{[^{}]*\})*\}/g, '?');
+      const qm = flat.match(/(["'`])\s*((?:UPDATE\s+\w+\s+SET|DELETE\s+FROM\s+\w+)\b[\s\S]*?)\1/i);
+      const wm = flat.match(/['"`]\s*(?:UPDATE\s+\w+\s+SET|DELETE\s+FROM\s+\w+)\b([^'"`]*)/i);
+      const stmt = qm ? qm[2] : wm ? wm[0] : '';
+      if (!isMaintenancePath && um && (qm || wm) && !/\bWHERE\b/i.test(stmt)) {
         push(i, {
           id: `db-no-where-${file.path}-${i}`,
           title: `${/DELETE/i.test(um[1]) ? 'DELETE' : 'UPDATE'} with no WHERE clause`,
@@ -132,8 +144,15 @@ export function probeDbPatterns(files) {
       // Migration statements that cannot run twice.
       // Gate-1: Prisma/Drizzle generate these files and prevent re-runs
       // with their version tables — IF NOT EXISTS is not theirs to add.
+      // Sequence-numbered files (0001_init.sql, 20240901_x.sql, V3__x.sql)
+      // belong to a runner that records applied versions: D1, Knex, Flyway,
+      // Rails, Django, golang-migrate, dbmate, the Supabase CLI. That runner
+      // is the remediation this check prescribes, and a plain CREATE TABLE
+      // under it is the idiom (field scan 2026-10-28: fifty-one findings on
+      // one D1 schema). What remains is a hand-applied SQL file.
+      const sequenced = /(?:^|\/)(?:\d{3,}[_-]|\d{8,}|V\d+__)[^/]*\.sql$/i.test(file.path);
       const toolManaged =
-        /(^|\/)(?:prisma|drizzle)\//i.test(file.path) || /-- CreateTable/.test(code);
+        sequenced || /(^|\/)(?:prisma|drizzle)\//i.test(file.path) || /-- CreateTable/.test(code);
       if (isMigration && !toolManaged && /^\s*CREATE\s+TABLE\s+(?!IF\s+NOT\s+EXISTS)/i.test(line)) {
         push(i, {
           id: `db-migration-rerun-${file.path}-${i}`,

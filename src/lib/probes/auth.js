@@ -8,7 +8,7 @@
 // preserved by builtin.js, which is now a back-compat shim re-exporting
 // every probe function from its new family file.
 
-import { isTestFile, isScannerSelfSource } from '../file-filter.js';
+import { isTestFile, isScannerSelfSource, isServiceWorkerFile } from '../file-filter.js';
 import {
   collectSafeBindings,
   collectFunctionBodies,
@@ -1521,6 +1521,9 @@ export function probeAPIRouteAuth(files) {
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     if (!/\.[jt]sx?$/.test(file.path)) return;
+    // A service worker's fetch listener is the browser's own cache layer,
+    // not a server route (see isServiceWorkerFile).
+    if (isServiceWorkerFile(file.path, file.content)) return;
     if (hasCorpusMiddleware) return; // gated at the middleware layer
     if (hasAppWideAuthMiddleware) return; // gated by Express/Hono/Koa app.use
     const c = file.content;
@@ -1557,8 +1560,10 @@ export function probeAPIRouteAuth(files) {
       /\b(?:fastify|app)\.register\s*\(\s*(?:fastifyAuth|fastifyJwt|fastifyJWT|fastifyBearerAuth)/i.test(
         c
       ) ||
-      // Webhook signature verification IS the auth (Stripe, GitHub, Slack)
-      /(?:stripe\.webhooks\.constructEvent|x-hub-signature|x-slack-signature|wh\.verify|webhookCallback)/i.test(
+      // Webhook signature verification IS the auth (Stripe, GitHub, Slack,
+      // Twilio). A Twilio voice Worker that checks X-Twilio-Signature on
+      // every request drew a high for its INSERTs (field scan 2026-10-28).
+      /(?:stripe\.webhooks\.constructEvent|x-hub-signature|x-slack-signature|x-twilio-signature|validateTwilioSignature|validateRequest\s*\(|wh\.verify|webhookCallback)/i.test(
         c
       ) ||
       // GraphQL: resolver context.user check

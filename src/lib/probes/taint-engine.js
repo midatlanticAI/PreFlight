@@ -47,7 +47,7 @@
 import { Parser } from 'acorn';
 import jsx from 'acorn-jsx';
 import * as acornLoose from 'acorn-loose';
-import { isTestFile, isScannerSelfSource } from '../file-filter.js';
+import { isTestFile, isScannerSelfSource, isServiceWorkerFile } from '../file-filter.js';
 
 // JSX-aware tolerant parser. acorn-loose is the resilience layer (recovers
 // from syntax errors); jsx adds the JSX grammar. Order matters: jsx must
@@ -776,6 +776,11 @@ export function probeTaintFlow(files) {
   for (const file of files) {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) continue;
     if (!/\.[jt]sx?$/.test(file.path)) continue;
+    // In a service worker the `event` parameter is the browser's own page
+    // request and `fetch(event.request)` is the cache layer refetching it;
+    // reading that as a user-controlled outbound URL reported an SSRF on a
+    // PWA shell (field scan 2026-10-28). See isServiceWorkerFile.
+    if (isServiceWorkerFile(file.path, file.content)) continue;
     const ast = parseFile(file.content, file.path.match(/\.[jt]sx?$/)?.[0] || '.js');
     if (!ast) continue;
     // Rebuilt per file; sinks resolve callee names through it.

@@ -276,6 +276,27 @@ export function valueLooksLikeSecret(value, opts = {}) {
   // and applying them to SECRET_KEY / JWT_SECRET / BOT_TOKEN silenced real
   // word-chain secrets, Telegram's colon-format tokens, and Astra/Ably keys
   // (Gate-2 confirmed, 2026-09-03).
+  // An UPPER_SNAKE identifier in the value position names the setting that
+  // holds the credential, it is not the credential: `secret: 'ANTHROPIC_API_KEY'`
+  // is a provider table saying which env var to read, and it drew four
+  // criticals on one lookup table (field scan 2026-10-28). Rejected in every
+  // mode. Two or more all-caps segments: a real password spelled
+  // MY_SECRET_PASSWORD is the documented cost, and a single word ('HUNTER2')
+  // still passes.
+  if (/^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/.test(v)) return false;
+  // A separator-joined word chain that carries a fixture marker as one of
+  // its segments ('qa-auth-isolated-secret', 'test_session_secret',
+  // 'dummy-token-value') is a harness value, in every mode: the marker is
+  // the author saying so. The marker has to be a whole segment, so
+  // 'contest-winner-2026' and 'devilish$' are untouched, and a chain with no
+  // marker ('correct-horse-battery-staple') is still a passphrase.
+  if (
+    /^[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)+$/.test(v) &&
+    /(?:^|[-_])(?:test|qa|dummy|fake|sample|example|placeholder|mock|stub|fixture)(?:[-_]|$)/i.test(
+      v
+    )
+  )
+    return false;
   if (passwordNamed) return true;
   // Namespaced ids: cacheKey := "user:profile:v2:default!". No real key
   // format uses colons; base64 never contains one.

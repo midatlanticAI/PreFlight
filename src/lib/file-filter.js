@@ -33,7 +33,11 @@ const norm = (path) => (typeof path === 'string' ? path.replace(/\\/g, '/') : pa
 export function isTestFile(rawPath) {
   const path = norm(rawPath);
   if (!path) return false;
-  if (/\.(test|spec|eval)\.[jt]sx?$/i.test(path)) return true;
+  // .mjs/.cjs/.mts/.cts count. A Workers project writes every test as
+  // *.test.mjs, and with those extensions missing here one hundred all-rows
+  // UPDATE findings and thirty-eight "hardcoded secrets" landed on fixtures
+  // (field scan 2026-10-28).
+  if (/\.(test|spec|eval)\.(?:[cm]?[jt]s|[jt]sx)$/i.test(path)) return true;
   // Directory names: exact test/fixture/mock dirs plus hyphen/underscore
   // compounds (integration-tests/, memory-tests/, test-fixtures/, evals/).
   // FP triage 2026-07 (gemini-cli-fork scan): the literal alternation missed
@@ -45,7 +49,30 @@ export function isTestFile(rawPath) {
     )
   )
     return true;
+  // A QA harness directory at the repo root or under scripts/ (auth-http.mjs,
+  // fixture servers, blocklist bypass drills: field scan 2026-10-28, seventeen
+  // "hardcoded secrets" on harness env objects). Deliberately not a bare
+  // `qa/` anywhere: in a RAG app src/qa/ is the question-answering module.
+  if (/^(?:scripts?\/)?qa\//i.test(path)) return true;
   return false;
+}
+
+// A service worker is browser code that spells `addEventListener('fetch'` the
+// way a Cloudflare Worker does. Its `event.request` is the page's own
+// navigation and its `fetch(req)` is the browser refetching the page, so a
+// route-shaped probe reads it as an unauthenticated API handler and the taint
+// engine as an SSRF sink (field scan 2026-10-28: a PWA's two service workers
+// drew a critical, two highs, and an SSRF). The filename is not enough,
+// sw.js is also a bundle name; the content has to register a worker
+// lifecycle event or claim clients, which a server-side Worker never does.
+export function isServiceWorkerFile(rawPath, content) {
+  if (typeof content !== 'string') return false;
+  return (
+    /\b(?:skipWaiting|clients\.claim|importScripts)\s*\(/.test(content) ||
+    /\baddEventListener\s*\(\s*['"](?:install|activate|push|notificationclick|periodicsync)['"]/.test(
+      content
+    )
+  );
 }
 
 // True for project markdown documentation files. The secret scanner pattern

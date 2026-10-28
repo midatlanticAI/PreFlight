@@ -105,6 +105,27 @@ function dynamicallyEnabledTables(maskedSql) {
   return out;
 }
 
+// Row Level Security is a Postgres feature. A `.sql` file in a Cloudflare D1
+// (SQLite), MySQL or plain SQLite project cannot enable it, and telling that
+// project every table is "missing" RLS is fifty-one criticals for a setting
+// its engine does not have (field scan 2026-10-28, one D1 schema). The
+// migration phase runs only on Postgres evidence: the project depends on
+// Supabase, the file lives under a supabase/ tree, or the SQL uses a
+// Postgres spelling. A dialect-neutral schema in a project with no Supabase
+// dependency makes no RLS claim at all, and a SQLite or MySQL spelling
+// anywhere in the file is decisive the other way. A schema-qualified table
+// (public.users, app.orders) is Postgres too: SQLite has only main. and
+// temp., which are excluded.
+const POSTGRES_SQL_RE =
+  /\b(?:uuid|gen_random_uuid|uuid_generate_v4|serial|bigserial|jsonb|timestamptz|plpgsql|security\s+(?:definer|invoker)|row\s+level\s+security|create\s+policy|auth\.(?:uid|jwt|role)|create\s+extension|create\s+schema|language\s+sql)\b|\$\$|::\s*\w+|\bcreate\s+table\s+(?:if\s+not\s+exists\s+)?(?!main\.|temp\.)[a-z_]\w*\.\w/i;
+const SQLITE_OR_MYSQL_SQL_RE =
+  /\b(?:AUTOINCREMENT|AUTO_INCREMENT|PRAGMA|WITHOUT\s+ROWID)\b|\bENGINE\s*=/i;
+function isPostgresSql(path, content, isSupabaseProject) {
+  if (SQLITE_OR_MYSQL_SQL_RE.test(content)) return false;
+  if (isSupabaseProject || /(^|\/)supabase\//i.test(path)) return true;
+  return POSTGRES_SQL_RE.test(content);
+}
+
 function collectProtectedTables(files) {
   const protectedTables = new Set();
   let sawMigration = false;
@@ -180,8 +201,10 @@ function probeSupabaseClientReads(files) {
 
 export function probeSupabaseRLS(files) {
   const findings = probeSupabaseClientReads(files);
+  const { isSupabaseProject } = collectSupabaseHandles(files);
   files.forEach((file) => {
     if (!/\.sql$/.test(file.path)) return;
+    if (!isPostgresSql(file.path, file.content || '', isSupabaseProject)) return;
     // Masked view for every match below. maskSqlComments preserves length, so
     // match offsets and the line numbers derived from them stay accurate.
     const content = maskSqlComments(file.content || '');

@@ -238,7 +238,9 @@ describe('F12 Database Patterns', () => {
         'server/admin.js',
         `export async function resetAll(db) {\n  await db.query('UPDATE users SET credits = 0');\n}\nexport const transfer = async (prisma, a, b, amt) => {\n  await prisma.account.update({ where: { id: a }, data: { balance: { decrement: amt } } });\n  await prisma.account.update({ where: { id: b }, data: { balance: { increment: amt } } });\n};\n`
       ),
-      file('migrations/002_payments.sql', `CREATE TABLE payments (id serial primary key);\n`)
+      // Un-numbered on purpose: a sequenced file belongs to a version-recording
+      // runner and is exempt (field scan 2026-10-28).
+      file('migrations/payments.sql', `CREATE TABLE payments (id serial primary key);\n`)
     );
     expect(has(res, /UPDATE with no WHERE/), titles(res)).toBe(true);
     expect(has(res, /not re-runnable/), titles(res)).toBe(true);

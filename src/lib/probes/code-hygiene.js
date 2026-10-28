@@ -18,7 +18,16 @@ export function probeTrojanSource(files) {
     if (!BIDI_CONTROL_RE.test(file.content)) return;
     const lines = file.content.split('\n');
     lines.forEach((line, i) => {
-      if (BIDI_CONTROL_RE.test(line)) {
+      // A sanitizer that strips bidi controls has to spell them, and a regex
+      // character class written with the raw characters is where it does so
+      // (field scan 2026-10-28: an INVISIBLE strip list beside \u0000-\u001F
+      // drew a high). A class that also carries escaped control ranges is the
+      // defence, not the attack, so those classes are blanked before the
+      // test; a bidi character anywhere else on the line still fires.
+      const outsideStripLists = line.replace(/\[((?:[^\]\\]|\\.)*)\]/g, (whole, body) =>
+        /\\u[0-9A-Fa-f]{4}/.test(body) ? '' : whole
+      );
+      if (BIDI_CONTROL_RE.test(outsideStripLists)) {
         findings.push({
           id: `trojan-${file.path}-${i}`,
           probe: 'Trojan Source',

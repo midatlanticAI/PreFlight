@@ -28,6 +28,7 @@ import {
   maskCommentsForPath,
   redactValueInEvidence,
 } from './_internal/masking.js';
+import { valueLooksLikeSecret } from './_internal/credential-shape.js';
 
 // Preventive check: does the project's .gitignore actually have a pattern that
 // would catch .env files BEFORE they get committed? Most leaked-secret incidents
@@ -92,6 +93,16 @@ export function probeSecrets(files) {
         // looks at the matched text only so a real key embedded next to a
         // placeholder marker still fires.
         if (SECRET_VALUE_PLACEHOLDER_RE.test(m[0])) return;
+        // The generic pattern is the one rule here with no fixed value shape,
+        // so its value goes through the shared credential-shape judgement
+        // like every password-named match in Auth Weakness does. That is
+        // what rejects an env var NAME in the value position
+        // (`secret: 'ANTHROPIC_API_KEY'` names the setting, field scan
+        // 2026-10-28) and a fixture-marked word chain.
+        if (pat.name === 'Generic Hardcoded Secret') {
+          const value = m[0].match(/["']([^"']+)["']\s*$/)?.[1] || '';
+          if (!valueLooksLikeSecret(value, { passwordNamed: true })) return;
+        }
         // Suppress matches whose enclosing assignment names the variable as
         // a sample/example/test/fake fixture (e.g. SAMPLE_OPENAI_KEY).
         // Generic identifiers like API_KEY or AWS_SECRET still fire — those

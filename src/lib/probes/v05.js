@@ -378,7 +378,7 @@ const LODASH_RANDOM_RE = /\b_\.(?:random|shuffle|sample)\s*\(/;
 // `discount[_]?code`, `referral[_]?code`, `api[_-]?key`, `jwt`, `sid`,
 // `bearer`. The original list was missing every one of these.
 const SECURITY_CONTEXT_RE =
-  /token|secret|password|nonce|csrf|otp|verification|verifyemail|reset|signature|recovery|magiclink|invitetoken|magic[A-Z]|invite[A-Z]|\bkey\b|\bsalt\b|\biv\b|\bhash\b|\buuid\b|\bpin\b|access[_-]?code|coupon[_-]?code|discount[_-]?code|referral[_-]?code|api[_-]?key|\bjwt\b|\bsid\b|\bbearer\b/i;
+  /token|secret|password|nonce|csrf|otp|verification|verifyemail|reset|signature|recovery|magiclink|invitetoken|magic[A-Z]|invite[A-Z]|(?:api|secret|access|private|auth|session|signing|encryption|license|master|recovery|hmac)[_-]?key\b|\bsalt\b|\biv\b|\bhash\b|\buuid\b|\bpin\b|access[_-]?code|coupon[_-]?code|discount[_-]?code|referral[_-]?code|api[_-]?key|\bjwt\b|\bsid\b|\bbearer\b/i;
 const UI_CONTEXT_RE =
   /\b(?:jitter|delay|shuffle|animation|fade|color|hsl|rgb|pixel|particle|preview|placeholder|mock|fake|wobble|tween|ease|bounce|opacity|hue|chart|axis|mesh|vertex|scene|camera|sample|bucket|backoff|retry)\b/i;
 // LHS identifier heuristic — the strongest signal. If the line is an
@@ -451,6 +451,26 @@ const LHS_BENIGN_QUALIFIERS = new Set([
 // keyboard identifiers. Checked before the segment walk so 'code' stays a
 // live qualifier for otp/pin/invite (Gate-3).
 const LHS_BENIGN_MERGED = new Set(['keycode', 'charcode', 'keyup', 'keydown', 'keypress']);
+// Bare `key` is a list key or a map key unless a credential qualifier
+// precedes it. `const key = () => Math.random().toString(36).slice(2)` seeds
+// React row keys in an invoice editor and was reported high as an
+// authenticator (field scan 2026-10-28); the same rule keeps `key={...}`
+// props in the context window from supplying "security context" to an
+// unrelated Math.random. apiKey / sessionKey / signingKey still fire.
+const KEY_CREDENTIAL_QUALIFIERS = new Set([
+  'api',
+  'secret',
+  'access',
+  'private',
+  'auth',
+  'session',
+  'signing',
+  'encryption',
+  'license',
+  'master',
+  'recovery',
+  'hmac',
+]);
 const lhsNameIsSecurity = (line) => {
   const m = line.match(LHS_BINDING_RE);
   if (!m) return false;
@@ -466,6 +486,7 @@ const lhsNameIsSecurity = (line) => {
     if (LHS_SECURITY_SEGMENTS.has(segs[i])) hitLen = 1;
     else if (merged && LHS_SECURITY_SEGMENTS.has(merged)) hitLen = 2;
     if (hitLen === 0) continue;
+    if (hitLen === 1 && segs[i] === 'key' && !KEY_CREDENTIAL_QUALIFIERS.has(segs[i - 1])) continue;
     const after = segs[i + hitLen];
     if (after && LHS_BENIGN_QUALIFIERS.has(after)) continue;
     return true;
