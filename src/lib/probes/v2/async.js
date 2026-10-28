@@ -25,6 +25,7 @@
 
 import { isTestFile, isScannerSelfSource } from '../../file-filter.js';
 import { maskCommentsForPath } from '../_internal/masking.js';
+import { lineIndex } from './line-index.js';
 import { parseModule, walk } from './context.js';
 
 export const ASYNC_LOOP_SPAN_BUDGET = 4000;
@@ -41,8 +42,6 @@ const finding = (o) => ({
   cwe: 'CWE-1088',
   ...o,
 });
-
-const lineOf = (content, idx) => content.slice(0, idx).split('\n').length;
 
 function readBraceSpan(content, openBrace, budget = ASYNC_LOOP_SPAN_BUDGET) {
   let depth = 0;
@@ -78,6 +77,7 @@ export function probeAsyncCorrectness(files) {
     )
       return;
     const code = maskCommentsForPath(file.path, content);
+    const lineAt = lineIndex(content);
     const codeLines = code.split('\n');
     const rawLines = content.split('\n');
     const push = (line, o) =>
@@ -93,14 +93,19 @@ export function probeAsyncCorrectness(files) {
     // 3. await on an IO call inside a loop: N round trips, one at a time.
     //    Opt-out: a `/* serial */` marker on the loop line (read from the RAW
     //    line, since comments are blanked in the match view).
-    const loopRe = /\b(?:for|while)\s*\([^)]*\)\s*(\{)|\bfor\s+await\s*\(/g;
+    // The header admits two levels of nested parens: `for (const id of
+    // Object.keys(map))` and `for (const x of items.filter((i) => i.ok))`
+    // were invisible to a `[^)]*` header (Gate-3 G7, G38). The alternatives
+    // are disjoint, so the scan stays linear.
+    const loopRe =
+      /\b(?:for|while)\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)\s*(\{)|\bfor\s+await\s*\(/g;
     let lm;
     while ((lm = loopRe.exec(code)) !== null) {
       if (!lm[1]) continue; // `for await` is already streaming; not this shape
       const openBrace = lm.index + lm[0].length - 1;
       const span = readBraceSpan(code, openBrace);
       if (span === null) continue;
-      const ln = lineOf(code, lm.index);
+      const ln = lineAt(lm.index);
       if (/\/\*\s*serial\s*\*\//.test(rawLines[ln - 1] ?? '')) continue;
       // Only the pure fan-out shape fires: the awaited call must use the
       // loop variable, and the body must not feed one iteration into the
@@ -187,7 +192,9 @@ export function probeAsyncCorrectness(files) {
         });
       }
       // 6. Mixing then-chains and await on one statement.
-      if (/\bawait\b[^;]*\.then\s*\(/.test(line)) {
+      // Bounded: open-ended `[^;]*` rescanned to end-of-line from every
+      // await on a semicolon-free minified line (Gate-3 G17).
+      if (/\bawait\b[^;]{0,300}\.then\s*\(/.test(line)) {
         push(ln, {
           id: `async-mixed-${file.path}-${ln}`,
           title: 'await and .then mixed in one expression',
@@ -268,7 +275,7 @@ export function probeAsyncCorrectness(files) {
       !/main\s*\(\s*\)\s*\.\s*catch/.test(code)
     ) {
       const idx = code.search(/^\s*(?:void\s+)?main\s*\(\s*\)\s*;?\s*$/m);
-      push(lineOf(code, idx), {
+      push(lineAt(idx), {
         id: `async-main-unhandled-${file.path}`,
         title: 'async main() called without .catch',
         severity: 'medium',
@@ -300,7 +307,7 @@ export function probeAsyncCorrectness(files) {
       const span = readBraceSpan(code, rm.index + rm[0].length - 1);
       if (span === null) continue;
       if (/\bawait\b/.test(span) && !/\btry\b/.test(span)) {
-        const ln = lineOf(code, rm.index);
+        const ln = lineAt(rm.index);
         push(ln, {
           id: `async-route-boundary-${file.path}-${ln}`,
           title: 'Route handler awaits without a try boundary',
@@ -331,7 +338,7 @@ export function probeAsyncCorrectness(files) {
         /^(?:res|response|reply|ctx)\./.test(calleeText)
       )
         return;
-      push(lineOf(content, node.start), {
+      push(lineAt(node.start), {
         id: `async-floating-${file.path}-${node.start}`,
         title: `Result of ${calleeText}() is not awaited or handled`,
         severity: 'medium',

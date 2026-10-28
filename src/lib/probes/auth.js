@@ -1105,7 +1105,14 @@ export function probeClientAuthStorage(files) {
         if (/^(?:SAMPLE|EXAMPLE|FAKE|DUMMY|MOCK|FIXTURE|PLACEHOLDER|STUB)[_A-Z0-9]*$/.test(name)) {
           continue;
         }
-        const value = (dm[3] || '') + (dm[5] || '') + (dm[7] || '') + (dm[9] || '');
+        // Interpolations are dropped before the value is judged: with the
+        // masker now keeping `${...}` as code, `const key = `dev-proc-${me.session.userId}``
+        // read as an auth key because of the word inside the braces
+        // (canary replay 2026-10-28). The literal text is the key's name.
+        const value = ((dm[3] || '') + (dm[5] || '') + (dm[7] || '') + (dm[9] || '')).replace(
+          /\$\{[^}]*\}/g,
+          ''
+        );
         if (!value) continue;
         if (
           /(?:token|jwt|auth|session|bearer|access_?token|refresh_?token|api[_-]?key)/i.test(value)

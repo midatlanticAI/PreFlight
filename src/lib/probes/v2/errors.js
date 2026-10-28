@@ -32,7 +32,8 @@
 //       one file, and a probe should not call a correct idiom a defect.
 
 import { isTestFile, isScannerSelfSource } from '../../file-filter.js';
-import { maskCommentsForPath } from '../_internal/masking.js';
+import { maskCommentsForPath, maskCodeShapeForPath } from '../_internal/masking.js';
+import { lineIndex } from './line-index.js';
 
 export const ERRORS_FILE_RE = /\.(?:[jt]sx?|mjs|cjs)$/i;
 export const ERRORS_CATCH_SPAN_BUDGET = 2500;
@@ -45,7 +46,8 @@ const finding = (o) => ({
   ...o,
 });
 
-const lineOf = (content, idx) => content.slice(0, idx).split('\n').length;
+// Catch parameters go into dynamic patterns escaped ($err is legal).
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 function readBraceSpan(content, openBrace, budget = ERRORS_CATCH_SPAN_BUDGET) {
   let depth = 0;
@@ -70,6 +72,13 @@ export function probeErrorHandling(files) {
     const content = file.content || '';
     if (!content.trim()) return;
     const code = maskCommentsForPath(file.path, content);
+    // String-blind view for the catch scanner: a `}` inside a log string
+    // closed the block before its throw, so a catch that rethrew with cause
+    // was reported as a swallow, and the catch parameter spelled inside a
+    // string ('e-mail failed') counted as a use (Gate-3 G9, G39). Masks
+    // preserve length, so offsets read the same source on every view.
+    const shape = maskCodeShapeForPath(file.path, content);
+    const lineAt = lineIndex(content);
     const rawLines = content.split('\n');
     const push = (line, o) =>
       findings.push(
@@ -104,15 +113,22 @@ export function probeErrorHandling(files) {
     }
 
     // ---- catch-block checks (1, 2, 3, 9, 10, 20, 22, 13) ----
-    const catchRe = /\bcatch\s*(?:\(\s*(\w+)\s*\))?\s*(\{)/g;
+    // The parameter may be typed (`catch (e: unknown)`, the TypeScript
+    // spelling in every .ts file this family claims) or destructured
+    // (`catch ({ message })`); the first draft accepted a bare identifier
+    // only, so every catch check was dead in typed code (Gate-3 G8, G40).
+    // A destructured parameter has no single name to count uses of and is
+    // treated like a bare `catch {`.
+    const catchRe =
+      /\bcatch\s*(?:\(\s*(?:([A-Za-z_$][\w$]*)(?:\s*:\s*[\w$.<>[\]| ]+)?|\{[^}]{0,200}\})\s*\))?\s*(\{)/g;
     let cm;
-    while ((cm = catchRe.exec(code)) !== null) {
+    while ((cm = catchRe.exec(shape)) !== null) {
       const param = cm[1] || null;
       const openBrace = cm.index + cm[0].length - 1;
-      const span = readBraceSpan(code, openBrace);
+      const span = readBraceSpan(shape, openBrace);
       if (span === null) continue;
       const body = span.trim();
-      const ln = lineOf(code, cm.index);
+      const ln = lineAt(cm.index);
 
       // 2. Entirely empty catch.
       if (body === '') {
@@ -127,7 +143,13 @@ export function probeErrorHandling(files) {
         continue;
       }
       // 1 (+4, +11 merged). The error is used only to log it, or never used.
-      const paramUses = param ? [...body.matchAll(new RegExp(`\\b${param}\\b`, 'g'))].length : 0;
+      // Counted on the string-blind body. Template interpolations survive
+      // the mask as code, so `errors.push(`failed: ${err.message}`)` is a
+      // use and `showBanner('e-mail failed')` is not.
+      const rawSpan = content.slice(openBrace + 1, openBrace + 1 + span.length);
+      const paramUses = param
+        ? [...body.matchAll(new RegExp(`(?<![\\w$])${esc(param)}(?![\\w$])`, 'g'))].length
+        : 0;
       // Handling signals: anything that answers, surfaces, retries, or
       // propagates. Sending a response IS handling — the first draft called
       // `catch (e) { res.status(500).json(…) }` a swallow (caught by an
@@ -153,7 +175,6 @@ export function probeErrorHandling(files) {
         // effort }`) is a decision, not an accident — corpus round
         // 2026-09-03. The mask is length-preserving, so the raw span sits
         // at the same indices.
-        const rawSpan = content.slice(openBrace + 1, openBrace + 1 + span.length);
         const explained = /\/\/|\/\*/.test(rawSpan);
         push(ln, {
           id: `errors-catch-swallow-${file.path}-${ln}`,
@@ -166,7 +187,7 @@ export function probeErrorHandling(files) {
         continue;
       }
       // 3. Bare rethrow with no transformation.
-      if (param && new RegExp(`^throw\\s+${param}\\s*;?$`).test(body)) {
+      if (param && new RegExp(`^throw\\s+${esc(param)}\\s*;?$`).test(body)) {
         push(ln, {
           id: `errors-bare-rethrow-${file.path}-${ln}`,
           title: 'Catch only rethrows the same error',
@@ -180,7 +201,7 @@ export function probeErrorHandling(files) {
       // stack included — it is this probe's own recommended fix.
       if (
         param &&
-        new RegExp(`throw\\s+new\\s+Error\\s*\\(\\s*${param}\\s*\\.\\s*message`).test(body) &&
+        new RegExp(`throw\\s+new\\s+Error\\s*\\(\\s*${esc(param)}\\s*\\.\\s*message`).test(body) &&
         !/\bcause\s*:/.test(body)
       ) {
         push(ln, {
@@ -213,7 +234,7 @@ export function probeErrorHandling(files) {
         });
       }
       // 20. Catch parameter shadowed by a nested catch with the same name.
-      if (param && new RegExp(`catch\\s*\\(\\s*${param}\\s*\\)`).test(span)) {
+      if (param && new RegExp(`catch\\s*\\(\\s*${esc(param)}\\s*[:)]`).test(span)) {
         push(ln, {
           id: `errors-shadowed-catch-${file.path}-${ln}`,
           title: `Nested catch shadows outer parameter ${param}`,

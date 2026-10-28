@@ -25,6 +25,7 @@
 
 import { isTestFile, isScannerSelfSource } from '../../file-filter.js';
 import { maskCommentsForPath } from '../_internal/masking.js';
+import { lineIndex } from './line-index.js';
 
 export const DB_FILE_RE = /\.(?:[jt]sx?|mjs|cjs|py|sql)$/i;
 
@@ -62,8 +63,24 @@ export function probeDbPatterns(files) {
         })
       );
 
+    // Gate-3 G19/G30: this whole-file test ran once per LINE inside the loop
+    // below, O(lines x bytes) on every file whether or not knex appeared.
+    const usesKnex = /knex\s*\(|from\s+['"]knex['"]|require\s*\(\s*['"]knex['"]/.test(code);
+    const lineAt = lineIndex(content);
     const isMigrationPath = /(^|\/)(?:migrations?|migrate)\//i.test(file.path);
     const isMigration = isMigrationPath && /\.sql$/i.test(file.path);
+    // Gate-1: Prisma/Drizzle generate these files and prevent re-runs with
+    // their version tables — IF NOT EXISTS is not theirs to add.
+    // Sequence-numbered files (0001_init.sql, 20240901_x.sql, V3__x.sql)
+    // belong to a runner that records applied versions: D1, Knex, Flyway,
+    // Rails, Django, golang-migrate, dbmate, the Supabase CLI. That runner
+    // is the remediation this check prescribes, and a plain CREATE TABLE
+    // under it is the idiom (field scan 2026-10-28: fifty-one findings on
+    // one D1 schema). What remains is a hand-applied SQL file. Per file:
+    // the whole-file `-- CreateTable` test used to run once per line.
+    const sequenced = /(?:^|\/)(?:\d{3,}[_-]|\d{8,}|V\d+__)[^/]*\.sql$/i.test(file.path);
+    const toolManaged =
+      sequenced || /(^|\/)(?:prisma|drizzle)\//i.test(file.path) || /-- CreateTable/.test(code);
     // Gate-1: reset/seed/demo scripts clear whole tables as their stated
     // job, and migration backfills touch every row by definition.
     const isMaintenancePath =
@@ -124,7 +141,6 @@ export function probeDbPatterns(files) {
           });
         }
       }
-      const usesKnex = /knex\s*\(|from\s+['"]knex['"]|require\s*\(\s*['"]knex['"]/.test(code);
       if (!isMaintenancePath && usesKnex && /\.(?:update|del|delete)\s*\(/.test(line)) {
         const w = codeLines.slice(Math.max(0, i - 1), Math.min(codeLines.length, i + 4)).join(' ');
         const km = /knex\s*\([^)]*\)\s*(?:\.\w+\s*\([^)]*\)\s*)*\.(?:update|del|delete)\s*\(/.test(
@@ -142,17 +158,6 @@ export function probeDbPatterns(files) {
         }
       }
       // Migration statements that cannot run twice.
-      // Gate-1: Prisma/Drizzle generate these files and prevent re-runs
-      // with their version tables — IF NOT EXISTS is not theirs to add.
-      // Sequence-numbered files (0001_init.sql, 20240901_x.sql, V3__x.sql)
-      // belong to a runner that records applied versions: D1, Knex, Flyway,
-      // Rails, Django, golang-migrate, dbmate, the Supabase CLI. That runner
-      // is the remediation this check prescribes, and a plain CREATE TABLE
-      // under it is the idiom (field scan 2026-10-28: fifty-one findings on
-      // one D1 schema). What remains is a hand-applied SQL file.
-      const sequenced = /(?:^|\/)(?:\d{3,}[_-]|\d{8,}|V\d+__)[^/]*\.sql$/i.test(file.path);
-      const toolManaged =
-        sequenced || /(^|\/)(?:prisma|drizzle)\//i.test(file.path) || /-- CreateTable/.test(code);
       if (isMigration && !toolManaged && /^\s*CREATE\s+TABLE\s+(?!IF\s+NOT\s+EXISTS)/i.test(line)) {
         push(i, {
           id: `db-migration-rerun-${file.path}-${i}`,
@@ -199,7 +204,7 @@ export function probeDbPatterns(files) {
           nonTelemetry.length >= 2 &&
           !/\$transaction|\.transaction\s*\(|BEGIN|startSession|withTransaction/i.test(span)
         ) {
-          const ln = code.slice(0, fm.index).split('\n').length;
+          const ln = lineAt(fm.index);
           push(ln - 1, {
             id: `db-no-transaction-${file.path}-${ln}`,
             title: `${writes.length} dependent writes with no transaction`,

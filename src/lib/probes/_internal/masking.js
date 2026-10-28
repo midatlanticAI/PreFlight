@@ -107,7 +107,6 @@ function maskSource(content, { blankStrings = false, blankTemplates = false } = 
   if (typeof content !== 'string' || content.length === 0) return content || '';
   const out = [];
   const len = content.length;
-  let i = 0;
   const blankExceptNewline = (ch) => (ch === '\n' ? '\n' : ' ');
   // Last non-whitespace character emitted, used only to tell a regex literal
   // from a division. Comments never update it, which is what we want: `x = /a/`
@@ -155,116 +154,148 @@ function maskSource(content, { blankStrings = false, blankTemplates = false } = 
     lastSignificantIdx = j;
     return f;
   };
-  while (i < len) {
-    const c = content[i];
-    const c2 = i + 1 < len ? content[i + 1] : '';
-    // Regex literal. Without this, the `"` in `String(s).replace(/[&<>"']/g, …)`
-    // opens a string that runs to the next unrelated quote, blanking hundreds
-    // of lines of real code. escapeHtml is in nearly every generated app, so
-    // this silently truncated analysis on a large share of real projects
-    // (real-scan finding 2026-07: it hid six unhandled promise chains and
-    // every other masked-content check between lines 442 and 1098 of one file).
-    if (c === '/' && c2 !== '/' && c2 !== '*' && isRegexPosition()) {
-      const consumed = consumeRegex(i);
-      if (consumed > 0) {
-        i = consumed;
-        continue;
-      }
-    }
-    // /* block comment (may span lines)
-    if (c === '/' && c2 === '*') {
-      const end = content.indexOf('*/', i + 2);
-      if (end === -1) {
-        // No terminator anywhere. In real source an unclosed block comment is
-        // rare; a `/*` with no `*/` is far more often this lexer meeting text
-        // it has no mode for — JSX and HTML copy, where `src/data/*` is a glob
-        // a human is reading, not a comment a compiler is skipping.
-        //
-        // Blanking to EOF on that guess cost 95 of the 187 lines of this
-        // repo's own TermsView.jsx: every masked check stopped running at the
-        // word "src/data/*" and nothing said so. Treat the `/*` as ordinary
-        // text and keep lexing.
-        //
-        // The trade is deliberate and it is the lesson of the whole file: an
-        // unterminated construct is evidence of a mis-lex, and for a scanner,
-        // under-masking risks a false positive somebody can see, while
-        // over-masking hides real code and looks like a clean result.
-        out.push('/', '*');
-        i += 2;
-        continue;
-      }
-      out.push('/', '*');
-      for (let j = i + 2; j < end; j++) out.push(blankExceptNewline(content[j]));
-      out.push('*', '/');
-      i = end + 2;
-      continue;
-    }
-    // // line comment
-    if (c === '/' && c2 === '/') {
-      out.push('/', '/');
-      let j = i + 2;
-      while (j < len && content[j] !== '\n') {
-        out.push(' ');
-        j++;
-      }
-      i = j;
-      continue;
-    }
-    // String literal: ' " or backtick. Template literals can span lines.
-    // Every quote kind is CONSUMED here regardless of whether its body is
-    // blanked, which is the property the old narrow walker lacked.
-    if (c === "'" || c === '"' || c === '`') {
-      const quote = c;
-      const blank = quote === '`' ? blankTemplates : blankStrings;
-      const keep = (ch) => (blank ? blankExceptNewline(ch) : ch);
-      const outLenBeforeQuote = out.length;
-      out.push(quote);
-      let j = i + 1;
-      while (j < len) {
-        if (content[j] === '\\' && j + 1 < len) {
-          // Skip escape and the character it escapes; preserve newlines.
-          out.push(keep(content[j]));
-          out.push(keep(content[j + 1]));
-          j += 2;
+  // One walker, re-entered for template interpolations. With stopAtBrace it
+  // lexes code until the `}` that closes the interpolation it was called for
+  // and returns that index; otherwise it runs to the end and returns len.
+  function lex(start, stopAtBrace) {
+    let i = start;
+    let depth = 0;
+    while (i < len) {
+      const c = content[i];
+      const c2 = i + 1 < len ? content[i + 1] : '';
+      // Regex literal. Without this, the `"` in `String(s).replace(/[&<>"']/g, …)`
+      // opens a string that runs to the next unrelated quote, blanking hundreds
+      // of lines of real code. escapeHtml is in nearly every generated app, so
+      // this silently truncated analysis on a large share of real projects
+      // (real-scan finding 2026-07: it hid six unhandled promise chains and
+      // every other masked-content check between lines 442 and 1098 of one file).
+      if (c === '/' && c2 !== '/' && c2 !== '*' && isRegexPosition()) {
+        const consumed = consumeRegex(i);
+        if (consumed > 0) {
+          i = consumed;
           continue;
         }
-        if (content[j] === quote) break;
-        // A non-template quote does not span lines. An unterminated one is a
-        // lexing dead end, and running to the end of the file from it is how a
-        // whole file silently stops being analysed. Stop at the newline and
-        // treat the quote as ordinary punctuation instead.
-        if (quote !== '`' && content[j] === '\n') break;
-        out.push(keep(content[j]));
-        j++;
       }
-      if (j >= len) {
-        // Unterminated at EOF. Same reasoning as the unclosed block comment
-        // above: a lone backtick in JSX text ("the ` character starts a
-        // template literal") would otherwise swallow the rest of the file.
-        // Rewind and treat the quote as ordinary punctuation.
-        out.length = outLenBeforeQuote;
-        out.push(quote);
-        i += 1;
+      // /* block comment (may span lines)
+      if (c === '/' && c2 === '*') {
+        const end = content.indexOf('*/', i + 2);
+        if (end === -1) {
+          // No terminator anywhere. In real source an unclosed block comment is
+          // rare; a `/*` with no `*/` is far more often this lexer meeting text
+          // it has no mode for — JSX and HTML copy, where `src/data/*` is a glob
+          // a human is reading, not a comment a compiler is skipping.
+          //
+          // Blanking to EOF on that guess cost 95 of the 187 lines of this
+          // repo's own TermsView.jsx: every masked check stopped running at the
+          // word "src/data/*" and nothing said so. Treat the `/*` as ordinary
+          // text and keep lexing.
+          //
+          // The trade is deliberate and it is the lesson of the whole file: an
+          // unterminated construct is evidence of a mis-lex, and for a scanner,
+          // under-masking risks a false positive somebody can see, while
+          // over-masking hides real code and looks like a clean result.
+          out.push('/', '*');
+          i += 2;
+          continue;
+        }
+        out.push('/', '*');
+        for (let j = i + 2; j < end; j++) out.push(blankExceptNewline(content[j]));
+        out.push('*', '/');
+        i = end + 2;
         continue;
       }
-      if (quote !== '`' && content[j] === '\n') {
-        // Unterminated single-line string: resume normal lexing at the newline.
+      // // line comment
+      if (c === '/' && c2 === '/') {
+        out.push('/', '/');
+        let j = i + 2;
+        while (j < len && content[j] !== '\n') {
+          out.push(' ');
+          j++;
+        }
         i = j;
         continue;
       }
-      out.push(quote);
-      lastSignificant = quote; // a string ends an expression
-      lastSignificantIdx = j;
-      i = j + 1;
-      continue;
+      // String literal: ' " or backtick. Template literals can span lines.
+      // Every quote kind is CONSUMED here regardless of whether its body is
+      // blanked, which is the property the old narrow walker lacked.
+      if (c === "'" || c === '"' || c === '`') {
+        const quote = c;
+        const blank = quote === '`' ? blankTemplates : blankStrings;
+        const keep = (ch) => (blank ? blankExceptNewline(ch) : ch);
+        const outLenBeforeQuote = out.length;
+        out.push(quote);
+        let j = i + 1;
+        while (j < len) {
+          if (content[j] === '\\' && j + 1 < len) {
+            // Skip escape and the character it escapes; preserve newlines.
+            out.push(keep(content[j]));
+            out.push(keep(content[j + 1]));
+            j += 2;
+            continue;
+          }
+          if (content[j] === quote) break;
+          // `${ … }` inside a template is code: it holds strings, comments and
+          // nested templates (htm and lit render trees nest three deep), and
+          // the first draft read the nested backtick as the END of the outer
+          // template. Every view desynchronised from there to the next
+          // unrelated backtick and blanked whole components, which hid an
+          // empty catch and a comment-only catch on two real apps (canary
+          // replay 2026-10-28). The interpolation is lexed by the same walker
+          // back to its own closing brace, never blanked.
+          if (quote === '`' && content[j] === '$' && content[j + 1] === '{') {
+            out.push('$', '{');
+            j = lex(j + 2, true);
+            if (j >= len) break; // unterminated interpolation: the EOF rewind below
+            out.push('}');
+            j++;
+            continue;
+          }
+          // A non-template quote does not span lines. An unterminated one is a
+          // lexing dead end, and running to the end of the file from it is how a
+          // whole file silently stops being analysed. Stop at the newline and
+          // treat the quote as ordinary punctuation instead.
+          if (quote !== '`' && content[j] === '\n') break;
+          out.push(keep(content[j]));
+          j++;
+        }
+        if (j >= len) {
+          // Unterminated at EOF. Same reasoning as the unclosed block comment
+          // above: a lone backtick in JSX text ("the ` character starts a
+          // template literal") would otherwise swallow the rest of the file.
+          // Rewind and treat the quote as ordinary punctuation.
+          out.length = outLenBeforeQuote;
+          out.push(quote);
+          i += 1;
+          continue;
+        }
+        if (quote !== '`' && content[j] === '\n') {
+          // Unterminated single-line string: resume normal lexing at the newline.
+          i = j;
+          continue;
+        }
+        out.push(quote);
+        lastSignificant = quote; // a string ends an expression
+        lastSignificantIdx = j;
+        i = j + 1;
+        continue;
+      }
+      if (stopAtBrace) {
+        if (c === '{') depth++;
+        else if (c === '}') {
+          if (depth === 0) return i;
+          depth--;
+        }
+      }
+      out.push(c);
+      if (!/\s/.test(c)) {
+        lastSignificant = c;
+        lastSignificantIdx = i;
+      }
+      i++;
     }
-    out.push(c);
-    if (!/\s/.test(c)) {
-      lastSignificant = c;
-      lastSignificantIdx = i;
-    }
-    i++;
+    return len;
   }
+  lex(0, false);
   return out.join('');
 }
 

@@ -25,6 +25,7 @@
 
 import { isTestFile, isScannerSelfSource } from '../../file-filter.js';
 import { maskCommentsForPath } from '../_internal/masking.js';
+import { lineIndex } from './line-index.js';
 
 export const API_FILE_RE = /\.(?:[jt]sx?|mjs|cjs|py)$/i;
 
@@ -35,8 +36,6 @@ const finding = (o) => ({
   cwe: 'CWE-20',
   ...o,
 });
-
-const lineOf = (content, idx) => content.slice(0, idx).split('\n').length;
 
 function readBraceSpan(content, openBrace, budget = 4000) {
   let depth = 0;
@@ -67,6 +66,7 @@ export function probeApiPatterns(files) {
     const isPy = /\.py$/i.test(file.path);
     if (!/\.(?:post|put|patch|get|delete)\s*\(|@(?:app|router)\.|async\s+def/.test(content)) return;
     const code = maskCommentsForPath(file.path, content);
+    const lineAt = lineIndex(content);
     const rawLines = content.split('\n');
     const push = (line, o) =>
       findings.push(
@@ -126,7 +126,7 @@ export function probeApiPatterns(files) {
       const routePath = rm[2];
       const span = readBraceSpan(code, rm.index + rm[0].length - 1);
       if (span === null) continue;
-      const ln = lineOf(code, rm.index);
+      const ln = lineAt(rm.index);
 
       // Request body fed to persistence with no validation signal in scope.
       const writesFromBody =
@@ -195,7 +195,7 @@ export function probeApiPatterns(files) {
       let rr;
       while ((rr = refRouteRe.exec(code)) !== null) {
         const routePath = rr[1] || rr[2];
-        const ln = lineOf(code, rr.index);
+        const ln = lineAt(rr.index);
         const id = `api-no-ratelimit-${file.path}-${ln}`;
         if (flaggedIds.has(id)) continue;
         const routeSegs = routePath.toLowerCase().split(/[/\-_.]+/);
@@ -237,7 +237,7 @@ export function probeApiPatterns(files) {
         !/\b(?:take|limit|LIMIT|first|pageSize|per_page|top)\b/.test(span) &&
         !referenceish
       ) {
-        const ln = lineOf(code, lm.index);
+        const ln = lineAt(lm.index);
         push(ln, {
           id: `api-no-pagination-${file.path}-${ln}`,
           title: `${lm[1]} returns the whole table`,

@@ -5,7 +5,9 @@ the eleven v2 families at commit e48e58d. Every entry below was reproduced by th
 through the real PROBES registry and then independently re-reproduced by a second checker
 whose default verdict was REFUTED. Refuted claims are not listed.
 
-Generated 2026-09-04 from the run outputs. Nothing here is fixed yet.
+Generated 2026-09-04 from the run outputs.
+
+**Fixed 2026-10-28.** All forty, by cause: guards in Build & Config, string-blind span scanners (and the nested-template masker bug the replay exposed), the structural regex holes each where it sits, and one shared line index plus hoisted loop invariants for the superlinear scans. Pins: `src/test/v2-families-gate3-2026-09.test.js`. The entry in CHANGELOG.md dated 2026-10-28 carries the account.
 
 ## Contract violations (probe throws) (13)
 

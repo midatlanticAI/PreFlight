@@ -102,7 +102,9 @@ export function probePerfHazards(files) {
       // Gate-2 (C32): subpath imports (moment/locale/de, moment/min/…) are
       // the same dependency.
       if (
-        /import\s+[\w{*]\S*\s.*from\s+['"]moment(?:\/[^'"]*)?['"]|import\s+['"]moment\/[^'"]*['"]|require\s*\(\s*['"]moment(?:\/[^'"]*)?['"]\s*\)/.test(
+        // Bounded clause: the unbounded `.*` backtracked to end-of-line from
+        // every import on a minified line (Gate-3 G20).
+        /import\s+[^;'"]{1,200}?\bfrom\s+['"]moment(?:\/[^'"]*)?['"]|import\s+['"]moment\/[^'"]*['"]|require\s*\(\s*['"]moment(?:\/[^'"]*)?['"]\s*\)/.test(
           line
         )
       ) {

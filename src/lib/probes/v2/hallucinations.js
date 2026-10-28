@@ -187,7 +187,9 @@ export function probeAiHallucinations(files) {
 
     codeLines.forEach((line, i) => {
       // Named imports from 'react' that react does not export.
-      const rm = line.match(/import\s*\{([^}]+)\}\s*from\s*['"]react['"]/);
+      // Bounded: `[^}]+` rescanned to end-of-line from every `import {` on a
+      // brace-free minified line (Gate-3 G18).
+      const rm = line.match(/import\s*\{([^}]{1,600})\}\s*from\s*['"]react['"]/);
       if (rm) {
         const isTs = /\.(?:ts|tsx|mts|cts)$/i.test(file.path);
         for (const raw of rm[1].split(',')) {
@@ -211,7 +213,7 @@ export function probeAiHallucinations(files) {
         }
       }
       // Named imports from 'next/navigation' outside its export list.
-      const nm = line.match(/import\s*\{([^}]+)\}\s*from\s*['"]next\/navigation['"]/);
+      const nm = line.match(/import\s*\{([^}]{1,600})\}\s*from\s*['"]next\/navigation['"]/);
       if (nm) {
         for (const raw of nm[1].split(',')) {
           const name = raw

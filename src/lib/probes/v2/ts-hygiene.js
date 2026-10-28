@@ -17,7 +17,7 @@
 //   enum_used_as_string_literal — a style choice with no defect boundary.
 
 import { isTestFile, isScannerSelfSource } from '../../file-filter.js';
-import { maskCommentsForPath } from '../_internal/masking.js';
+import { maskCommentsForPath, maskCommentsOnly } from '../_internal/masking.js';
 
 export const TS_FILE_RE = /\.(?:ts|tsx|mts|cts)$/i;
 
@@ -41,7 +41,11 @@ export function probeTsHygiene(files) {
     // tsconfig checks read the config file itself.
     if (/(^|\/)tsconfig(?:\.\w+)?\.json$/i.test(file.path)) {
       const content = file.content || '';
-      const lines = content.split('\n');
+      // tsconfig is JSONC: a comment recalling the old setting ("strict":
+      // false was the old setting) fired on a config whose strict is true
+      // (Gate-3 G11). Decide on the comment-blind view, quote the raw line.
+      const rawLines = content.split('\n');
+      const lines = maskCommentsOnly(content).split('\n');
       const flag = (re, title, remediation) => {
         const i = lines.findIndex((l) => re.test(l));
         if (i === -1) return;
@@ -52,7 +56,7 @@ export function probeTsHygiene(files) {
             severity: 'medium',
             file: file.path,
             line: i + 1,
-            evidence: lines[i].trim().slice(0, 160),
+            evidence: (rawLines[i] ?? '').trim().slice(0, 160),
             remediation,
           })
         );
@@ -73,7 +77,9 @@ export function probeTsHygiene(files) {
     if (!TS_FILE_RE.test(file.path)) return;
     const content = file.content || '';
     if (!content.trim()) return;
-    if (!/@ts-|as\s+any|as\s+unknown|!\./.test(content)) return;
+    // Gate-3 G10: the gate did not carry the non-null-chain trigger, so
+    // `u?.name!` at the end of an expression could never be reached.
+    if (!/@ts-|as\s+any|as\s+unknown|!\.|\?\.\w+!/.test(content)) return;
     // Directives live in comments, so this family reads the RAW lines for
     // the @ts-* checks (the directive IS a comment) and the masked view for
     // the cast checks (a cast in a comment is documentation).

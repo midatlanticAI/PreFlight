@@ -31,8 +31,9 @@
 // on /\.(?:jsx?|mjs|cjs)$/i per the F7 precedent.
 
 import { isTestFile, isScannerSelfSource } from '../../file-filter.js';
-import { maskCommentsForPath } from '../_internal/masking.js';
+import { maskCommentsForPath, maskCodeShapeForPath } from '../_internal/masking.js';
 import { parseModule, walk } from './context.js';
+import { lineIndex } from './line-index.js';
 
 // Named thresholds (tests and the Learn page read these).
 export const REACT_EFFECT_SPAN_BUDGET = 6000;
@@ -64,14 +65,55 @@ function readCallSpan(content, openParen, budget = REACT_EFFECT_SPAN_BUDGET) {
   return null;
 }
 
-const lineOf = (content, idx) => content.slice(0, idx).split('\n').length;
+// Identifiers go into dynamic patterns escaped: `$t` as a timer id turned
+// `\b$t\s*=` into an end anchor mid-pattern and the leak check stood down
+// on exactly the effect it existed for (Gate-3 G13).
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// The cleanup function of an effect callback: everything from `return () =>`
-// or `return function` to the end of the span. '' when the effect returns
-// nothing (or returns a value, which is its own defect but not this one's).
+// Index of the closing brace of the effect callback's block body, or -1 for
+// a concise body. The span scanners below all key off this one scan.
+function callbackClose(span) {
+  const open = span.search(/=>\s*\{|function[^{]*\{/);
+  if (open === -1) return -1;
+  let depth = 0;
+  for (let i = span.indexOf('{', open); i < span.length; i++) {
+    if (span[i] === '{') depth++;
+    else if (span[i] === '}' && --depth === 0) return i;
+  }
+  return -1;
+}
+
+// The cleanup function of an effect callback: everything from the effect's
+// OWN `return () =>` or `return function` to the end of the span. '' when
+// the effect returns nothing (or returns a value, which is its own defect
+// but not this one's). Gate-3 G36: the first draft matched `return () =>`
+// anywhere, so a nested helper's returned closure was read as the cleanup
+// and a listener added after it was exempted as "cleanup text". A return
+// inside the effect's own if-block still counts (`if (pending) { const t =
+// setTimeout(...); return () => clearTimeout(t); }` is correct code and
+// drew a timer finding when only depth-1 returns were read); a return
+// inside a nested function or arrow body does not.
 function cleanupOf(span) {
-  const m = span.match(/return\s+(?:\(\s*\)\s*=>|function\b|\(\)\s*=>)/);
-  return m ? span.slice(m.index) : '';
+  const open = span.search(/=>\s*\{|function[^{]*\{/);
+  if (open === -1) return '';
+  const start = span.indexOf('{', open);
+  const fnBrace = []; // per open brace: does it open a nested function body?
+  for (let i = start; i < span.length; i++) {
+    const ch = span[i];
+    if (ch === '{') {
+      const before = span.slice(Math.max(start, i - 80), i).trimEnd();
+      fnBrace.push(i !== start && (/=>$/.test(before) || /\bfunction\b[^{]*\)$/.test(before)));
+    } else if (ch === '}') {
+      fnBrace.pop();
+      if (fnBrace.length === 0) break;
+    } else if (
+      ch === 'r' &&
+      !fnBrace.includes(true) &&
+      /^return\s+(?:async\s+)?(?:\(\s*\)\s*=>|function\b)/.test(span.slice(i, i + 40))
+    )
+      return span.slice(i);
+  }
+  return '';
 }
 
 // Gate-1 (2026-09-03): the resource checks may only accuse an effect whose
@@ -111,7 +153,9 @@ function cleanupIsOpaque(span) {
       if (!idm) continue; // `return () =>` etc. — cleanupOf reads those
       // An identifier assigned from a timer in this same span is an id,
       // not a cleanup — React itself warns on it.
-      if (new RegExp(`\\b${idm[1]}\\s*=\\s*set(?:Timeout|Interval)\\s*\\(`).test(span))
+      // (?<![\w$]) rather than \b: a $-initial identifier has no word
+      // boundary before it, so \b never matched `$t` (Gate-3 G13).
+      if (new RegExp(`(?<![\\w$])${esc(idm[1])}\\s*=\\s*set(?:Timeout|Interval)\\s*\\(`).test(span))
         return false;
       return true;
     }
@@ -119,12 +163,16 @@ function cleanupIsOpaque(span) {
   return false;
 }
 
-// The dependency segment: text after the callback's closing brace-comma, i.e.
-// the tail of the span after the LAST `}` that is followed by `,`. null when
-// the effect has no second argument at all.
+// The dependency segment: the text after the callback's closing brace and
+// a comma. null when the effect has no second argument at all. Gate-3 G5:
+// matching the FIRST `},` in the span let `const opts = { a: 1 }, extra = 2`
+// inside the body stand in for a deps array that was not there.
 function depsOf(span) {
-  const m = span.match(/\}\s*,([\s\S]*)$/);
-  if (m) return m[1].trim();
+  const close = callbackClose(span);
+  if (close !== -1) {
+    const m = span.slice(close + 1).match(/^\s*,([\s\S]*)$/);
+    return m ? m[1].trim() : null;
+  }
   // Concise-arrow effect body: `useEffect(() => setMounted(true), [])` has
   // no closing brace; the deps are the trailing array after the last comma.
   const c = span.match(/,\s*(\[[\s\S]*\])\s*$/);
@@ -155,24 +203,35 @@ export function probeReactHygiene(files) {
     // alone and silently skipped the prop/Provider/App-Router checks in
     // files that used none.
     if (
-      !/use(?:Effect|LayoutEffect|State|Ref|Memo|Callback)|forwardRef|React\.lazy|\blazy\s*\(|\.Provider|\.map\s*\(|(?:component|render|element)=\{|\.current\s*\}|window\.|document\.|localStorage/.test(
+      !/use(?:Effect|LayoutEffect|State|Ref|Memo|Callback)|forwardRef|React\.lazy|\blazy\s*\(|\.Provider|\.map\s*\(|(?:component|render|element)=\{|\.current\s*\}|window\.|document\.|localStorage|\bfunction\s+[A-Z]|\b(?:const|let|var)\s+[A-Z]\w*\s*=/.test(
         content
       )
     )
       return;
     const code = maskCommentsForPath(file.path, content);
+    // String-blind view for the span scanners: a `)` or `}` inside a log
+    // string truncated an effect span before its cleanup and a correct
+    // effect was accused (Gate-3 G3, G4). Both masks preserve length, so an
+    // offset found on one view reads the same source on the other.
+    const shape = maskCodeShapeForPath(file.path, content);
+    const lineAt = lineIndex(content);
+    // Gate-3 G27: the stale-closure check re-ran this matchAll over the whole
+    // file for every []-deps effect. Once per file.
+    const stateNames = [
+      ...content.matchAll(/const\s*\[\s*(\w+)\s*,\s*set[A-Z]\w*\s*\]\s*=\s*useState/g),
+    ].map((x) => x[1]);
 
     // ---- Effect-span checks (1,2,3,4,5,6,8,9,11) ----
     const effectRe = /\buse(?:Layout)?Effect\s*(\()/g;
     let em;
     while ((em = effectRe.exec(code)) !== null) {
       const openParen = em.index + em[0].length - 1;
-      const span = readCallSpan(code, openParen);
-      if (span === null) continue;
-      const ln = lineOf(code, em.index);
-      const cleanup = cleanupOf(span);
-      const body = cleanup ? span.slice(0, span.length - cleanup.length) : span;
-      const opaqueCleanup = cleanup === '' && cleanupIsOpaque(span);
+      const spanShape = readCallSpan(shape, openParen);
+      if (spanShape === null) continue;
+      const ln = lineAt(em.index);
+      const cleanup = cleanupOf(spanShape);
+      const body = cleanup ? spanShape.slice(0, spanShape.length - cleanup.length) : spanShape;
+      const opaqueCleanup = cleanup === '' && cleanupIsOpaque(spanShape);
       // An arrow cleanup that CALLS a helper (`return () => teardown(ref);`)
       // delegates the release — the specific verb lives in the helper, so
       // the per-resource verb tests below cannot see it (Gate-1 C3).
@@ -184,10 +243,9 @@ export function probeReactHygiene(files) {
         !/removeEventListener|clearInterval|clearTimeout|unsubscribe|\.close\s*\(|disconnect|unobserve|\.abort\s*\(/.test(
           cleanup
         );
-      // Cancellation vocabulary is matched on the STRING-BLANKED span with
+      // Cancellation vocabulary is matched on the string-blanked span with
       // word boundaries — Gate-2: 'status=active' in a URL and a
       // 'lastActive' data field both vouched for uncancellable fetches.
-      const spanShape = span.replace(/(['"`])(?:(?!\1)[^\\\n]|\\.)*\1/g, "''");
       const push = (o) => findings.push(finding({ file: file.path, line: ln, ...o }));
       const evidence = code
         .slice(em.index, em.index + 160)
@@ -221,7 +279,7 @@ export function probeReactHygiene(files) {
         !opaqueCleanup &&
         !cleanupDelegates &&
         ((/\bsetInterval\s*\(/.test(body) && !/clearInterval\s*\(/.test(cleanup)) ||
-          (/\b(?:const|let|var)\s+\w+\s*=\s*setTimeout\s*\(|\w+\.current\s*=\s*setTimeout\s*\(/.test(
+          (/\b(?:const|let|var)\s+[\w$]+\s*=\s*setTimeout\s*\(|[\w$]+\.current\s*=\s*setTimeout\s*\(/.test(
             body
           ) &&
             !/clearTimeout\s*\(/.test(cleanup)))
@@ -310,7 +368,7 @@ export function probeReactHygiene(files) {
         });
       }
       // 9. No dependency array at all: the effect runs after every render.
-      const deps = depsOf(span);
+      const deps = depsOf(spanShape);
       if (deps === null && /set[A-Z]\w*\s*\(|fetch\s*\(/.test(body)) {
         push({
           id: `react-effect-nodeps-${file.path}-${ln}`,
@@ -338,9 +396,6 @@ export function probeReactHygiene(files) {
       // 8. Stale closure: [] deps but the effect body reads a useState value
       //    inside an interval or listener callback.
       if (deps !== null && /^\[\s*\]$/.test(deps)) {
-        const stateNames = [
-          ...content.matchAll(/const\s*\[\s*(\w+)\s*,\s*set[A-Z]\w*\s*\]\s*=\s*useState/g),
-        ].map((x) => x[1]);
         const inCallback = /(?:setInterval|addEventListener)\s*\(/.test(body);
         // Bare identifier reads only: `.error`, `'error'` and "error" are
         // event properties and string literals, not state reads (Gate-1: an
@@ -373,11 +428,17 @@ export function probeReactHygiene(files) {
       );
 
     codeLines.forEach((line, i) => {
-      // 19. key={i} where i is the map callback's index parameter.
-      const km = line.match(
-        /\.map\s*\(\s*\(\s*\w+\s*,\s*(\w+)\s*\)\s*=>[\s\S]*?\bkey=\{\s*(\w+)\s*\}/
-      );
-      if (km && km[1] === km[2]) {
+      // 19. key={i} where i is the map callback's index parameter. Read
+      // across the next two lines, since Prettier puts the element on its
+      // own line (Gate-3 G6), and bounded at 200 characters between the
+      // arrow and the key: the open-ended lazy scan was quadratic on a
+      // minified line of .map calls (G33). The match has to start on this
+      // line so a window never reports the same map twice.
+      const km = codeLines
+        .slice(i, i + 3)
+        .join(' ')
+        .match(/\.map\s*\(\s*\(\s*\w+\s*,\s*(\w+)\s*\)\s*=>[^]{0,200}?\bkey=\{\s*(\w+)\s*\}/);
+      if (km && km[1] === km[2] && km.index < line.length) {
         pushLine(i, {
           id: `react-keyindex-${file.path}-${i}`,
           title: 'Array index used as the key in a dynamic list',
@@ -391,7 +452,10 @@ export function probeReactHygiene(files) {
       // remounts (Gate-1: fired on react-hook-form's Controller render and
       // React Router v5's recommended render=). Only component= treats the
       // value as a component type.
-      if (/\bcomponent=\{\s*(?:\(\s*[\w{},\s]*\)\s*=>|function\b)/.test(line)) {
+      // Gate-3 G14: `\s*` beside a class that also ate whitespace backtracked
+      // quadratically on a long run of spaces; the parameter list is one
+      // bounded class now.
+      if (/\bcomponent=\{\s*(?:\([\w{},\s]{0,200}\)\s*=>|function\b)/.test(line)) {
         pushLine(i, {
           id: `react-inlinecomponent-${file.path}-${i}`,
           title: 'Anonymous component defined inline in a prop',
@@ -432,8 +496,8 @@ export function probeReactHygiene(files) {
           title: 'forwardRef component has no displayName',
           severity: 'info',
           file: file.path,
-          line: lineOf(code, idx),
-          evidence: (rawLines[lineOf(code, idx) - 1] ?? '').trim().slice(0, 160),
+          line: lineAt(idx),
+          evidence: (rawLines[lineAt(idx) - 1] ?? '').trim().slice(0, 160),
           remediation:
             'Wrapped components render as Anonymous in DevTools and error stacks. Set MyComponent.displayName = "MyComponent" after the forwardRef call.',
         })
@@ -452,8 +516,8 @@ export function probeReactHygiene(files) {
           title: 'React.lazy without a Suspense boundary in the file',
           severity: 'medium',
           file: file.path,
-          line: lineOf(code, idx),
-          evidence: (rawLines[lineOf(code, idx) - 1] ?? '').trim().slice(0, 160),
+          line: lineAt(idx),
+          evidence: (rawLines[lineAt(idx) - 1] ?? '').trim().slice(0, 160),
           remediation:
             'A lazy component rendered outside any <Suspense> boundary throws while its chunk loads. Wrap the render site in <Suspense fallback={...}>. If the boundary lives in another file, add a comment naming it where the lazy component is used.',
         })
@@ -465,7 +529,9 @@ export function probeReactHygiene(files) {
     // client component runs as client code with no directive of its own
     // (Gate-1: fired on standard App Router colocation).
     if (
-      /(^|\/)app\/.*(?:^|\/)(?:page|layout|template)\.(?:jsx|tsx|js|ts)$/i.test(file.path) &&
+      // Gate-3 G2: a dead `(?:^|/)` alternative mid-pattern required a slash
+      // between app/ and the filename, which excluded the root app/page.tsx.
+      /(^|\/)app\/(?:.*\/)?(?:page|layout|template)\.(?:jsx|tsx|js|ts)$/i.test(file.path) &&
       !/['"]use client['"]/.test(content.slice(0, 400)) &&
       files.some((f) => /(^|\/)next\.config\.[cm]?js$/.test(f.path)) &&
       /\buse(?:State|Effect|LayoutEffect|Reducer)\s*\(|\bwindow\.|\blocalStorage\b|\bdocument\./.test(
@@ -481,8 +547,8 @@ export function probeReactHygiene(files) {
           title: 'Server component uses client-only APIs',
           severity: 'medium',
           file: file.path,
-          line: lineOf(code, idx),
-          evidence: (rawLines[lineOf(code, idx) - 1] ?? '').trim().slice(0, 160),
+          line: lineAt(idx),
+          evidence: (rawLines[lineAt(idx) - 1] ?? '').trim().slice(0, 160),
           remediation:
             'Files under app/ are server components unless they start with "use client". Hooks and browser globals do not exist there; the build fails or the page crashes at request time. Add "use client" at the top, or move the interactive part into its own client component.',
         })
@@ -530,7 +596,7 @@ export function probeReactHygiene(files) {
                   title: `Component ${innerName} defined inside ${outer}`,
                   severity: 'medium',
                   file: file.path,
-                  line: lineOf(content, inner.start),
+                  line: lineAt(inner.start),
                   evidence: content
                     .slice(inner.start, inner.start + 120)
                     .split('\n')[0]
@@ -567,7 +633,7 @@ export function probeReactHygiene(files) {
                 title: `${node.callee.name} called conditionally`,
                 severity: 'medium',
                 file: file.path,
-                line: lineOf(content, node.start),
+                line: lineAt(node.start),
                 evidence: content
                   .slice(node.start, node.start + 120)
                   .split('\n')[0]
@@ -621,7 +687,7 @@ export function probeReactHygiene(files) {
               title: `${node.callee.name} called during render of ${componentFn}`,
               severity: 'medium',
               file: file.path,
-              line: lineOf(content, node.start),
+              line: lineAt(node.start),
               evidence: content
                 .slice(node.start, node.start + 120)
                 .split('\n')[0]

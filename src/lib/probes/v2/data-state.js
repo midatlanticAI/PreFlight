@@ -28,6 +28,7 @@
 
 import { isTestFile, isScannerSelfSource } from '../../file-filter.js';
 import { maskCommentsForPath } from '../_internal/masking.js';
+import { lineIndex } from './line-index.js';
 
 export const DATA_FILE_RE = /\.(?:[jt]sx?|mjs|cjs)$/i;
 
@@ -59,6 +60,19 @@ export function probeDataState(files) {
           ...o,
         })
       );
+
+    const lineAt = lineIndex(content);
+    // Props destructured in a component signature, read once per file.
+    // Gate-3 G32: the first draft built and ran a whole-file RegExp per
+    // useState(x) match to answer this. Both names of a rename (`{ a: b }`)
+    // count, as the per-match pattern's \b did.
+    const destructuredProps = new Set();
+    for (const dm of code.matchAll(
+      /function\s+[A-Z]\w*\s*\(\s*\{([^}]{0,400})\}|=\s*\(\s*\{([^}]{0,400})\}\s*\)\s*=>/g
+    ))
+      for (const part of (dm[1] ?? dm[2] ?? '').split(','))
+        for (const n of part.split(/[:=]/))
+          if (/^\s*\w+\s*$/.test(n)) destructuredProps.add(n.trim());
 
     // Duplicate fetch: the same literal URL fetched from 2+ sites in one
     // file — the tell of copy-pasted data loading with no shared layer.
@@ -94,7 +108,9 @@ export function probeDataState(files) {
       const beaconShaped =
         /method\s*:\s*['"](?:POST|PUT)/.test(pollWindow) && !/\.then\s*\(|await\s/.test(pollWindow);
       if (
-        /setInterval\s*\(\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{?[^}]*fetch\s*\(|setInterval\s*\(\s*(?:async\s+)?function[^{]*\{[^}]*fetch\s*\(/.test(
+        // Bounded: `[^}]*` rescanned to the end of the window from every
+        // setInterval on a brace-free minified line (Gate-3 G15).
+        /setInterval\s*\(\s*(?:async\s*)?\([^)]{0,100}\)\s*=>\s*\{?[^}]{0,400}fetch\s*\(|setInterval\s*\(\s*(?:async\s+)?function[^{]{0,100}\{[^}]{0,400}fetch\s*\(/.test(
           pollWindow
         ) &&
         /setInterval/.test(line) &&
@@ -156,10 +172,7 @@ export function probeDataState(files) {
         const name = sp[1];
         const segs = name.split('.');
         const rootName = segs[0];
-        const destructured = new RegExp(
-          `function\\s+[A-Z]\\w*\\s*\\(\\s*\\{[^}]*\\b${rootName}\\b[^}]*\\}|=\\s*\\(\\s*\\{[^}]*\\b${rootName}\\b[^}]*\\}\\s*\\)\\s*=>`
-        ).test(code);
-        const isProp = /props\./.test(sp[0]) || destructured;
+        const isProp = /props\./.test(sp[0]) || destructuredProps.has(rootName);
         // Gate-1: initial*/default* names ARE the fix this check teaches —
         // react.dev blesses them as the visible one-time-read signal.
         const signposted = segs.some((s) => /^(?:initial|default)/i.test(s));
@@ -203,12 +216,18 @@ export function probeDataState(files) {
           }
         }
       }
+      // Gate-3 G16/G25: per fetch, a linear scan of every effect span and a
+      // prefix re-split for the line number made this doubly quadratic, the
+      // worst v2 hotspot (7.3s at 400KB). One byte map of effect-covered
+      // offsets, one line index.
+      const inEffect = new Uint8Array(code.length + 1);
+      for (const [a, b] of effectSpans) inEffect.fill(1, a + 1, b);
       const fRe = /\bfetch\s*\(/g;
       let fm2;
       while ((fm2 = fRe.exec(code)) !== null) {
         const idx = fm2.index;
-        if (effectSpans.some(([a, b]) => idx > a && idx < b)) continue;
-        const ln = code.slice(0, idx).split('\n').length;
+        if (inEffect[idx]) continue;
+        const ln = lineAt(idx);
         const lineText = codeLines[ln - 1] || '';
         // Inside a handler attribute, a named handler, a loader, or any
         // function that is not the component itself: approximate by
@@ -258,7 +277,7 @@ export function probeDataState(files) {
       !/\b(?:error|isError|failed|failure)\b/i.test(code)
     ) {
       const idx = code.search(/fetch\s*\(/);
-      push(code.slice(0, idx).split('\n').length, {
+      push(lineAt(idx), {
         id: `data-no-ui-states-${file.path}`,
         title: 'Fetch with no loading or error state',
         severity: 'low',

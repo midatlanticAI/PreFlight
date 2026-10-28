@@ -62,13 +62,16 @@ export function probeA11ySemantics(files) {
     // stylesheet does, so the check runs wherever the declaration appears.
     const hasCssInJs =
       !isCss && /styled[.(]|\bcss`|createGlobalStyle|\bkeyframes`|sx=\{|style=\{\{/.test(code);
-    if (isCss || hasCssInJs) {
+    // Gate-3 G21/G28: the whole-file :focus-visible test ran once per
+    // outline:none line; a 400KB reset sheet took 2.2s. Once per file, and
+    // a file that has it skips the loop entirely.
+    const hasFocusVisible = projectHasFocusVisible || /:focus-visible/.test(code);
+    if ((isCss || hasCssInJs) && !hasFocusVisible) {
       codeLines.forEach((line, i) => {
         if (/outline\s*:\s*['"]?(?:none|0)\b/.test(line)) {
           const windowText = codeLines
             .slice(Math.max(0, i - 6), Math.min(codeLines.length, i + 7))
             .join(' ');
-          if (projectHasFocusVisible || /:focus-visible/.test(code)) return;
           // (?!none|0)\S, not [^n0]: with a bare character class, \s*
           // backtracks to zero and the SPACE after the colon satisfies it.
           if (

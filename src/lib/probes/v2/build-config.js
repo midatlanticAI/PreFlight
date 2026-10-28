@@ -32,8 +32,11 @@ export function probeBuildConfig(files) {
   // prefixed to EVERY path (webkitRelativePath), which broke every
   // exact-match root check — a committed lockfile read as missing on
   // essentially all folder-uploaded projects. Strip the shared root.
+  // Gate-3 G34: a record with no path threw here and took the whole family
+  // down for the scan. The contract is never throw; a pathless record is
+  // simply not a path.
   const rawPaths = files
-    .filter((f) => !/node_modules/.test(f.path))
+    .filter((f) => f && typeof f.path === 'string' && !/node_modules/.test(f.path))
     .map((f) => f.path.replace(/^\.\//, ''));
   const firstSeg = rawPaths.length && rawPaths[0].includes('/') ? rawPaths[0].split('/')[0] : null;
   const sharedRoot =
@@ -82,13 +85,16 @@ export function probeBuildConfig(files) {
   }
 
   if (pkgFile) {
+    // Gate-3 G12/G35: null or undefined content survived the JSON.parse
+    // try/catch and threw on .split one line later.
+    const pkgText = typeof pkgFile.content === 'string' ? pkgFile.content : '';
     let pkg = null;
     try {
-      pkg = JSON.parse(pkgFile.content);
+      pkg = JSON.parse(pkgText);
     } catch {
       pkg = null; // malformed package.json is its own concern, not this one
     }
-    const lines = pkgFile.content.split('\n');
+    const lines = pkgText.split('\n');
     const lineFor = (needle) => {
       const i = lines.findIndex((l) => l.includes(needle));
       return i === -1 ? 1 : i + 1;
