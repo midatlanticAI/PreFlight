@@ -69,6 +69,17 @@ jobs:
         run: npm run test:self-audit
         timeout-minutes: 2
 
+      # IndexNow: tell Bing (and through it the Copilot / ChatGPT search
+      # indexes), Yandex and Seznam that the sitemap's pages changed. Pages
+      # deploys from the same push within minutes; the engines crawl later.
+      # Google reads the sitemap through Search Console instead. Never fails
+      # the build.
+      - name: IndexNow ping (main pushes only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.node == '22'
+        run: npm run indexnow
+        continue-on-error: true
+        timeout-minutes: 1
+
       - name: Upload built artifact
         if: success() && matrix.node == '22'
         # Pinned to SHA. Last verified: actions/upload-artifact v4.6.2.
