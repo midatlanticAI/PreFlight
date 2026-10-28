@@ -6,6 +6,12 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-10-28 — the sitemap was never regenerated, because the hardening line that stops worms also stops npm's prebuild
+
+`.npmrc` sets `ignore-scripts=true`, the single highest-value line in the file: it is what keeps an install-time worm from running on a developer machine or a CI runner. npm applies the same setting to its own `pre` and `post` lifecycle hooks, so `prebuild` never ran, locally, in CI, or on the Pages build, and `public/sitemap.xml` only changed when somebody ran the generator by hand. The committed sitemap had 100 URLs against 117 prerendered routes; the eleven v2 pattern pages from September and today's six pages were missing from it.
+
+The generator is now the first step of the `build` script itself, where no setting can skip it. One hundred seventeen URLs. The handoff note that promised the sitemap "regenerates every build" was true of the script and false of the tooling, which is the kind of gap the Package Manager Hardening probe exists to teach, pointed inward.
+
 ### 2026-10-28 — October's incidents, read off the advisories: php2shell, LiteLLM, a planted AGENTS.md, and 16,326 open Supabase tables
 
 The threat intel had not moved since August 7. Five field reports and one probe bring it to today, every version and date checked against a primary source before it went in.
