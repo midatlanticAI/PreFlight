@@ -114,6 +114,12 @@ export function probeAuthWeakness(files) {
           )
         )
           return;
+        // The shared value judgement, in password-named mode: the key regex
+        // above reads `"parse-passwd": "^1.0.0"` in a lockfile as a passwd
+        // key holding a version range, and a critical on a dependency pin
+        // was the whole of a canary's delta (2026-10-28). The same call
+        // already guards the generic rule in Secret Scanner.
+        if (!valueLooksLikeSecret(value, { passwordNamed: true })) return;
         // docker-compose with a stock image default (POSTGRES_PASSWORD:
         // postgres) is the documented local-dev idiom, not a leak — but it
         // becomes one the day the compose file is reused in production, so

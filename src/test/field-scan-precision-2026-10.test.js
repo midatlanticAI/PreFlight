@@ -392,3 +392,104 @@ describe('Database Patterns: a column list built in an interpolation', () => {
     );
   });
 });
+
+describe('SQL Injection: the interpolation has to be in the query literal itself', () => {
+  // A D1 statement with placeholders only, followed on the next line by a
+  // .bind() whose first argument is a template literal building the row id.
+  // The window the probe read spanned both literals; the finding read the id
+  // as the query. Five of these on one Twilio Worker.
+  const PARAM_THEN_BIND = `export async function logSms(env, from, body, p) {
+  await env.DB.prepare(\`INSERT INTO messages (id, tenant_id, channel, direction, thread_key, from_addr, to_addr, body, provider, provider_id, status, sent_by)
+    VALUES (?1, ?2, 'sms', 'inbound', ?3, ?3, ?4, ?5, 'twilio', ?6, 'received', 'customer')\`)
+    .bind(\`msg_\${Date.now().toString(36)}\${crypto.randomUUID().slice(0, 8)}\`, env.TENANT_ID || 'arnm', from, p.To || '', body, p.MessageSid || null).run();
+  await env.DB.prepare(\`INSERT INTO consent_events (id, tenant_id, identifier, channel, action) VALUES (?1, ?2, ?3, 'sms', ?4)\`)
+    .bind(\`cs_\${Date.now().toString(36)}\`, env.TENANT_ID || 'arnm', from, 'help').run();
+}
+`;
+  it('does NOT report a parameterised statement whose .bind() builds an id on the next line', () => {
+    const res = run('SQL Injection', file('voice/index.js', PARAM_THEN_BIND));
+    none(res, /template-literal interpolation/);
+  });
+  it('still reports interpolation inside the query literal, single line', () => {
+    const res = run(
+      'SQL Injection',
+      file(
+        'voice/index.js',
+        "export async function f(env, from) {\n  await env.DB.prepare(`UPDATE customers SET sms_consent = 'opted_out' WHERE primary_phone = '${from}'`).run();\n}\n"
+      )
+    );
+    some(res, /SQL query built with template-literal interpolation/);
+  });
+  it('still reports interpolation inside a wrapped query literal', () => {
+    const res = run(
+      'SQL Injection',
+      file(
+        'api/db.js',
+        'export async function f(db, id) {\n  return db.query(\n    `SELECT * FROM users WHERE id = ${id}`\n  );\n}\n'
+      )
+    );
+    some(res, /SQL query built with template-literal interpolation/);
+  });
+  it('still reports a bare callee whose query literal interpolates', () => {
+    const res = run(
+      'SQL Injection',
+      file(
+        'api/db.js',
+        'export async function f(stmt, id) {\n  return execute(`SELECT * FROM users WHERE id = ${id}`);\n}\n'
+      )
+    );
+    some(res, /SQL query built with template-literal interpolation/);
+  });
+});
+
+describe('SQL Injection: a column list built in a nested template is still an interpolation', () => {
+  it('reports SET clauses mapped from Object.keys(patch) through an inner template', () => {
+    const res = run(
+      'SQL Injection',
+      file(
+        'admin/api/routes/customers.js',
+        "export function queue(env, stmts, tenant, id, patch) {\n  stmts.push(env.DB.prepare(`UPDATE customers SET ${Object.keys(patch).map((k, i) => `${k} = ?${i + 3}`).join(', ')} WHERE id = ?1 AND tenant_id = ?2`).bind(id, tenant, ...Object.values(patch)));\n}\n"
+      )
+    );
+    some(res, /SQL query built with template-literal interpolation/);
+  });
+  it('reports an IN list whose placeholders are built through an inner template', () => {
+    const res = run(
+      'SQL Injection',
+      file(
+        'admin/api/routes/dev.js',
+        "export function purge(env, tenant, ids, tag) {\n  return env.DB.prepare(`DELETE FROM events WHERE tenant_id = ?1 AND (entity_id IN (${ids.map((_, i) => `?${i + 2}`).join(',')}) OR request_id LIKE ?${ids.length + 2})`).bind(tenant, ...ids, `${tag}%`);\n}\n"
+      )
+    );
+    some(res, /SQL query built with template-literal interpolation/);
+  });
+});
+
+describe('Auth Weakness: a version range under a passwd-named dependency is a pin', () => {
+  const LOCK = `{
+  "name": "app",
+  "lockfileVersion": 3,
+  "packages": {
+    "node_modules/homedir-polyfill": {
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/homedir-polyfill/-/homedir-polyfill-1.0.3.tgz",
+      "dev": true,
+      "dependencies": {
+        "parse-passwd": "^1.0.0"
+      }
+    }
+  }
+}
+`;
+  it('does NOT report "parse-passwd": "^1.0.0" in a lockfile as a hardcoded password', () => {
+    const res = run('Auth Weakness', file('package-lock.json', LOCK));
+    none(res, /Hardcoded password/);
+  });
+  it('still reports a real password value in a config file', () => {
+    const res = run(
+      'Auth Weakness',
+      file('config/database.json', '{\n  "host": "db.internal",\n  "password": "xK9#mQ2vL8pR"\n}\n')
+    );
+    some(res, /Hardcoded password/);
+  });
+});

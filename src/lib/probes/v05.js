@@ -102,6 +102,47 @@ const GO_SQL_SPRINTF =
   /\b(?:db|tx|conn|stmt)\.(?:Query|QueryRow|QueryContext|QueryRowContext|Exec|ExecContext|Prepare)\s*\(\s*(?:fmt\.Sprintf|"[^"]*"\s*\+)/;
 
 /**
+ * Index of the backtick that closes the template literal opening at `s[start]`
+ * (or `s.length` when it never closes). An `${…}` is skipped as code: braces
+ * are balanced and a template literal met inside it is skipped whole, so a
+ * column list built as `${cols.map((c) => \`${c} = ?\`).join(', ')}` keeps the
+ * outer literal open. Ending at the first inner backtick cut the body before
+ * the interpolation closed and the interpolation test then saw nothing.
+ *
+ * @param {string} s
+ * @param {number} start index of the opening backtick
+ * @returns {number}
+ */
+function templateEnd(s, start) {
+  let j = start + 1;
+  while (j < s.length) {
+    const c = s.charCodeAt(j);
+    if (c === 92) {
+      j += 2;
+      continue;
+    }
+    if (c === 96) return j;
+    if (c === 36 && s.charCodeAt(j + 1) === 123) {
+      j += 2;
+      let depth = 1;
+      while (j < s.length && depth > 0) {
+        const d = s.charCodeAt(j);
+        if (d === 96) {
+          j = templateEnd(s, j) + 1;
+          continue;
+        }
+        if (d === 123) depth++;
+        else if (d === 125) depth--;
+        j++;
+      }
+      continue;
+    }
+    j++;
+  }
+  return s.length;
+}
+
+/**
  * Body of the first argument of a call opened on `lines[i]`, when that argument
  * is a template literal — even if the literal opens on a later line.
  *
@@ -128,17 +169,8 @@ function firstTemplateArgBody(lines, i, re) {
     const lead = /^(?:\s|\/\/[^\n]*|\/\*|\*\/)+/.exec(text);
     const rest = lead ? text.slice(lead[0].length) : text;
     if (rest.charCodeAt(0) === 96) {
-      let j = 1;
-      while (j < rest.length) {
-        if (rest[j] === '\\') {
-          j += 2;
-          continue;
-        }
-        if (rest.charCodeAt(j) === 96) break;
-        j++;
-      }
       re.lastIndex = 0;
-      return rest.slice(1, j);
+      return rest.slice(1, templateEnd(rest, 0));
     }
   }
   re.lastIndex = 0;
@@ -177,10 +209,18 @@ export function probeSQLInjectionTemplateLiterals(files) {
       // decoration. Resolving the first argument across the span is what makes
       // the wrapped call visible.
       const wrapped = SQL_CALL_WRAPPED.test(line);
-      const riskArg = wrapped ? firstTemplateArgBody(lines, i, SQL_RISK_CALL_OPEN) : null;
+      // When the first argument resolves to a template literal, the
+      // interpolation test runs on that literal alone. The span is a window
+      // of lines, and the line after a fully parameterised D1 statement is
+      // routinely `.bind(\`msg_${Date.now()}\`, ...)`: an interpolation in a
+      // different literal, the id of the row, which the window read as the
+      // query's own. The span stays as the fallback for a call whose first
+      // argument the resolver cannot see (a variable, a wrapped non-literal).
+      const riskArg = m1 || wrapped ? firstTemplateArgBody(lines, i, SQL_RISK_CALL_OPEN) : null;
       if (
-        (m1 && SQL_HAS_INTERPOLATION.test(span)) ||
-        (riskArg !== null && SQL_HAS_INTERPOLATION.test(riskArg))
+        riskArg !== null
+          ? SQL_HAS_INTERPOLATION.test(riskArg)
+          : m1 && SQL_HAS_INTERPOLATION.test(span)
       ) {
         findings.push({
           id: `sqli-tl-${file.path}-${i}`,
@@ -203,10 +243,11 @@ export function probeSQLInjectionTemplateLiterals(files) {
       // / 'UPDATE' / 'DELETE' inside the template).
       const m2 = SQL_BARE_CALLEES.exec(line);
       SQL_BARE_CALLEES.lastIndex = 0;
-      const bareArg = wrapped ? firstTemplateArgBody(lines, i, SQL_BARE_CALL_OPEN) : null;
+      const bareArg = m2 || wrapped ? firstTemplateArgBody(lines, i, SQL_BARE_CALL_OPEN) : null;
       if (
-        (m2 && SQL_HAS_INTERPOLATION.test(span)) ||
-        (bareArg !== null && SQL_HAS_INTERPOLATION.test(bareArg))
+        bareArg !== null
+          ? SQL_HAS_INTERPOLATION.test(bareArg)
+          : m2 && SQL_HAS_INTERPOLATION.test(span)
       ) {
         const looksLikeSQL = /SELECT |INSERT INTO|UPDATE |DELETE FROM/i.test(span);
         if (looksLikeSQL) {

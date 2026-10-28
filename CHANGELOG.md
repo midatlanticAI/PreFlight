@@ -6,6 +6,14 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-10-28 — the interpolation was in the next line's literal, and a lockfile pin was read as a password
+
+Two more precision fixes, both found by replaying the corpora after the morning's commits rather than by a test.
+
+**SQL Injection read a window, not a literal.** The template-literal check tested four lines of source for `${` once a risky callee matched, so a fully parameterised D1 statement followed on the next line by ``.bind(`msg_${Date.now()}`, ...)`` was reported as a query built by interpolation: the interpolation belonged to the row id, a different literal. Five criticals on one Twilio voice Worker, all placeholders. The check now resolves the call's first argument and tests that literal alone, with the window kept only for a first argument it cannot see. The resolver had its own hole, found by the same replay: it ended the literal at the first nested backtick, so a column list built as ``${Object.keys(patch).map((k, i) => `${k} = ?${i + 3}`)}`` lost the one finding on the target repo most worth a human's eyes. It now walks `${…}` as code, braces balanced, inner templates skipped whole. The target repo went 378 to 373; both canaries flat. Six pins.
+
+**A version range is not a credential.** `"parse-passwd": "^1.0.0"` in a lockfile matched the config-file password rule in Auth Weakness, which has its own list of value exemptions instead of the shared judgement that Secret Scanner and the code-side rules already use. The rule now runs the value through `valueLooksLikeSecret` in password-named mode, which also rejects a version or version range in every mode. One critical on a canary, gone; nothing else moved. Two pins.
+
 ### 2026-10-28 — the sitemap was never regenerated, because the hardening line that stops worms also stops npm's prebuild
 
 `.npmrc` sets `ignore-scripts=true`, the single highest-value line in the file: it is what keeps an install-time worm from running on a developer machine or a CI runner. npm applies the same setting to its own `pre` and `post` lifecycle hooks, so `prebuild` never ran, locally, in CI, or on the Pages build, and `public/sitemap.xml` only changed when somebody ran the generator by hand. The committed sitemap had 100 URLs against 117 prerendered routes; the eleven v2 pattern pages from September and today's six pages were missing from it.

@@ -254,6 +254,12 @@ export function valueLooksLikeSecret(value, opts = {}) {
   // URLs are config, not secrets: TOKEN_URL = "https://oauth2.googleapis.com/token",
   // $apiUrl = "https://api.stripe.com/v1/charges", #define API_BASE_URL.
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) return false;
+  // A version or a version range is a dependency pin, not a credential:
+  // `"parse-passwd": "^1.0.0"` is a lockfile entry for a package whose name
+  // happens to contain passwd, and it drew a critical on a canary corpus
+  // (2026-10-28). Rejected in every mode; a password spelled 1.2.3 is the
+  // documented cost.
+  if (/^[\^~<>=]*v?\d+(?:\.\d+){1,2}(?:[-+][\w.]+)?$/.test(v)) return false;
   // Validation-schema keywords, closed set, rejected in every mode.
   if (VALIDATION_KEYWORDS.has(v.toLowerCase())) return false;
   // Title-case single words are UI copy — in any language. The ASCII-only
