@@ -85,7 +85,7 @@ Wired today: Sam SNIPPET is the system prompt for `formatAgentPrompt` (Copy Agen
 ```bash
 npm install            # install dependencies
 npm run dev            # vite dev server on :5173
-npm test               # vitest run (4373 tests across 128 files on main)
+npm test               # vitest run (4377 tests across 128 files on main, incl. the 9 self-audit tests run separately)
 npm run lint           # eslint
 npm run lint:fix       # eslint --fix
 npm run format         # prettier write
@@ -108,11 +108,11 @@ Architecturally enforced, not promised. If you ever build a backend, you break t
 
 ## Counts (as of 2026-10-28)
 
-- 129 probes (52 core + 66 language adapters + 11 v2 families; PHP Runtime Version added 2026-10-28 for php2shell; XL-013 JWT covers all 15 languages, cross-file taint added)
+- 131 probes (52 core + 68 language adapters + 11 v2 families; PHP Runtime Version added 2026-10-28 for php2shell; Swift and C++ XL-001 adapters registered 2026-10-28; XL-013 JWT covers all 15 languages, cross-file taint added)
 - OWASP Top 10 2025 (web, A01-A10) + OWASP LLM Top 10 2026 (LLM01/02/03/08/09/10 mapped). The LLM list renumbered in 2026, so per-finding citations note the prior 2025 id where the slot moved. Intentionally unmapped: SEO, GEO, A11y (discoverability/accessibility), Code Quality / AI Code Smells / AI Codegen Bloat (maintainability), Architecture / Host Detection (classifiers).
 - 70 published Learn patterns, 14 published field reports, 15 published architecture shapes (no drafts)
 - 9 BYOK providers
-- 4373 tests across 128 files on `main`, lint clean, self-audit 9/9
+- 4377 tests across 128 files on `main` (4,368 in `npm test` plus 9 in `test:self-audit`), lint clean, self-audit 9/9
 - Breakers v1 hardening suite merged into `main`
 - v2 build COMPLETE: all 12 families live (F0 context, F7 bloat, and the 2026-09-03 build of F1 React, F2 Async, F3 Errors, F4 Data & State, F5 TypeScript, F6 Performance, F8 A11y Semantics, F9 Build & Config, F10 Hallucinations, F11 API, F12 Database). Family severity ceiling is medium pending the parked class-ceiling decision. See CHANGELOG.md.
 

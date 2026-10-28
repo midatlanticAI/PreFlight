@@ -77,6 +77,12 @@ import { SW_AUTH_001 } from './swift/sw-auth-001-token-verification.js';
 import { DA_AUTH_001 } from './dart/da-auth-001-token-verification.js';
 import { C_AUTH_001 } from './c/c-auth-001-token-verification.js';
 import { CPP_AUTH_001 } from './cpp/cpp-auth-001-token-verification.js';
+// XL-001 for the two languages Phase 3 left out on the grounds that their
+// defaults were safe. Codable and a hand-rolled parser are; the legacy
+// NSKeyedUnarchiver API and a cereal / boost binary archive over socket
+// bytes are not. Both verified on fixtures before registration (2026-10-28).
+import { SW_DESERIALIZE_001 } from './swift/sw-deserialize-001-nskeyedunarchiver.js';
+import { CPP_DESERIALIZE_001 } from './cpp/cpp-deserialize-001-binary-archive.js';
 
 /** @type {object[]} */
 export const ADAPTERS = [
@@ -149,4 +155,6 @@ export const ADAPTERS = [
   DA_AUTH_001,
   C_AUTH_001,
   CPP_AUTH_001,
+  SW_DESERIALIZE_001,
+  CPP_DESERIALIZE_001,
 ];

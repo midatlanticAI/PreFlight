@@ -2,7 +2,7 @@
 title: Unsafe deserialization (XL-001)
 slug: xl-unsafe-deserialization
 type: pattern
-last_updated: 2026-05-15
+last_updated: 2026-10-28
 draft: false
 related_probe_ids:
   - Python Unsafe Deserialization
@@ -35,6 +35,13 @@ The pattern is the same in every language. Only the call changes:
 - Ruby: `Marshal.load`, `YAML.load`.
 - PHP: `unserialize` on request data.
 - C#: `BinaryFormatter`, `TypeNameHandling != None`.
+- Swift: the legacy `NSKeyedUnarchiver.unarchiveObject(with:)` class
+  methods and `NSKeyedUnarchiver(forReadingWith:)` without
+  `requiresSecureCoding`. The archive names the class to instantiate.
+  `Codable` and `unarchivedObject(ofClass:from:)` do not have this problem.
+- C++: a cereal `BinaryInputArchive` or boost `binary_iarchive` fed bytes
+  that came off a socket. Both libraries say untrusted input is outside
+  their threat model.
 
 That cross-language sameness is why this is a shared family (XL-001) with
 one concept page and per-language detectors, rather than a dozen

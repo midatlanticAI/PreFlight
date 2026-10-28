@@ -1,8 +1,10 @@
 // Phase 3 (Swift). XL-002 (SQLite/Vapor interpolation), XL-004
-// (URLCredential trust-all), XL-006 (secrets). XL-001 not adapted
-// (Codable is safe by default); XL-013 not adapted (no clear corpus
-// Swift JWT-signature-skip pattern). Composition: adapt only families
-// that apply. New detection, shadow only, family Learn pages inherited.
+// (URLCredential trust-all), XL-006 (secrets), XL-013 (JWT, added with the
+// cross-language auth pass). XL-001 was left out at first because Codable
+// is safe by default; the legacy NSKeyedUnarchiver class methods are not,
+// and SW-DESERIALIZE-001 covers exactly those (added 2026-10-28).
+// Composition: adapt only families that apply. New detection, family
+// Learn pages inherited.
 //
 // Reference: docs/v05-research/preflight_v05_probe_inventory.md "6. Swift"
 
@@ -18,12 +20,18 @@ import { runShadow } from '../lib/probes/v05/shadow.js';
 import { getBySlug } from '../lib/learn-content.js';
 import { PROBES } from '../App.jsx';
 
-const IDS = ['SW-SECRETS-001', 'SW-SQL-RAW-001', 'SW-TLS-VERIFY-001', 'SW-AUTH-001'];
+const IDS = [
+  'SW-SECRETS-001',
+  'SW-SQL-RAW-001',
+  'SW-TLS-VERIFY-001',
+  'SW-AUTH-001',
+  'SW-DESERIALIZE-001',
+];
 const ENTRIES = Object.values(PROBE_MANIFEST_V05).filter((e) => IDS.includes(e.probe_id));
 const byId = (id) => PROBE_MANIFEST_V05[id];
 
 describe('Phase 3 (Swift): manifest shape', () => {
-  it('registers the three Swift adapters and they are the only swift ones', () => {
+  it('registers the Swift adapters and they are the only swift ones', () => {
     const ids = Object.keys(PROBE_MANIFEST_V05);
     for (const id of IDS) expect(ids).toContain(id);
     const swIds = Object.values(PROBE_MANIFEST_V05)
@@ -49,6 +57,8 @@ describe('Phase 3 (Swift): manifest shape', () => {
     expect(byId('SW-TLS-VERIFY-001').learn_more_slug).toBe('xl-tls-verification-disabled');
     expect(byId('SW-SECRETS-001').xl_family).toBe('XL-006');
     expect(byId('SW-SECRETS-001').learn_more_slug).toBe('xl-hardcoded-secrets');
+    expect(byId('SW-DESERIALIZE-001').xl_family).toBe('XL-001');
+    expect(byId('SW-DESERIALIZE-001').learn_more_slug).toBe('xl-unsafe-deserialization');
   });
 
   it('Swift adapters are LIVE and user-visible (in v0.4 PROBES + OWASP map)', () => {

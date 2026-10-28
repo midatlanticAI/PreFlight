@@ -1,6 +1,6 @@
 # PreFlight Audit Tool
 
-> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 129 probes covering OWASP Top 10 2025 (A01-A10) and OWASP LLM Top 10 2026 (LLM01, LLM02, LLM03, LLM08, LLM09, LLM10), plus 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, multi-language adapters (Python, Go, Ruby, PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust), and conventional SAST checks. Every finding carries the OWASP category code(s) it maps to. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
+> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 131 probes covering OWASP Top 10 2025 (A01-A10) and OWASP LLM Top 10 2026 (LLM01, LLM02, LLM03, LLM08, LLM09, LLM10), plus 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, multi-language adapters (Python, Go, Ruby, PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust), and conventional SAST checks. Every finding carries the OWASP category code(s) it maps to. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
 
 The PreFlight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai). Contact: John@midatlantic.ai. License: free for individual and team use.
 
@@ -16,7 +16,7 @@ The PreFlight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai
 
 ## What it does
 
-The tool extracts text from selected files or a public GitHub repository and runs 129 pure-function probes against the content. Each probe emits zero or more findings with severity (critical / high / medium / low / info), a CWE reference, a file path and line number, evidence, and a remediation block. Findings are aggregated into a risk score out of 100 with a tier label (LOW / MODERATE / HIGH / CRITICAL RISK), and broken out into four area scores: security, code health, accessibility, and discoverability. The headline score reflects security exposure only. Code-health, accessibility and discoverability findings are reported in full and shown on their own axis, but do not reduce it, because a security number dragged down by opinions about function shape or a missing meta tag is answering the wrong question. An area with no findings reads "clear" rather than 100, since a perfect score and an area that never applied are different claims. The tier label is additionally clamped to the worst real finding: a project with no critical and no high findings is never labelled HIGH or CRITICAL no matter how many cosmetic findings it carries.
+The tool extracts text from selected files or a public GitHub repository and runs 131 pure-function probes against the content. Each probe emits zero or more findings with severity (critical / high / medium / low / info), a CWE reference, a file path and line number, evidence, and a remediation block. Findings are aggregated into a risk score out of 100 with a tier label (LOW / MODERATE / HIGH / CRITICAL RISK), and broken out into four area scores: security, code health, accessibility, and discoverability. The headline score reflects security exposure only. Code-health, accessibility and discoverability findings are reported in full and shown on their own axis, but do not reduce it, because a security number dragged down by opinions about function shape or a missing meta tag is answering the wrong question. An area with no findings reads "clear" rather than 100, since a perfect score and an area that never applied are different claims. The tier label is additionally clamped to the worst real finding: a project with no critical and no high findings is never labelled HIGH or CRITICAL no matter how many cosmetic findings it carries.
 
 ## Input modes
 
@@ -31,12 +31,12 @@ The tool extracts text from selected files or a public GitHub repository and run
 - Baseline diff vs. prior scan of the same source (introduced / fixed / persisted findings, score delta).
 - Diagnostics drawer with structured logs (debug / info / warn / error filterable, copy / save / clear).
 
-## The 129 probes
+## The 131 probes
 
 Two groups:
 
 1. **Core probes** (52, items 1-52). JavaScript / TypeScript / Python / SQL / config-file analysis, AI-tooling and supply-chain checks, plus two dataflow probes (intra-file and cross-file taint). Run regardless of language.
-2. **Multi-language adapters** (66, items 53-118). Per-language coverage of the cross-language failure shapes (Unsafe / Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret) plus XL-013 JWT signature verification. Every one of the 15 languages now ships the JWT check. Languages: Python, JavaScript/TypeScript, Rust, Go, Java, C, C++, C#, Kotlin, Swift, Ruby, PHP, Scala, Elixir, Dart.
+2. **Multi-language adapters** (68, items 53-120). Per-language coverage of the cross-language failure shapes (Unsafe / Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret) plus XL-013 JWT signature verification. Every one of the 15 languages now ships the JWT check. Languages: Python, JavaScript/TypeScript, Rust, Go, Java, C, C++, C#, Kotlin, Swift, Ruby, PHP, Scala, Elixir, Dart.
 
 In registry order (matches `src/lib/probes.js` PROBES array):
 
@@ -93,7 +93,7 @@ In registry order (matches `src/lib/probes.js` PROBES array):
 51. **Host Detection** — attributes which AI build tool produced the repo (classifier, informational).
 52. **AI Codegen Bloat** — the tells of un-read AI-generated code (maintainability, informational).
 
-### Multi-language adapters (53-118)
+### Multi-language adapters (53-120)
 
 Every language ships some combination of Unsafe / Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, and XL-013 JWT Signature Verification. All 15 languages now carry the JWT check.
 
@@ -103,16 +103,15 @@ Every language ships some combination of Unsafe / Untrusted Deserialization, Raw
 - **Go** — Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
 - **Java** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
 - **C** — Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
-- **C++** — Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **C++** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
 - **C#** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Token Validation Disabled.
 - **Kotlin** — Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
-- **Swift** — Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
+- **Swift** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
 - **Ruby** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
 - **PHP** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
 - **Scala** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
 - **Elixir** — Unsafe Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
 - **Dart** — Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, JWT Signature Not Verified.
-- **Dart** (94-96): Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret.
 
 ## What it does NOT do
 

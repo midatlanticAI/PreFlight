@@ -1,9 +1,11 @@
-// Phase 3 (C family). C and C++ adapters for XL-002/004/006. XL-001
-// (unsafe deserialization) does not meaningfully apply to C/C++ — there is
-// no pickle / ObjectInputStream gadget concept — so the C family adapts
-// only the families that apply (composition: a language need not cover
-// every XL family). New detection, shadow only, family Learn pages
-// inherited.
+// Phase 3 (C family). C and C++ adapters for XL-002/004/006, XL-013 from
+// the cross-language auth pass, and for C++ only, XL-001. There is no
+// pickle / ObjectInputStream gadget concept in C, so C adapts only the
+// families that apply (composition: a language need not cover every XL
+// family). C++ has one: a cereal or boost binary input archive rebuilds a
+// typed object graph from bytes, and CPP-DESERIALIZE-001 reports it when the
+// same file reads from the network (added 2026-10-28). New detection,
+// family Learn pages inherited.
 //
 // Reference: docs/v05-research/preflight_v05_probe_inventory.md
 //            "8. C" / "9. C++"
@@ -21,7 +23,13 @@ import { getBySlug } from '../lib/learn-content.js';
 import { PROBES } from '../App.jsx';
 
 const C_IDS = ['CC-AUTH-001', 'CC-SECRETS-001', 'CC-SQL-RAW-001', 'CC-TLS-VERIFY-001'];
-const CPP_IDS = ['CPP-AUTH-001', 'CPP-SECRETS-001', 'CPP-SQL-RAW-001', 'CPP-TLS-VERIFY-001'];
+const CPP_IDS = [
+  'CPP-AUTH-001',
+  'CPP-SECRETS-001',
+  'CPP-SQL-RAW-001',
+  'CPP-TLS-VERIFY-001',
+  'CPP-DESERIALIZE-001',
+];
 const ALL = [...C_IDS, ...CPP_IDS];
 const ENTRIES = Object.values(PROBE_MANIFEST_V05).filter((e) => ALL.includes(e.probe_id));
 
@@ -30,8 +38,15 @@ const SLUG = {
   'TLS-VERIFY': 'xl-tls-verification-disabled',
   SECRETS: 'xl-hardcoded-secrets',
   AUTH: 'xl-auth-token-verification',
+  DESERIALIZE: 'xl-unsafe-deserialization',
 };
-const XL = { 'SQL-RAW': 'XL-002', 'TLS-VERIFY': 'XL-004', SECRETS: 'XL-006', AUTH: 'XL-013' };
+const XL = {
+  'SQL-RAW': 'XL-002',
+  'TLS-VERIFY': 'XL-004',
+  SECRETS: 'XL-006',
+  AUTH: 'XL-013',
+  DESERIALIZE: 'XL-001',
+};
 const familyKey = (id) => id.replace(/^(?:CC|CPP)-/, '').replace(/-001$/, '');
 
 describe('Phase 3 (C family): manifest shape', () => {

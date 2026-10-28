@@ -6,6 +6,10 @@ The deployed site at [preflight.midatlantic.ai](https://preflight.midatlantic.ai
 
 ## [Unreleased]
 
+### 2026-10-28 — two finished adapters that had been sitting untracked since September
+
+Wave 3 left 25 adapter files untracked. Two of them were finished, fixtured and proven, and the September handoff said so; they just never reached the registry. **Swift Unsafe Deserialization** (`SW-DESERIALIZE-001`) reports the legacy `NSKeyedUnarchiver.unarchiveObject(with:)` class methods and `NSKeyedUnarchiver(forReadingWith:)` without `requiresSecureCoding` nearby; `Codable` and `unarchivedObject(ofClass:from:)` are different tokens and never match. **C++ Unsafe Deserialization** (`CPP-DESERIALIZE-001`) reports a cereal `BinaryInputArchive` or boost `binary_iarchive` constructed in a file that also reads from the network, and stays silent on an archive over the app's own cache file. Phase 3 had skipped XL-001 for both languages on the grounds that their defaults are safe, which is true of the defaults and not of the legacy spellings; the two test headers now say that. Both re-proven on their fixtures through `runShadow` before registration. Probe count 129 to 131, adapters 66 to 68, the XL-001 Learn page names both, counts synced on every surface including the share card. Canaries flat.
+
 ### 2026-10-28 — the interpolation was in the next line's literal, and a lockfile pin was read as a password
 
 Two more precision fixes, both found by replaying the corpora after the morning's commits rather than by a test.
