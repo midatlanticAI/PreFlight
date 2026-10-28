@@ -26,24 +26,24 @@ import { PROBES } from '../lib/probes.js';
 // always shows the complete, current list.
 const FEATURED_REPORTS = [
   {
-    slug: 'nextjs-rce-pair-2026-08',
-    title: 'Two unauthenticated RCEs in Next.js, and the audit that said clean',
-    date: '2026-08-25',
+    slug: 'agents-md-downloads-2026-10',
+    title: 'A planted AGENTS.md in the Downloads folder told the coding agent to install malware',
+    date: '2026-10-22',
   },
   {
-    slug: 'vm2-two-waves-2026-08',
-    title: 'vm2 3.11.6 was the fix, and then it was the target',
-    date: '2026-08-17',
+    slug: 'php2shell-2026-10',
+    title: 'php2shell: remote code execution in the PHP engine, exploited within days',
+    date: '2026-10-21',
   },
   {
-    slug: 'agent-approval-gates-2026-08',
-    title: 'The approval prompt is the whole security model, and it kept not firing',
-    date: '2026-08-11',
+    slug: 'litellm-pypi-2026-10',
+    title: 'LiteLLM 1.107.0: a release pipeline taken over, a stealer on every Python start',
+    date: '2026-10-21',
   },
   {
-    slug: 'mini-shai-hulud-keyv-2026-08',
-    title: 'Mini Shai-Hulud takes the keyv and Cacheable families',
-    date: '2026-08-04',
+    slug: 'supabase-exposure-study-2026-09',
+    title: '16,326 Supabase databases answered a request for the users table',
+    date: '2026-09-25',
   },
 ];
 const FEATURED_EXPLAINERS = [

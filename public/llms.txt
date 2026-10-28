@@ -1,6 +1,6 @@
 # PreFlight Audit Tool
 
-> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 128 probes covering OWASP Top 10 2025 (A01-A10) and OWASP LLM Top 10 2026 (LLM01, LLM02, LLM03, LLM08, LLM09, LLM10), plus 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, multi-language adapters (Python, Go, Ruby, PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust), and conventional SAST checks. Every finding carries the OWASP category code(s) it maps to. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
+> A free, in-browser static security audit for apps built with AI coding tools (Lovable, Cursor, Bolt, Replit, Claude Code) and any other web application. 129 probes covering OWASP Top 10 2025 (A01-A10) and OWASP LLM Top 10 2026 (LLM01, LLM02, LLM03, LLM08, LLM09, LLM10), plus 2025–2026 supply-chain incidents (including the May 11, 2026 Mini Shai-Hulud TanStack worm), MCP security, AI-tooling rules-file backdoors, post-infection IOC detection, AST-based code-correctness checks, multi-language adapters (Python, Go, Ruby, PHP, Java, Kotlin, Swift, Scala, Elixir, Dart, C#, Rust), and conventional SAST checks. Every finding carries the OWASP category code(s) it maps to. All scanning runs locally in the browser — no upload, no signup, no analytics beacons.
 
 The PreFlight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai). Contact: John@midatlantic.ai. License: free for individual and team use.
 
@@ -16,7 +16,7 @@ The PreFlight Audit Tool is published by Mid-Atlantic AI (https://midatlantic.ai
 
 ## What it does
 
-The tool extracts text from selected files or a public GitHub repository and runs 117 pure-function probes against the content. Each probe emits zero or more findings with severity (critical / high / medium / low / info), a CWE reference, a file path and line number, evidence, and a remediation block. Findings are aggregated into a risk score out of 100 with a tier label (LOW / MODERATE / HIGH / CRITICAL RISK), and broken out into four area scores: security, code health, accessibility, and discoverability. The headline score reflects security exposure only. Code-health, accessibility and discoverability findings are reported in full and shown on their own axis, but do not reduce it, because a security number dragged down by opinions about function shape or a missing meta tag is answering the wrong question. An area with no findings reads "clear" rather than 100, since a perfect score and an area that never applied are different claims. The tier label is additionally clamped to the worst real finding: a project with no critical and no high findings is never labelled HIGH or CRITICAL no matter how many cosmetic findings it carries.
+The tool extracts text from selected files or a public GitHub repository and runs 129 pure-function probes against the content. Each probe emits zero or more findings with severity (critical / high / medium / low / info), a CWE reference, a file path and line number, evidence, and a remediation block. Findings are aggregated into a risk score out of 100 with a tier label (LOW / MODERATE / HIGH / CRITICAL RISK), and broken out into four area scores: security, code health, accessibility, and discoverability. The headline score reflects security exposure only. Code-health, accessibility and discoverability findings are reported in full and shown on their own axis, but do not reduce it, because a security number dragged down by opinions about function shape or a missing meta tag is answering the wrong question. An area with no findings reads "clear" rather than 100, since a perfect score and an area that never applied are different claims. The tier label is additionally clamped to the worst real finding: a project with no critical and no high findings is never labelled HIGH or CRITICAL no matter how many cosmetic findings it carries.
 
 ## Input modes
 
@@ -31,12 +31,12 @@ The tool extracts text from selected files or a public GitHub repository and run
 - Baseline diff vs. prior scan of the same source (introduced / fixed / persisted findings, score delta).
 - Diagnostics drawer with structured logs (debug / info / warn / error filterable, copy / save / clear).
 
-## The 128 probes
+## The 129 probes
 
 Two groups:
 
-1. **Core probes** (51, items 1-51). JavaScript / TypeScript / Python / SQL / config-file analysis, AI-tooling and supply-chain checks, plus two dataflow probes (intra-file and cross-file taint). Run regardless of language.
-2. **Multi-language adapters** (66, items 52-117). Per-language coverage of the cross-language failure shapes (Unsafe / Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret) plus XL-013 JWT signature verification. Every one of the 15 languages now ships the JWT check. Languages: Python, JavaScript/TypeScript, Rust, Go, Java, C, C++, C#, Kotlin, Swift, Ruby, PHP, Scala, Elixir, Dart.
+1. **Core probes** (52, items 1-52). JavaScript / TypeScript / Python / SQL / config-file analysis, AI-tooling and supply-chain checks, plus two dataflow probes (intra-file and cross-file taint). Run regardless of language.
+2. **Multi-language adapters** (66, items 53-118). Per-language coverage of the cross-language failure shapes (Unsafe / Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret) plus XL-013 JWT signature verification. Every one of the 15 languages now ships the JWT check. Languages: Python, JavaScript/TypeScript, Rust, Go, Java, C, C++, C#, Kotlin, Swift, Ruby, PHP, Scala, Elixir, Dart.
 
 In registry order (matches `src/lib/probes.js` PROBES array):
 
@@ -67,32 +67,33 @@ In registry order (matches `src/lib/probes.js` PROBES array):
 25. **AI Rules Files** — `.cursorrules` / `.cursor/rules` / `.windsurfrules` / `CLAUDE.md` with bidi control chars or instruction-override phrasing.
 26. **Malicious Artifacts** — post-infection indicators of compromise dropped on disk by known worms.
 27. **Agent Config Backdoor** — `.claude/settings*.json` hooks on auto-firing events, `.vscode/tasks.json` tasks with `runOn: folderOpen`.
-28. **AI Code Smells** — the tells of code generated and shipped without a read-through.
-29. **URL Reputation** — raw IPs, shorteners, suspicious TLDs, HTTP-only hosts in source.
-30. **HTML Hygiene** — unsafe HTML patterns and missing hardening attributes.
-31. **Reflected XSS** — user input reaching the DOM without escaping.
-32. **SEO Hygiene** — discoverability metadata (informational, does not affect the security score).
-33. **GEO Hygiene** — generative-engine-optimization metadata (informational).
-34. **A11y Landmarks** — accessibility landmark checks (informational).
-35. **Code Quality** — maintainability and error-handling hygiene (health axis).
-36. **Code Correctness** — AST-based scope-validity checks (undeclared identifiers).
-37. **Package Manager Hardening** — lockfile / install-script hardening advice.
-38. **SQL Injection** — string-interpolated SQL in JavaScript / TypeScript.
-39. **Path Traversal** — user input reaching filesystem paths.
-40. **Weak Randomness** — `Math.random` used for security-bearing values.
-41. **Stack Trace Leaks** — stack traces returned to clients.
-42. **Subresource Integrity** — third-party scripts without SRI.
-43. **Source Map Exposure** — source maps shipped to production.
-44. **Iframe Sandbox** — iframes without a restrictive `sandbox` attribute.
-45. **Security Logging** — auth events with no logging hooks.
-46. **RAG Ingestion** — user-supplied content ingested into a vector store without provenance.
-47. **Vector Embedding Weaknesses** — vector search without a per-tenant scope filter.
-48. **Taint Flow** — intra-file dataflow from a user-input source to a dangerous sink (AST-based).
-49. **Cross-File Taint** — a source in one file reaching a sink in another through an imported function (function-summary dataflow).
-50. **Host Detection** — attributes which AI build tool produced the repo (classifier, informational).
-51. **AI Codegen Bloat** — the tells of un-read AI-generated code (maintainability, informational).
+28. **PHP Runtime Version** — a Dockerfile, `.php-version`, `.tool-versions` or composer platform pin naming a PHP release below the php2shell fix (CVE-2026-109618/109619; 8.2.35, 8.3.36, 8.4.27, 8.5.12) or on an unsupported branch.
+29. **AI Code Smells** — the tells of code generated and shipped without a read-through.
+30. **URL Reputation** — raw IPs, shorteners, suspicious TLDs, HTTP-only hosts in source.
+31. **HTML Hygiene** — unsafe HTML patterns and missing hardening attributes.
+32. **Reflected XSS** — user input reaching the DOM without escaping.
+33. **SEO Hygiene** — discoverability metadata (informational, does not affect the security score).
+34. **GEO Hygiene** — generative-engine-optimization metadata (informational).
+35. **A11y Landmarks** — accessibility landmark checks (informational).
+36. **Code Quality** — maintainability and error-handling hygiene (health axis).
+37. **Code Correctness** — AST-based scope-validity checks (undeclared identifiers).
+38. **Package Manager Hardening** — lockfile / install-script hardening advice.
+39. **SQL Injection** — string-interpolated SQL in JavaScript / TypeScript.
+40. **Path Traversal** — user input reaching filesystem paths.
+41. **Weak Randomness** — `Math.random` used for security-bearing values.
+42. **Stack Trace Leaks** — stack traces returned to clients.
+43. **Subresource Integrity** — third-party scripts without SRI.
+44. **Source Map Exposure** — source maps shipped to production.
+45. **Iframe Sandbox** — iframes without a restrictive `sandbox` attribute.
+46. **Security Logging** — auth events with no logging hooks.
+47. **RAG Ingestion** — user-supplied content ingested into a vector store without provenance.
+48. **Vector Embedding Weaknesses** — vector search without a per-tenant scope filter.
+49. **Taint Flow** — intra-file dataflow from a user-input source to a dangerous sink (AST-based).
+50. **Cross-File Taint** — a source in one file reaching a sink in another through an imported function (function-summary dataflow).
+51. **Host Detection** — attributes which AI build tool produced the repo (classifier, informational).
+52. **AI Codegen Bloat** — the tells of un-read AI-generated code (maintainability, informational).
 
-### Multi-language adapters (52-117)
+### Multi-language adapters (53-118)
 
 Every language ships some combination of Unsafe / Untrusted Deserialization, Raw SQL Interpolation, TLS Verification Disabled, Hardcoded Secret, and XL-013 JWT Signature Verification. All 15 languages now carry the JWT check.
 

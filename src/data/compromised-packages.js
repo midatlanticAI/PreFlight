@@ -6,8 +6,11 @@
 // cleanly from Vite, Vitest, ESLint, and bare Node without needing the ES2025
 // `with { type: "json" }` attribute that not all toolchains parse yet.
 //
-// Schema: { [package-name]: { versions: string[], note: string } }
+// Schema: { [package-name]: { versions: string[], note: string, ecosystem?: 'npm' | 'pypi' } }
 //  array entries match exact resolved versions, or use "*" for any version.
+//  `ecosystem` defaults to npm; a pypi entry is matched against Python
+//  manifests and lockfiles only, so an npm package that shares the name
+//  (lightning, litellm) is never accused of a PyPI advisory.
 
 export default {
   _schema: 'preflight/compromised-packages/v1',
@@ -19,7 +22,7 @@ export default {
   // 2026-07-25 research pass confidently reported a wave-wide "0.10.1" marker
   // version across the TanStack packages that GHSA-g7cv-rxg3-hmpx shows does
   // not exist; importing it would have false-positived ~45 packages.
-  _lastReviewed: '2026-08-07',
+  _lastReviewed: '2026-10-28',
 
   axios: {
     versions: ['1.14.1', '0.30.4'],
@@ -76,6 +79,41 @@ export default {
   lightning: {
     versions: ['2.6.2', '2.6.3'],
     note: 'PyPI Mini Shai-Hulud variant',
+    ecosystem: 'pypi',
+  },
+
+  // LiteLLM, PyPI. Two incidents on one package: the March 2026 versions and
+  // the October 21, 2026 release-pipeline compromise, in which seven
+  // 1.107.0 wheels (and the matching Docker tags) shipped compiled malware
+  // that drops cook.pth / cook.py / sitecustomize.py into site-packages, so
+  // every Python start on the host re-runs the stealer. Verified against
+  // OSV MAL-2026-2144 (PYSEC-2026-2) and LiteLLM's own incident report
+  // (2026-10-28).
+  litellm: {
+    versions: ['1.82.7', '1.82.8', '1.107.0'],
+    note: 'LiteLLM release-pipeline compromise, credential stealer with site-packages persistence — October 21, 2026 (OSV MAL-2026-2144); 1.82.x from the March 2026 incident',
+    ecosystem: 'pypi',
+  },
+
+  // October 2026, Shai-Hulud lineage. The Tensorlake TypeScript SDK's
+  // 0.5.144 carried an obfuscated lib/setup.mjs loader (OSV MAL-2026-17650,
+  // GHSA-rqxj-g25x-4v9v, found by Amazon Inspector). Verified 2026-10-28.
+  tensorlake: {
+    versions: ['0.5.144'],
+    note: 'Shai-Hulud-lineage credential stealer, obfuscated install-time loader — October 8, 2026 (OSV MAL-2026-17650)',
+  },
+  // MALFEX campaign, October 2026. function-color pulls function-flag, a
+  // downloader for a Windows payload; function-color is the package a
+  // planted AGENTS.md told Codex to install in the October 22 Downloads
+  // folder report. Verified against OSV MAL-2026-17647 / MAL-2026-17648
+  // (2026-10-28).
+  'function-color': {
+    versions: ['1.0.0', '1.7.3'],
+    note: 'MALFEX campaign, RAT and stealer dropper; the package a planted AGENTS.md installed — October 2026 (OSV MAL-2026-17647)',
+  },
+  'function-flag': {
+    versions: ['1.7.3'],
+    note: 'MALFEX campaign, downloader pulled in by function-color — October 2026 (OSV MAL-2026-17648)',
   },
 
   '@tanstack/router-utils': {

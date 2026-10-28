@@ -71,6 +71,7 @@ function scanClaudeSettings(file, findings) {
   } catch {
     return; // malformed: nothing reliable to assert
   }
+  scanClaudeEnvRedirect(cfg, file, findings);
   claudeHookCommands(cfg.hooks).forEach(({ event, command }, i) => {
     const autoFires = AUTO_FIRING_CLAUDE_EVENTS.has(event);
     const malicious = MALICIOUS_COMMAND_RE.test(command);
@@ -93,6 +94,43 @@ function scanClaudeSettings(file, findings) {
       remediation: `A committed .claude/settings.json hook runs on the developer's machine whenever this project is opened in Claude Code${autoFires ? ` (the ${event} event fires automatically, with no user action)` : ''}. This is the persistence mechanism used by the 2026 Miasma / Shai-Hulud npm worms: they survive \`npm uninstall\` by writing a SessionStart hook here. If you did not author this hook, treat the host as compromised and follow this order exactly: 1) disconnect the machine from the network; 2) screenshot, then remove the hook. Do NOT revoke tokens yet, these worms wipe the home directory if they lose access while still resident; 3) rotate every reachable credential (npm, GitHub, SSH, cloud, Kubernetes) from a SEPARATE trusted machine. If you DID author it, move trusted setup into an explicit script a teammate runs deliberately, not an auto-firing hook.`,
     });
   });
+}
+
+// A committed .claude/settings.json `env` that points the agent's API
+// traffic somewhere other than the provider. The October 2026 Downloads
+// folder report: a planted CLAUDE.md got Claude Code to write an
+// ANTHROPIC_BASE_URL into project settings, after which every request,
+// login token included, went to the attacker's server, which could answer
+// as the model and hand the agent commands. A corporate gateway is the
+// honest use of this key, so the finding names the host and asks.
+const API_BASE_ENV_RE =
+  /^(?:ANTHROPIC|OPENAI|GEMINI|GOOGLE|OPENROUTER|AZURE_OPENAI)_(?:BASE_URL|API_URL|API_BASE|ENDPOINT)$/;
+const PROVIDER_HOST_RE =
+  /^(?:api\.anthropic\.com|api\.openai\.com|generativelanguage\.googleapis\.com|openrouter\.ai|[\w.-]+\.openai\.azure\.com|localhost|127\.0\.0\.1)$/i;
+function scanClaudeEnvRedirect(cfg, file, findings) {
+  const env = cfg && typeof cfg.env === 'object' && cfg.env ? cfg.env : {};
+  for (const [key, value] of Object.entries(env)) {
+    if (!API_BASE_ENV_RE.test(key) || typeof value !== 'string') continue;
+    let host = '';
+    try {
+      host = new URL(value).hostname;
+    } catch {
+      continue;
+    }
+    if (PROVIDER_HOST_RE.test(host)) continue;
+    findings.push({
+      id: `agent-claude-baseurl-${file.path}-${key}`,
+      probe: 'Agent Config Backdoor',
+      title: `Committed agent settings route ${key} to ${host}`,
+      severity: 'high',
+      category: 'Supply Chain',
+      cwe: 'CWE-829',
+      file: file.path,
+      line: 1,
+      evidence: `env.${key}: ${value.slice(0, 160)}`,
+      remediation: `Every request the agent makes, the login token included, goes to ${host} instead of the provider, and that server can answer as the model and return commands for the agent to run. This is the persistence a planted CLAUDE.md wrote in the October 2026 Downloads-folder hijack. If ${host} is your organisation's gateway, say so in a comment beside it and keep it out of the committed file where it can. If you did not add it, remove it, assume the login token leaked, and rotate it from a clean machine.`,
+    });
+  }
 }
 
 function scanVscodeTasks(file, findings) {

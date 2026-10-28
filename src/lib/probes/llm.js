@@ -209,11 +209,43 @@ export function probeLLMSecurity(files) {
 
 // --- Webhook Signature Verification ---
 
+// Codex keeps its MCP servers in TOML (~/.codex/config.toml, or a committed
+// .codex/config.toml), one `[mcp_servers.<name>]` table each with `command`
+// and `args`. That table is what a planted AGENTS.md told Codex to append in
+// the October 2026 Downloads-folder hijack, and it is machine-wide: every
+// session in every folder loads it. Enough TOML to read command and args;
+// anything else in the file is ignored.
+function parseCodexMcpServers(content) {
+  const servers = {};
+  let current = null;
+  for (const raw of String(content || '').split('\n')) {
+    const line = raw.replace(/#.*$/, '').trim();
+    const table = line.match(/^\[mcp_servers\.([^\].]+)\]$/);
+    if (table) {
+      current = {};
+      servers[table[1].replace(/^"|"$/g, '')] = current;
+      continue;
+    }
+    if (/^\[/.test(line)) {
+      current = null;
+      continue;
+    }
+    if (!current) continue;
+    const cmd = line.match(/^command\s*=\s*"([^"]*)"/);
+    if (cmd) current.command = cmd[1];
+    const args = line.match(/^args\s*=\s*\[([^\]]*)\]/);
+    if (args) current.args = [...args[1].matchAll(/"([^"]*)"/g)].map((m) => m[1]);
+  }
+  return servers;
+}
+
 export function probeMCPSecurity(files) {
   const findings = [];
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
     const isMCPConfig = /(claude_desktop_config\.json|\.mcp\.json|mcp\.json)$/.test(file.path);
+    const isCodexConfig = /(^|\/)\.codex\/config\.toml$/.test(file.path);
+    let servers = null;
     if (isMCPConfig) {
       let cfg;
       try {
@@ -230,9 +262,41 @@ export function probeMCPSecurity(files) {
         cfg.mcp?.servers,
         cfg.mcp?.mcpServers,
       ];
-      const servers = candidateBuckets.filter(Boolean).reduce((a, b) => Object.assign(a, b), {});
+      servers = candidateBuckets.filter(Boolean).reduce((a, b) => Object.assign(a, b), {});
+    } else if (isCodexConfig) {
+      servers = parseCodexMcpServers(file.content);
+    }
+    if (servers) {
       Object.entries(servers).forEach(([name, srv]) => {
         if (!srv) return;
+        // A server launched through npx / bunx / uvx / pipx with no version
+        // resolves the package from the registry on every agent start. That
+        // is both an unpinned dependency and exactly the shape the October
+        // 2026 planted config used (`npx -y function-color`). A pinned
+        // `pkg@1.2.3` is a normal install and stays quiet.
+        const launcher = String(srv.command || '')
+          .split(/[\\/]/)
+          .pop()
+          .toLowerCase();
+        const argList = (srv.args || []).map(String);
+        if (/^(?:npx|bunx|uvx|pipx)$/.test(launcher)) {
+          const pkg = argList.find((a) => !a.startsWith('-') && a !== 'run');
+          const pinned = pkg ? /@\d/.test(pkg.replace(/^@[^/]+\//, '')) : false;
+          if (pkg && !pinned) {
+            findings.push({
+              id: `mcp-registry-start-${file.path}-${name}`,
+              probe: 'MCP Security',
+              title: `MCP server "${name}" installs ${pkg} from the registry on every start`,
+              severity: 'medium',
+              category: 'AI/LLM Security',
+              cwe: 'CWE-1357',
+              file: file.path,
+              line: 1,
+              evidence: `${name}: ${srv.command} ${argList.join(' ')}`.slice(0, 200),
+              remediation: `${launcher} with no version fetches whatever ${pkg} the registry serves at the moment the agent starts, every start, on every machine that loads this config. Pin the version (${pkg}@x.y.z) or install the server once and point command at the binary. If you did not add this entry, it is the persistence a planted instruction file writes: remove it and check what it installed.`,
+            });
+          }
+        }
         // Shell-spawning MCP servers
         if (
           srv.command &&

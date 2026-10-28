@@ -141,6 +141,7 @@ import { probeDbPatterns } from './probes/v2/db-patterns.js';
 // 2026: agent/editor auto-execution backdoors (.claude hooks, .vscode runOn:
 // folderOpen) — the Miasma / Shai-Hulud persistence vector.
 import { probeAgentConfigBackdoor } from './probes/agent-backdoor.js';
+import { probePhpRuntimeVersion } from './probes/runtime-version.js';
 
 import {
   probeExternalURLs,
@@ -195,6 +196,7 @@ export {
 export { probeTaintFlow } from './probes/taint-engine.js';
 export { probeCrossFileTaint } from './probes/taint-cross-file.js';
 export { probeAgentConfigBackdoor } from './probes/agent-backdoor.js';
+export { probePhpRuntimeVersion } from './probes/runtime-version.js';
 // v2 F0: cross-cutting context detectors (framework / host / hook-context /
 // async-context) that route the v2 probe families. See docs/preflight-v2-spec.md §1.10.
 export {
@@ -253,6 +255,7 @@ export const PROBES = [
   { name: 'AI Rules Files', fn: probeAIRulesFiles },
   { name: 'Malicious Artifacts', fn: probeMaliciousArtifacts },
   { name: 'Agent Config Backdoor', fn: probeAgentConfigBackdoor },
+  { name: 'PHP Runtime Version', fn: probePhpRuntimeVersion },
   { name: 'AI Code Smells', fn: probeAICodeSmells },
   { name: 'URL Reputation', fn: probeExternalURLs },
   { name: 'HTML Hygiene', fn: probeHTML },

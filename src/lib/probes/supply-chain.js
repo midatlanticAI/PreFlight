@@ -464,9 +464,13 @@ function* _walkBunLock(content) {
 export function probeCompromisedPackages(files) {
   const findings = [];
   const seenFindings = new Set();
-  const emit = (name, version, chain, file, isTransitive, spec) => {
+  const emit = (name, version, chain, file, isTransitive, spec, eco = 'npm') => {
     const known = COMPROMISED_PACKAGES[name];
     if (!known) return;
+    // A manifest entry belongs to one registry. `lightning` is a PyPI
+    // advisory and also an unrelated npm package; the npm passes must not
+    // accuse the latter.
+    if ((known.ecosystem || 'npm') !== eco) return;
     if (!_isCompromisedVersion(known, version)) return;
     const key = `${name}@${version}-${file.path}`;
     if (seenFindings.has(key)) return;
@@ -493,7 +497,7 @@ export function probeCompromisedPackages(files) {
   // resolve to compromised).
   const emitFloating = (name, version, file) => {
     const known = COMPROMISED_PACKAGES[name];
-    if (!known) return;
+    if (!known || (known.ecosystem || 'npm') !== 'npm') return;
     findings.push({
       id: `compromised-floating-${file.path}-${name}`,
       probe: 'Compromised Packages',
@@ -561,7 +565,7 @@ export function probeCompromisedPackages(files) {
     };
     Object.entries(deps).forEach(([name, version]) => {
       const known = COMPROMISED_PACKAGES[name];
-      if (!known) return;
+      if (!known || (known.ecosystem || 'npm') !== 'npm') return;
       const versionStr = String(version);
       // Entries marked versions: ['*'] are compromised at every version;
       // any spec, pinned or floating, resolves to a bad release. Emit
@@ -589,6 +593,40 @@ export function probeCompromisedPackages(files) {
       const hit = known.versions.find((bad) => semverRangeIncludes(versionStr, bad));
       if (hit) emit(name, hit, 'root (direct)', file, false, versionStr);
     });
+  });
+  // Pass 3: Python. The manifest carried PyPI entries (lightning) that no
+  // pass could ever match, and the October 21, 2026 LiteLLM compromise made
+  // that gap concrete. Exact pins in requirements*.txt, and resolved
+  // versions in poetry.lock, uv.lock and Pipfile.lock. Names normalise the
+  // way PyPI does (case-insensitive, `_` and `.` read as `-`).
+  const pyName = (n) => String(n).trim().toLowerCase().replace(/[._]+/g, '-');
+  files.forEach((file) => {
+    const base = file.path.split('/').pop();
+    if (/^requirements[\w.-]*\.txt$/i.test(base)) {
+      file.content.split('\n').forEach((raw) => {
+        const line = raw.replace(/#.*$/, '').trim();
+        const m = line.match(/^([A-Za-z0-9][\w.-]*)(?:\[[^\]]*\])?\s*==\s*([\w.+!-]+)/);
+        if (m) emit(pyName(m[1]), m[2], 'root (direct)', file, false, null, 'pypi');
+      });
+    } else if (/^(?:poetry|uv)\.lock$/.test(base)) {
+      for (const m of file.content.matchAll(
+        /\[\[package\]\]\s*\n\s*name\s*=\s*"([^"]+)"\s*\n\s*version\s*=\s*"([^"]+)"/g
+      ))
+        emit(pyName(m[1]), m[2], base, file, true, null, 'pypi');
+    } else if (base === 'Pipfile.lock') {
+      let lock;
+      try {
+        lock = JSON.parse(file.content);
+      } catch {
+        return;
+      }
+      for (const bucket of [lock?.default, lock?.develop]) {
+        for (const [name, spec] of Object.entries(bucket || {})) {
+          const v = String(spec?.version || '').replace(/^==/, '');
+          if (v) emit(pyName(name), v, base, file, true, null, 'pypi');
+        }
+      }
+    }
   });
   return findings;
 }
@@ -645,7 +683,17 @@ export function probeAIRulesFiles(files) {
   const findings = [];
   files.forEach((file) => {
     if (isTestFile(file.path) || isScannerSelfSource(file.path)) return;
-    if (!/\.cursorrules$|\.cursor\/rules\/|\.windsurfrules$|CLAUDE\.md$/.test(file.path)) return;
+    // AGENTS.md is the cross-agent instruction file (Codex, Copilot, Cursor,
+    // Jules, Gemini CLI read it); copilot-instructions, GEMINI.md and the
+    // Cline/Roo rules are the per-tool spellings. A planted AGENTS.md was
+    // the October 2026 Downloads-folder hijack and this probe could not see
+    // the file at all.
+    if (
+      !/\.cursorrules$|\.cursor\/rules\/|\.windsurfrules$|CLAUDE\.md$|AGENTS\.md$|GEMINI\.md$|\.clinerules$|\.clinerules\/|\.roo\/rules|copilot-instructions\.md$|\.github\/instructions\/.*\.md$/.test(
+        file.path
+      )
+    )
+      return;
     if (BIDI_CONTROL_RE.test(file.content)) {
       findings.push({
         id: `rules-bidi-${file.path}`,
@@ -678,6 +726,35 @@ export function probeAIRulesFiles(files) {
         evidence: 'Phrases like "ignore previous instructions" found',
         remediation:
           'Rules files that include override-style language are either jailbreak attempts or compromised. Verify every instruction was placed by your team. Treat these files as code that ships with the product.',
+      });
+    }
+    // The October 2026 shape: no override language at all, just "routine
+    // setup" that tells the agent to edit its OWN configuration (register an
+    // MCP server in ~/.codex/config.toml, write an API base URL into
+    // .claude/settings.json) or to install a package before starting the
+    // task. Codex followed a planted AGENTS.md in more than 90% of trials,
+    // and the installed package was MALFEX malware. A rules file has no
+    // business reconfiguring the agent or installing anything; the
+    // directive itself is the finding, whatever it installs.
+    const selfConfig =
+      /\b(?:config\.toml|settings(?:\.local)?\.json|claude_desktop_config\.json|mcp\.json)\b[\s\S]{0,200}?\b(?:add|register|append|write|set|edit|update|insert)\b|\b(?:add|register|append|write|set|edit|update|insert)\b[\s\S]{0,200}?\b(?:config\.toml|settings(?:\.local)?\.json|claude_desktop_config\.json|mcp\.json)\b|\b(?:mcp[_\s-]?servers?|mcpServers)\b[\s\S]{0,120}?\b(?:add|register|install|configure|enable)\b|\b(?:ANTHROPIC|OPENAI|GEMINI|GOOGLE|OPENROUTER)_(?:BASE_URL|API_URL|API_BASE)\b|\b(?:base[_\s-]?url|api[_\s-]?endpoint|proxy)\b[\s\S]{0,80}?https?:\/\//i;
+    const installsTooling =
+      /\b(?:npx|bunx|pnpm\s+dlx|yarn\s+dlx|uvx|pipx\s+run)\s+(?:-y\s+|--yes\s+)?[@\w./-]+|\b(?:npm|pnpm|yarn|bun)\s+(?:i|install|add)\s+[@\w./-]+|\bpip3?\s+install\s+[\w.-]+|\bcurl\b[^\n]{0,120}\|\s*(?:ba)?sh\b/i;
+    if (selfConfig.test(file.content) || installsTooling.test(file.content)) {
+      findings.push({
+        id: `rules-selfconfig-${file.path}`,
+        probe: 'AI Rules Files',
+        title: 'Rules file directs the agent to change its own configuration or install tooling',
+        severity: 'high',
+        category: 'AI/LLM Security',
+        cwe: 'CWE-829',
+        file: file.path,
+        line: 1,
+        evidence: (file.content.match(selfConfig) || file.content.match(installsTooling) || [''])[0]
+          .replace(/\s+/g, ' ')
+          .slice(0, 160),
+        remediation:
+          'A rules file sets conventions for the code the agent writes. One that tells the agent to register a server in its own config, point its API traffic at a URL, or install a package "before starting" is giving itself persistence and a payload: Codex followed exactly this in a planted AGENTS.md (October 2026) and installed MALFEX malware; a CLAUDE.md variant wrote an ANTHROPIC_BASE_URL that leaked the login token. If your team did not write this instruction, treat the host as compromised, check ~/.codex/config.toml and .claude/settings.json for entries you did not add, and rotate the agent login token. If your team did write it, move the setup into a script a human runs on purpose.',
       });
     }
   });

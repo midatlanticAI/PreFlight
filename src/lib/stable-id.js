@@ -151,6 +151,11 @@ export const PROBE_META = {
     autofix: 'review-needed',
     learn_more_slug: 'package-json-supply-chain',
   },
+  'PHP Runtime Version': {
+    confidence: 'high',
+    autofix: 'mechanical',
+    learn_more_slug: 'php-runtime-version',
+  },
   'Malicious Artifacts': {
     confidence: 'high',
     autofix: 'manual',
@@ -472,7 +477,12 @@ const HAND_CODED_OWASP_MAP = {
   A03: ['Auth Weakness', 'SQL Injection', 'HTML Hygiene', 'Python Security', 'Reflected XSS'],
   A04: ['AI Code Smells', 'Stack Trace Leaks', 'Code Correctness'],
   A05: ['Security Headers', 'CORS', 'Source Map Exposure', 'Iframe Sandbox'],
-  A06: ['Compromised Packages', 'Slopsquat / Typosquat', 'Package Manager Hardening'],
+  A06: [
+    'Compromised Packages',
+    'Slopsquat / Typosquat',
+    'Package Manager Hardening',
+    'PHP Runtime Version',
+  ],
   A07: ['Auth Weakness', 'Webhook Validation'],
   A08: [
     'Trojan Source',

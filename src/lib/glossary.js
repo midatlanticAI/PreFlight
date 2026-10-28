@@ -303,6 +303,36 @@ export const GLOSSARY_GROUPS = [
     intro: 'The vocabulary of the 2025-2026 npm worm waves and the broader package-trust problem.',
     entries: [
       {
+        term: 'php2shell',
+        definition:
+          'The October 2026 pair of PHP engine bugs (CVE-2026-109618, CVE-2026-109619) giving unauthenticated remote code execution to any PHP serving web requests; fixed in 8.2.35, 8.3.36, 8.4.27, 8.5.12.',
+        link: 'https://www.php.net/archive/2026.php#2026-10-21-5',
+        internal: '/learn/incidents/php2shell-2026-10',
+        aliases: ['PHP2Shell', 'CVE-2026-109618', 'CVE-2026-109619'],
+      },
+      {
+        term: 'KEV (Known Exploited Vulnerabilities)',
+        definition:
+          'The CISA catalog of CVEs confirmed exploited in the wild; an entry means patch now, not at the next sprint.',
+        link: 'https://www.cisa.gov/known-exploited-vulnerabilities-catalog',
+        aliases: ['KEV catalog', 'CISA KEV'],
+      },
+      {
+        term: 'Trusted publishing',
+        definition:
+          'Registry publishing authorised by a CI identity token (OIDC) instead of a stored secret; strong until the CI identity itself is taken, as in the Red Hat and LiteLLM compromises.',
+        link: 'https://docs.npmjs.com/trusted-publishers',
+        aliases: ['OIDC publishing', 'provenance'],
+      },
+      {
+        term: 'sitecustomize persistence',
+        definition:
+          'Malware dropped into site-packages as sitecustomize.py or a .pth file, which Python imports on every interpreter start; the LiteLLM 1.107.0 payload used it, so pip itself reran the stealer.',
+        link: 'https://docs.python.org/3/library/site.html',
+        internal: '/learn/incidents/litellm-pypi-2026-10',
+        aliases: ['.pth persistence', 'cook.pth'],
+      },
+      {
         term: 'Typosquat',
         definition:
           'A package registered with a name one character off from a popular one, hoping for install typos.',
@@ -390,6 +420,22 @@ export const GLOSSARY_GROUPS = [
     title: 'AI and LLM security',
     intro: 'OWASP LLM Top 10 vocabulary plus the AI-tooling specifics PreFlight scans for.',
     entries: [
+      {
+        term: 'AGENTS.md',
+        definition:
+          'The cross-tool instruction file coding agents read when they start in a folder; treated as the project speaking, which is why a planted one can direct the agent to install malware.',
+        link: 'https://agents.md/',
+        internal: '/learn/incidents/agents-md-downloads-2026-10',
+        aliases: ['CLAUDE.md', 'rules file', 'instruction file'],
+      },
+      {
+        term: 'Distillation attack',
+        definition:
+          'Using stolen or abused API keys to drive a frontier model at scale and train a copy on its answers; the stated motive behind the October 2026 OpenCode key theft.',
+        link: 'https://en.wikipedia.org/wiki/Knowledge_distillation',
+        internal: '/learn/incidents/opencode-console-keys-2026-10',
+        aliases: ['model distillation'],
+      },
       {
         term: 'LLM (Large Language Model)',
         definition:
