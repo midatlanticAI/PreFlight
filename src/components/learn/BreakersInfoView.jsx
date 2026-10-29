@@ -157,7 +157,7 @@ export function BreakersInfoView() {
               <div style={{ minWidth: 0 }}>
                 {pattern ? (
                   <a
-                    href={`/learn/patterns/${slug}`}
+                    href={`/learn/patterns/${slug}/`}
                     style={{
                       textDecoration: 'none',
                       display: 'inline-flex',

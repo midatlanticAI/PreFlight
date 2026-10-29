@@ -3,7 +3,7 @@
 // sub-routes. Pulls entries from learn-content.js, displays them as a card list with
 // title, summary, last_updated, and a draft badge when applicable.
 
-import { Link } from 'react-router-dom';
+import { Link } from '../RouterLink.jsx';
 import { Clock } from 'lucide-react';
 import { getByType } from '../../lib/learn-content.js';
 import { T, fontMono } from '../../lib/theme.js';

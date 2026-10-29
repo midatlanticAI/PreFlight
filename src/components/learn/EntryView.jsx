@@ -5,13 +5,31 @@
 //
 // 404-friendly: if the slug doesn't resolve, returns a "not found" card with a back link.
 
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { Link } from '../RouterLink.jsx';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { getBySlug } from '../../lib/learn-content.js';
 import { shapesForPattern } from '../../lib/sandbox/shapes.js';
 import { T, fontMono } from '../../lib/theme.js';
+import { withTrailingSlash } from '../../lib/trailing-slash.js';
+
+// Markdown links: an internal one ("/learn/patterns/x") becomes a router Link
+// with the trailing slash the host serves (no 308 hop for crawlers, no full
+// reload for readers); anything else stays a plain anchor.
+const MARKDOWN_COMPONENTS = {
+  a: ({ node: _node, href, children, ...rest }) =>
+    typeof href === 'string' && href.startsWith('/') && !href.startsWith('//') ? (
+      <Link to={withTrailingSlash(href)} {...rest}>
+        {children}
+      </Link>
+    ) : (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    ),
+};
 
 // Map a content type to its index URL segment so the back-link points home.
 const SEGMENT_FOR = {
@@ -224,7 +242,9 @@ export function EntryBody({ entry }) {
         }}
       >
         <div className="ap-markdown">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.body}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+            {entry.body}
+          </ReactMarkdown>
         </div>
 
         {entry.related_probe_ids?.length > 0 && (

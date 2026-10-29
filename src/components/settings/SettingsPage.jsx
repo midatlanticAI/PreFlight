@@ -9,7 +9,8 @@
 //   /settings/diagnostics → Diagnostics
 //   /settings/about     → About
 
-import { NavLink, Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
+import { NavLink } from '../RouterLink.jsx';
 import { Sliders, MessageSquare, Github, Activity, Info } from 'lucide-react';
 import { T, fontUI } from '../../lib/theme.js';
 import { useScrollFades, ScrollFadeStyles } from '../ScrollableTabs.jsx';

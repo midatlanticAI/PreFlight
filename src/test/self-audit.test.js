@@ -14,6 +14,7 @@ import {
   probeSecrets,
 } from '../lib/probes.js';
 import { shouldScanFile, setSelfScanMode } from '../lib/file-filter.js';
+import { allRoutePaths } from '../../scripts/lib/routes.mjs';
 
 // This IS PreFlight scanning PreFlight, so the scanner-self-source exclusions
 // apply. They are off by default now (they used to leak into user scans and
@@ -204,6 +205,25 @@ describe('self-audit: our own dist/ should pass our own probes', () => {
       );
     }
     expect(blocking).toEqual([]);
+  });
+
+  // 2026-10-28: Search Console listed 30 "Page with redirect" URLs because
+  // every internal link named the no-slash form of a route and the host 308s
+  // that form to the slash form it serves. The Link/NavLink wrappers fix the
+  // source; this pins the built output so a raw <a href> or a new link site
+  // cannot bring the redirect hop back.
+  it('no prerendered page links an indexable route without its trailing slash', () => {
+    const routes = new Set(allRoutePaths().filter((p) => p !== '/'));
+    const pages = files.filter((f) => /^dist\/.*index\.html$/.test(f.path));
+    expect(pages.length).toBeGreaterThan(100);
+    const bad = [];
+    for (const page of pages) {
+      for (const m of page.content.matchAll(/href="(\/[^"#?]*)(?:[#?][^"]*)?"/g)) {
+        if (routes.has(m[1])) bad.push(`${page.path}: ${m[0]}`);
+      }
+    }
+    if (bad.length > 0) console.log('No-slash internal links:', bad.slice(0, 20));
+    expect(bad).toEqual([]);
   });
 
   it('runs the whole registry, not a hand-picked subset', () => {

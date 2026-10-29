@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Link } from './components/RouterLink.jsx';
+import { TrailingSlashRedirect } from './components/TrailingSlashRedirect.jsx';
 import { log, subscribe as subscribeLogs } from './lib/logger.js';
 import { track, timing } from './lib/analytics.js';
 
@@ -889,6 +891,7 @@ export default function App() {
   return (
     <div className="ap-app">
       <GlobalStyle />
+      <TrailingSlashRedirect />
       <a href="#main" className="ap-skip-link">
         Skip to main content
       </a>

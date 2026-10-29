@@ -85,7 +85,7 @@ Wired today: Sam SNIPPET is the system prompt for `formatAgentPrompt` (Copy Agen
 ```bash
 npm install            # install dependencies
 npm run dev            # vite dev server on :5173
-npm test               # vitest run (4377 tests across 128 files on main, incl. the 9 self-audit tests run separately)
+npm test               # vitest run (4389 tests across 129 files on main, incl. the 10 self-audit tests run separately)
 npm run lint           # eslint
 npm run lint:fix       # eslint --fix
 npm run format         # prettier write
@@ -112,7 +112,7 @@ Architecturally enforced, not promised. If you ever build a backend, you break t
 - OWASP Top 10 2025 (web, A01-A10) + OWASP LLM Top 10 2026 (LLM01/02/03/08/09/10 mapped). The LLM list renumbered in 2026, so per-finding citations note the prior 2025 id where the slot moved. Intentionally unmapped: SEO, GEO, A11y (discoverability/accessibility), Code Quality / AI Code Smells / AI Codegen Bloat (maintainability), Architecture / Host Detection (classifiers).
 - 70 published Learn patterns, 14 published field reports, 15 published architecture shapes (no drafts)
 - 9 BYOK providers
-- 4377 tests across 128 files on `main` (4,368 in `npm test` plus 9 in `test:self-audit`), lint clean, self-audit 9/9
+- 4389 tests across 129 files on `main` (4,379 in `npm test` plus 10 in `test:self-audit`), lint clean, self-audit 10/10
 - Breakers v1 hardening suite merged into `main`
 - v2 build COMPLETE: all 12 families live (F0 context, F7 bloat, and the 2026-09-03 build of F1 React, F2 Async, F3 Errors, F4 Data & State, F5 TypeScript, F6 Performance, F8 A11y Semantics, F9 Build & Config, F10 Hallucinations, F11 API, F12 Database). Family severity ceiling is medium pending the parked class-ceiling decision. See CHANGELOG.md.
 

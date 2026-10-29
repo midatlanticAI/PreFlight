@@ -18,7 +18,7 @@
 //     copy-to-clipboard (no fetch, consistent with the privacy contract).
 
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from './RouterLink.jsx';
 import { ShieldCheck, Copy, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   summarizeCompliance,

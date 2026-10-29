@@ -1359,7 +1359,7 @@ export const GLOSSARY_GROUPS = [
         term: 'Vibeware',
         definition:
           "Software built primarily through natural-language prompts to an AI tool. PreFlight's audience.",
-        link: '/learn/manifesto',
+        link: '/learn',
         internal: '/learn',
       },
       {
@@ -1401,7 +1401,7 @@ export const GLOSSARY_GROUPS = [
         term: 'Dogfood-as-CI-gate',
         definition:
           "PreFlight's founding principle: the tool has to pass its own audit on every build, or the build fails.",
-        link: '/learn/manifesto',
+        link: '/learn',
       },
     ],
   },

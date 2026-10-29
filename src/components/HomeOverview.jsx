@@ -15,6 +15,7 @@
 //     does" result-schema line, HowToView, the AuditView hero). No new prose
 //     is authored here, and manifesto.md is intentionally untouched.
 
+import { withTrailingSlash } from '../lib/trailing-slash.js';
 import { T, fontUI, fontMono } from '../lib/theme.js';
 
 const P = ({ children }) => (
@@ -33,7 +34,7 @@ const LI = ({ children }) => (
   <li style={{ color: T.textDim, fontSize: 15, lineHeight: 1.7, marginBottom: 6 }}>{children}</li>
 );
 const A = ({ href, children }) => (
-  <a href={href} style={{ color: T.accent, textDecoration: 'none' }}>
+  <a href={withTrailingSlash(href)} style={{ color: T.accent, textDecoration: 'none' }}>
     {children}
   </a>
 );

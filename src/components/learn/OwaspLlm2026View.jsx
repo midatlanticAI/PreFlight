@@ -7,7 +7,7 @@
 // free tool. Verified against OWASP's own 2025 and 2026 published documents.
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../RouterLink.jsx';
 import { T, fontDisplay, fontUI, fontMono } from '../../lib/theme.js';
 
 // delta = r25 - r26; positive means the risk climbed.

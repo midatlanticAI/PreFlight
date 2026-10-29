@@ -652,10 +652,10 @@ export function AuditView({
           no signup.
         </div>
         <nav aria-label="Footer links" style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
-          <a href="/privacy" style={{ color: T.textDim, textDecoration: 'none' }}>
+          <a href="/privacy/" style={{ color: T.textDim, textDecoration: 'none' }}>
             Privacy
           </a>
-          <a href="/terms" style={{ color: T.textDim, textDecoration: 'none' }}>
+          <a href="/terms/" style={{ color: T.textDim, textDecoration: 'none' }}>
             Terms
           </a>
           <a href="mailto:John@midatlantic.ai" style={{ color: T.textDim, textDecoration: 'none' }}>

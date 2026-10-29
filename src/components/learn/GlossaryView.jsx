@@ -15,7 +15,8 @@
 
 import { useMemo, useState } from 'react';
 import { ExternalLink, Search } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from '../RouterLink.jsx';
+import { withTrailingSlash } from '../../lib/trailing-slash.js';
 import {
   GLOSSARY_GROUPS,
   searchGlossary,
@@ -74,7 +75,7 @@ function EntryRow({ entry }) {
             </Link>
           )}
           <a
-            href={entry.link}
+            href={withTrailingSlash(entry.link)}
             target="_blank"
             rel="noopener noreferrer"
             className="ap-mono"

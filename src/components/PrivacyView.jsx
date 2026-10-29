@@ -4,7 +4,7 @@
 // this page just names them in the order someone evaluating PreFlight expects
 // to see them.
 
-import { Link } from 'react-router-dom';
+import { Link } from './RouterLink.jsx';
 import { T, fontMono, fontUI } from '../lib/theme.js';
 
 export function PrivacyView() {

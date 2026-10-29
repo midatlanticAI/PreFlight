@@ -4,7 +4,7 @@
 // agree to: it's free, it's open source, it doesn't run on a server you have
 // to trust, and there is no warranty.
 
-import { Link } from 'react-router-dom';
+import { Link } from './RouterLink.jsx';
 import { T, fontMono, fontUI } from '../lib/theme.js';
 
 export function TermsView() {

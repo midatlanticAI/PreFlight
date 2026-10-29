@@ -6,7 +6,7 @@
 // (Version 2026, December 2025, CC BY-SA 4.0).
 
 import React, { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../RouterLink.jsx';
 import { T, fontDisplay, fontMono } from '../../lib/theme.js';
 import { ScanCTA } from './OwaspLlm2026View.jsx';
 

@@ -10,7 +10,7 @@
 //   - Labels visible at every viewport. Below 480 px the icons shrink slightly and the
 //     padding tightens but labels never disappear (mystery-meat icon nav fails 3.2.3).
 
-import { NavLink } from 'react-router-dom';
+import { NavLink } from './RouterLink.jsx';
 import { ShieldCheck, Code, BookOpen, Settings as SettingsIcon } from 'lucide-react';
 import { T, fontUI } from '../lib/theme.js';
 

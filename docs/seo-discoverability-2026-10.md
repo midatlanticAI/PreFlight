@@ -12,7 +12,7 @@ Outside tools and competing scanners are named in this document because it is re
 | Two general web searches for the domain name | Zero results on the domain. Only unrelated "preflight" aviation and Adobe products.              |
 | Live `robots.txt`                            | Allows every crawler, names 14 AI crawlers as allowed, points to the sitemap. Not the problem.   |
 | Live `sitemap.xml`                           | 100 URLs, newest `lastmod` 2026-08-27. Stale because `prebuild` never ran (fixed in `384b9c3`).  |
-| Google Search Console verification file      | Shipped in May. The May handoff's "John clicks Verify and submits the sitemap" never happened.   |
+| Google Search Console                        | Verified since May as a domain property on `midatlantic.ai` (covers the subdomain). See 1b.      |
 | Live homepage                                | Renders fully server-side, title "PreFlight — Educational Audit for Vibers Building Vibeware".   |
 | Third-party mentions                         | One registry listing (TomeVault, "Silver tier, clean"). No other page on the web links the site. |
 
@@ -20,11 +20,28 @@ Nothing else in this document matters until this is fixed. A page that is not in
 
 ### What fixes it
 
-1. **John, Google Search Console.** Verify the property (the HTML file method is already deployed), submit `https://preflight.midatlantic.ai/sitemap.xml`, and request indexing for the homepage and `/learn/`. Then watch the Coverage report for a week.
-2. **John, Bing Webmaster Tools.** Import the verified GSC property (one click once GSC exists), or verify directly. Bing feeds Copilot and ChatGPT search, which is where vibe coders ask questions.
+1. **John, Google Search Console.** The property exists and Google has been crawling since August (section 1b). Once the trailing-slash fix below is live: resubmit the sitemap, press Validate Fix on the "Page with redirect" and "Discovered, currently not indexed" reports, and request indexing on `/`, `/learn/` and the five October field reports. Then watch Pages for two weeks.
+2. **John, Bing Webmaster Tools.** Import the verified GSC property (one click), or verify directly. Bing feeds Copilot and ChatGPT search, which is where vibe coders ask questions.
 3. **Repo, IndexNow.** Added today: `scripts/indexnow.mjs` pings every sitemap URL to Bing, Yandex, Seznam and through Bing the AI search engines, on every push to `main`. Google ignores IndexNow; that is what step 1 is for. The key file at `public/<key>.txt` is public by design: the key proves control of the host, it is not a secret.
 4. **Push.** The live sitemap is two months stale and missing seventeen pages. The nine local commits carry the fix and the pages.
 5. **Links.** The site has no inbound links. Search engines treat a page nobody links to as a page nobody wants. Section 5 lists where the competing scanners got theirs.
+
+### 1b. What Search Console says (read 2026-10-28)
+
+John sent the four Pages reports the same evening. The property is a domain property on `midatlantic.ai`, verified in May, and Google has been crawling the subdomain since the sitemap first went live in late August. What it found:
+
+| Report                               | Pages | First seen | What the examples are                                                                                  |
+| ------------------------------------ | ----- | ---------- | ------------------------------------------------------------------------------------------------------ |
+| Page with redirect (subdomain only)  | 30    | 2026-09-05 | `/learn/patterns/weak-cryptography`, `/learn/tools`, `/learn/flight-school`: every no-slash route URL  |
+| Page with redirect (domain property) | 34    | 2026-05-09 | The 30 above plus `http://midatlantic.ai/` and `http://www.midatlantic.ai/` (expected, the http hosts) |
+| Discovered, currently not indexed    | 12    | 2026-09-05 | Pattern and field-report pages Google knows about from the sitemap and has not bothered to crawl       |
+| Crawled, currently not indexed       | 6     | 2026-08-27 | `/learn/incidents`, `/learn/the-climb`, `/learn/resources`, `llms.txt`, both forms of `desktop-tauri`  |
+
+The redirect report is the mechanical one and it explains the other two. The host serves each prerendered page as `path/index.html` at the trailing-slash URL and answers the no-slash form with a 308. The canonical and the sitemap already named the slash form, but every one of the 1,943 internal links on the prerendered pages named the no-slash form, so each link Google followed was a redirect hop. A site where every internal link redirects reads as a site that does not know its own URLs, which is the crawl-priority signal behind "Discovered, currently not indexed", and the duplicate pair `desktop-tauri` / `desktop-tauri/` (both crawled on 2026-07-01, before the 308 existed) is the same defect from the other side.
+
+Fixed in the repo the same evening: `src/lib/trailing-slash.js` carries the rule, `src/components/RouterLink.jsx` wraps `Link` and `NavLink` so every `to` gets its slash (ESLint now refuses a direct import of either from the router), `TrailingSlashRedirect` normalises the live location once on load, markdown links inside Learn entries become router links with the slash, the raw anchors in the footer, the OWASP page and the glossary are slashed, the prerender renders each page at its slash URL, and the self-audit asserts that no prerendered page links an indexable route without its slash. A glossary entry pointed at `/learn/manifesto`, which is not a route; it now points at `/learn/`.
+
+`llms.txt` in "Crawled, currently not indexed" is correct behaviour: a text file for answer engines, not a page for the web index.
 
 ## 2. What people type, and who answers
 
@@ -97,6 +114,7 @@ ChatGPT search, Copilot and Perplexity pull from Bing's index plus their own cra
 
 - `scripts/gen-sitemap.mjs` now runs inside `npm run build` (sitemap was stale on the live site since August).
 - `scripts/indexnow.mjs`, the key file, an `indexnow` npm script and a non-fatal CI step on pushes to `main`.
+- Every internal link ends in `/`, matching the canonical, the sitemap and the URL the host serves (section 1b).
 - Counts and the share card say 131.
 - Field reports featured on the homepage.
 

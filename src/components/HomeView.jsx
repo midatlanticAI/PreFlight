@@ -8,7 +8,7 @@
 // Each block keeps its own `{!results && ...}` gate internally so behavior matches the
 // pre-extraction version exactly. The parent App passes `results` so the gates still work.
 
-import { Link } from 'react-router-dom';
+import { Link } from './RouterLink.jsx';
 import { Github, Folder, History, Clock, RefreshCw, Trash2, Eye } from 'lucide-react';
 
 import { T, riskTier } from '../lib/theme.js';

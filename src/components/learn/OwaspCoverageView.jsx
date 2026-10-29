@@ -121,7 +121,7 @@ function ProbePill({ probeName }) {
   if (pattern) {
     return (
       <a
-        href={`/learn/patterns/${slug}`}
+        href={`/learn/patterns/${slug}/`}
         title={`Open pattern: ${pattern.title}`}
         style={{ textDecoration: 'none' }}
       >
@@ -197,8 +197,8 @@ export function OwaspCoverageView() {
           nav rather than being orphaned at their own top-level urls. */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, margin: '10px 0 14px' }}>
         {[
-          { href: '/owasp-llm-2026', title: 'LLM Top 10: 2025 → 2026 shift' },
-          { href: '/owasp-agentic-2026', title: 'Agentic Top 10 (ASI01–ASI10)' },
+          { href: '/owasp-llm-2026/', title: 'LLM Top 10: 2025 → 2026 shift' },
+          { href: '/owasp-agentic-2026/', title: 'Agentic Top 10 (ASI01–ASI10)' },
         ].map((e) => (
           <a
             key={e.href}

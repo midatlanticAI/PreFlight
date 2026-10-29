@@ -72,7 +72,9 @@ try {
   const { getRouteMeta } = await vite.ssrLoadModule('/src/lib/seo.js');
 
   for (const path of allRoutePaths()) {
-    const appHtml = render(path);
+    // Render at the URL the host serves (trailing slash), so NavLink active
+    // state and relative resolution in the static HTML match the live page.
+    const appHtml = render(path === '/' ? '/' : `${path}/`);
     const meta = getRouteMeta(path);
 
     let html = applyHead(TEMPLATE, meta);

@@ -12,7 +12,8 @@
 //   /learn/shapes                   → IndexView with type="shape"
 //   /learn/shapes/:slug             → EntryView
 
-import { NavLink, Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
+import { NavLink } from '../RouterLink.jsx';
 import { T, fontUI } from '../../lib/theme.js';
 import { ScrollableTabs } from '../ScrollableTabs.jsx';
 

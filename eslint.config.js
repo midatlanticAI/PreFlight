@@ -46,6 +46,26 @@ export default [
       'no-useless-escape': 'off',
       'react-hooks/exhaustive-deps': 'error',
       'react-refresh/only-export-components': 'off',
+      // Every internal href must end in "/" (the URL the host serves without a
+      // 308). components/RouterLink.jsx wraps Link/NavLink to do that; nothing
+      // else imports them from the router directly. See lib/trailing-slash.js.
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react-router-dom',
+              importNames: ['Link', 'NavLink'],
+              message:
+                'Import Link / NavLink from src/components/RouterLink.jsx so internal hrefs carry the trailing slash.',
+            },
+          ],
+        },
+      ],
     },
+  },
+  {
+    files: ['src/components/RouterLink.jsx'],
+    rules: { 'no-restricted-imports': 'off' },
   },
 ];
