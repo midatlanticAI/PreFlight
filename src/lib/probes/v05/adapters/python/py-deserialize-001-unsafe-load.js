@@ -21,9 +21,51 @@ const UNSAFE_CALL_RE =
 const TORCH_LOAD_RE = /\btorch\.load\s*\(/;
 const TORCH_WEIGHTS_FALSE_RE = /weights_only\s*=\s*False/;
 
-// yaml.load is unsafe unless Loader is SafeLoader (or yaml.safe_load is used).
-const YAML_LOAD_RE = /\byaml\.load\s*\(/;
-const YAML_SAFE_RE = /Loader\s*=\s*(?:yaml\.)?SafeLoader|yaml\.safe_load\s*\(/;
+// Mask strings and comments before inspecting arguments. Offsets/newlines are
+// preserved; text mentioning a loader cannot become an exemption. This is a
+// lexical check, not Python name resolution or a general Python parser.
+function maskPythonText(content) {
+  return content.replace(
+    /#[^\n]*|"""[\s\S]*?(?:"""|$)|'''[\s\S]*?(?:'''|$)|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'/g,
+    (text) => text.replace(/[^\n]/g, text.startsWith('#') ? ' ' : '@')
+  );
+}
+
+const SAFE_LOADER_RE = /^(?:yaml\s*\.\s*)?C?SafeLoader$/;
+
+function unsafeYamlLines(content) {
+  const code = maskPythonText(content);
+  const unsafe = new Set();
+  for (const call of code.matchAll(/\byaml\s*\.\s*load\s*\(/g)) {
+    // Split only at the call's top-level commas. Nested calls/containers and
+    // other calls on the same line must not supply this call's Loader.
+    const args = [];
+    let depth = 0;
+    let start = call.index + call[0].length;
+    for (let i = start; i < code.length; i++) {
+      const ch = code[i];
+      if (ch === ')' && depth === 0) {
+        args.push(code.slice(start, i).trim());
+        break;
+      }
+      if ('([{'.includes(ch)) depth++;
+      else if (')]}'.includes(ch)) depth--;
+      else if (ch === ',' && depth === 0) {
+        args.push(code.slice(start, i).trim());
+        start = i + 1;
+      }
+    }
+    const keyword = args.find((arg) => /^Loader\s*=/.test(arg));
+    const loader = keyword ? keyword.replace(/^Loader\s*=\s*/, '') : args[1];
+    // **kwargs can override a positional loader; don't infer safety through
+    // dynamic arguments, aliases, constructors, attributes, or lookalike names.
+    if (loader && SAFE_LOADER_RE.test(loader) && !args.some((arg) => /^\*\*/.test(arg))) {
+      continue;
+    }
+    unsafe.add(code.slice(0, call.index).split('\n').length - 1);
+  }
+  return unsafe;
+}
 
 export const PY_DESERIALIZE_001 = {
   probe_id: 'PY-DESERIALIZE-001',
@@ -45,11 +87,11 @@ export const PY_DESERIALIZE_001 = {
   vibe_v05:
     '"Save object, load object." No trust boundary between bytes I wrote and bytes a request sent.',
   detection_approach:
-    'RX per line: pickle/cPickle/dill .load(s), joblib.load, pandas.read_pickle; torch.load with weights_only=False; yaml.load with no SafeLoader/safe_load on the line.',
+    'RX per line: pickle/cPickle/dill .load(s), joblib.load, pandas.read_pickle; torch.load with weights_only=False; yaml.load with no explicit positional or keyword SafeLoader/CSafeLoader in that call.',
   fp_gates_v05: [
     'comment-only lines (teaching examples)',
     'torch.load already passing weights_only=True (or relying on the 2.6+ default with no override)',
-    'yaml.load with Loader=SafeLoader on the same line',
+    'yaml.load with an explicit SafeLoader/CSafeLoader argument (bare or yaml-qualified)',
     'test files and the scanner self-source (handled by pythonFiles())',
   ],
   remediation:
@@ -68,6 +110,7 @@ export const PY_DESERIALIZE_001 = {
     const findings = [];
     for (const f of pythonFiles(files)) {
       const lines = f.content.split('\n');
+      const yamlUnsafe = unsafeYamlLines(f.content);
       lines.forEach((line, i) => {
         if (isPythonCommentLine(line)) return;
         let hit = null;
@@ -75,7 +118,7 @@ export const PY_DESERIALIZE_001 = {
           hit = 'pickle/dill/joblib/read_pickle deserialization';
         } else if (TORCH_LOAD_RE.test(line) && TORCH_WEIGHTS_FALSE_RE.test(line)) {
           hit = 'torch.load with weights_only=False';
-        } else if (YAML_LOAD_RE.test(line) && !YAML_SAFE_RE.test(line)) {
+        } else if (yamlUnsafe.has(i)) {
           hit = 'yaml.load without a safe loader';
         }
         if (!hit) return;

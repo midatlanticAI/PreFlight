@@ -15,18 +15,25 @@ const SQL_SURFACE_RE =
 
 // Interpolation forms: f-string with a substitution, %-format, .format(),
 // or string concatenation of a non-literal into the SQL.
-const FSTRING_INTERP_RE = /\bf["'][^"']*\{[^}]+\}/;
-const PERCENT_FORMAT_RE = /["'][^"']*%[sd][^"']*["']\s*%/;
-const DOTFORMAT_RE = /["'][^"']*\{[^}]*\}[^"']*["']\s*\.format\s*\(/;
-const CONCAT_RE = /["'][^"']*(?:SELECT|INSERT|UPDATE|DELETE|WHERE|FROM)[^"']*["']\s*\+\s*\w/i;
+// Match each Python string with its own closing delimiter. An SQL quote of
+// the other kind is ordinary string content, not the end of the Python string.
+const STRING_RE = /(?:\b([fFrR]{1,2}))?("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|#[^\n]*/g;
 
 function hasInterpolation(line) {
-  return (
-    FSTRING_INTERP_RE.test(line) ||
-    PERCENT_FORMAT_RE.test(line) ||
-    DOTFORMAT_RE.test(line) ||
-    CONCAT_RE.test(line)
-  );
+  for (const match of line.matchAll(STRING_RE)) {
+    if (match[0].startsWith('#')) break;
+    const body = match[2].slice(1, -1);
+    const tail = line.slice(match.index + match[0].length);
+    if (/f/i.test(match[1] || '') && /\{[^}]+\}/.test(body.replace(/\{\{|\}\}/g, ''))) {
+      return true;
+    }
+    if (/%[sd]/.test(body) && /^\s*%/.test(tail)) return true;
+    if (/\{[^}]*\}/.test(body) && /^\s*\.format\s*\(/.test(tail)) return true;
+    if (/SELECT|INSERT|UPDATE|DELETE|WHERE|FROM/i.test(body) && /^\s*\+\s*\w/.test(tail)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export const PY_SQL_RAW_001 = {
