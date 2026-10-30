@@ -69,6 +69,19 @@ jobs:
         run: npm run test:self-audit
         timeout-minutes: 2
 
+      - name: Bounded recall measurement (no thresholds)
+        run: npm run test:recall
+        timeout-minutes: 2
+
+      - name: Upload recall observations
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: recall-node-${{ matrix.node }}
+          path: .scratch/recall-scorecard.json
+          include-hidden-files: true
+          retention-days: 14
+        timeout-minutes: 2
+
       # IndexNow: tell Bing (and through it the Copilot / ChatGPT search
       # indexes), Yandex and Seznam that the sitemap's pages changed. Pages
       # deploys from the same push within minutes; the engines crawl later.
