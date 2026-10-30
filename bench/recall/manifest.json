@@ -1,0 +1,517 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "bandit-yaml",
+      "corpus": "bandit-small-sample",
+      "provenance": "independent",
+      "language": "Python",
+      "source": "https://github.com/PyCQA/bandit/blob/48ef27bd1bbc32f4e585c92310f7a574e87f6b04/examples/yaml_load.py",
+      "license": "Apache-2.0",
+      "labelBasis": "Upstream B506 documented unsafe yaml.load policy and explicit safe-case comments; tests/functional/test_functional.py test_yaml reports two medium findings at this revision. Local line transcription, not a fresh oracle run. Upstream CWE-20 is mapped narrowly to CWE-502 for unsafe YAML object construction. Safe loader and JSON calls are negative only for this class. Policy assumes untrusted YAML and legacy PyYAML semantics; literal input is a synthetic risky-API example, not an exploit.",
+      "files": [
+        {
+          "path": "bench/recall/bandit/yaml_load.py",
+          "scanPath": "app/yaml_load.py",
+          "sha256": "c2a880d76e7a15199674d494ee191b15386ac3c33151a0afdc99f206e7aec435"
+        }
+      ],
+      "labels": [
+        {
+          "id": "yaml-9",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 9,
+          "endLine": 9,
+          "kind": "positive"
+        },
+        {
+          "id": "yaml-12",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 12,
+          "endLine": 12,
+          "kind": "negative"
+        },
+        {
+          "id": "yaml-15",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 15,
+          "endLine": 15,
+          "kind": "negative"
+        },
+        {
+          "id": "yaml-20",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 20,
+          "endLine": 20,
+          "kind": "negative"
+        },
+        {
+          "id": "yaml-22",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 22,
+          "endLine": 22,
+          "kind": "positive"
+        },
+        {
+          "id": "yaml-25",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 25,
+          "endLine": 25,
+          "kind": "negative"
+        },
+        {
+          "id": "yaml-26",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 26,
+          "endLine": 26,
+          "kind": "negative"
+        },
+        {
+          "id": "yaml-27",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 27,
+          "endLine": 27,
+          "kind": "negative"
+        },
+        {
+          "id": "yaml-28",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 28,
+          "endLine": 28,
+          "kind": "negative"
+        }
+      ]
+    },
+    {
+      "id": "bandit-tls",
+      "corpus": "bandit-small-sample",
+      "provenance": "independent",
+      "language": "Python",
+      "source": "https://github.com/PyCQA/bandit/blob/48ef27bd1bbc32f4e585c92310f7a574e87f6b04/examples/requests-ssl-verify-disabled.py",
+      "license": "Apache-2.0",
+      "labelBasis": "Upstream B501 documented verify=False policy, bandit/plugins/crypto_request_no_cert_validation.py at 48ef27bd1bbc32f4e585c92310f7a574e87f6b04. Each request/client call transcribed under that policy before scanning. The historical # Okay comment marks the httpx section, not safe TLS settings; verify=False is positive there too. Synthetic API shapes; some httpx signatures depend on version. No oracle executed.",
+      "files": [
+        {
+          "path": "bench/recall/bandit/requests-ssl-verify-disabled.py",
+          "scanPath": "app/requests-ssl-verify-disabled.py",
+          "sha256": "7da634f602141c1331242a7d681ebf2ac128dd9d23973d4b7268845a63848e21"
+        }
+      ],
+      "labels": [
+        {
+          "id": "tls-5",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 5,
+          "endLine": 5,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-6",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 6,
+          "endLine": 6,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-7",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 7,
+          "endLine": 7,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-8",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 8,
+          "endLine": 8,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-9",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 9,
+          "endLine": 9,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-10",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 10,
+          "endLine": 10,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-11",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 11,
+          "endLine": 11,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-12",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 12,
+          "endLine": 12,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-13",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 13,
+          "endLine": 13,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-14",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 14,
+          "endLine": 14,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-15",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 15,
+          "endLine": 15,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-16",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 16,
+          "endLine": 16,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-17",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 17,
+          "endLine": 17,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-18",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 18,
+          "endLine": 18,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-21",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 21,
+          "endLine": 21,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-22",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 22,
+          "endLine": 22,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-23",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 23,
+          "endLine": 23,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-24",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 24,
+          "endLine": 24,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-25",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 25,
+          "endLine": 25,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-26",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 26,
+          "endLine": 26,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-27",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 27,
+          "endLine": 27,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-28",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 28,
+          "endLine": 28,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-29",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 29,
+          "endLine": 29,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-30",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 30,
+          "endLine": 30,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-31",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 31,
+          "endLine": 31,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-32",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 32,
+          "endLine": 32,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-33",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 33,
+          "endLine": 33,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-34",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 34,
+          "endLine": 34,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-35",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 35,
+          "endLine": 35,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-36",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 36,
+          "endLine": 36,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-37",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 37,
+          "endLine": 37,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-38",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 38,
+          "endLine": 38,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-39",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 39,
+          "endLine": 39,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-40",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 40,
+          "endLine": 40,
+          "kind": "positive"
+        },
+        {
+          "id": "tls-41",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 41,
+          "endLine": 41,
+          "kind": "negative"
+        },
+        {
+          "id": "tls-42",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 42,
+          "endLine": 42,
+          "kind": "positive"
+        }
+      ]
+    },
+    {
+      "id": "preflight-sql-positive",
+      "corpus": "preflight-existing-fixtures",
+      "provenance": "preflight-fixture",
+      "language": "Python",
+      "source": "src/lib/probes/v05/fixtures/PY-SQL-RAW-001/positive.py",
+      "license": "MIT",
+      "labelBasis": "Existing fixture comments label interpolated SQL as positive and bound/constant queries as negative. Local line transcription; correlated with PreFlight implementation, not independent recall evidence.",
+      "files": [
+        {
+          "path": "src/lib/probes/v05/fixtures/PY-SQL-RAW-001/positive.py",
+          "scanPath": "app/query.py",
+          "sha256": "8921e7500c0e474f2675092e25d73f91a2849c8a95eed345ba85a87bec08b0d7"
+        }
+      ],
+      "labels": [
+        {
+          "id": "sql-11",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 11,
+          "endLine": 11,
+          "kind": "positive"
+        },
+        {
+          "id": "sql-16",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 16,
+          "endLine": 16,
+          "kind": "positive"
+        },
+        {
+          "id": "sql-20",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 20,
+          "endLine": 20,
+          "kind": "positive"
+        },
+        {
+          "id": "sql-24",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 24,
+          "endLine": 24,
+          "kind": "positive"
+        },
+        {
+          "id": "sql-28",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 28,
+          "endLine": 28,
+          "kind": "positive"
+        }
+      ]
+    },
+    {
+      "id": "preflight-sql-negative",
+      "corpus": "preflight-existing-fixtures",
+      "provenance": "preflight-fixture",
+      "language": "Python",
+      "source": "src/lib/probes/v05/fixtures/PY-SQL-RAW-001/negative.py",
+      "license": "MIT",
+      "labelBasis": "Existing fixture comments label interpolated SQL as positive and bound/constant queries as negative. Local line transcription; correlated with PreFlight implementation, not independent recall evidence.",
+      "files": [
+        {
+          "path": "src/lib/probes/v05/fixtures/PY-SQL-RAW-001/negative.py",
+          "scanPath": "app/query.py",
+          "sha256": "a8e4a4fc7b660e725ff4e693e2e22a6faa88f4cc8083b09778fb11ade52e8c3d"
+        }
+      ],
+      "labels": [
+        {
+          "id": "sql-11",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 11,
+          "endLine": 11,
+          "kind": "negative"
+        },
+        {
+          "id": "sql-17",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 17,
+          "endLine": 17,
+          "kind": "negative"
+        },
+        {
+          "id": "sql-22",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 22,
+          "endLine": 22,
+          "kind": "negative"
+        },
+        {
+          "id": "sql-27",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 27,
+          "endLine": 27,
+          "kind": "negative"
+        },
+        {
+          "id": "sql-32",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 32,
+          "endLine": 32,
+          "kind": "negative"
+        }
+      ]
+    }
+  ]
+}

@@ -21,7 +21,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "og": "node scripts/generate-og.mjs",
-    "indexnow": "node scripts/indexnow.mjs"
+    "indexnow": "node scripts/indexnow.mjs",
+    "test:recall": "node scripts/recall/run.mjs"
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.5",
