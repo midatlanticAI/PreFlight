@@ -1,0 +1,865 @@
+{
+  "schemaVersion": 1,
+  "scorecards": [
+    {
+      "corpus": "bandit-small-sample",
+      "provenance": "independent",
+      "language": "Python",
+      "cwe": "CWE-295",
+      "detected": 18,
+      "missed": 0,
+      "falsePositives": 0,
+      "clearNegatives": 18,
+      "excluded": 0,
+      "duplicateFindings": 0,
+      "positives": 18,
+      "recall": 1
+    },
+    {
+      "corpus": "bandit-small-sample",
+      "provenance": "independent",
+      "language": "Python",
+      "cwe": "CWE-502",
+      "detected": 2,
+      "missed": 0,
+      "falsePositives": 0,
+      "clearNegatives": 7,
+      "excluded": 0,
+      "duplicateFindings": 0,
+      "positives": 2,
+      "recall": 1
+    },
+    {
+      "corpus": "preflight-existing-fixtures",
+      "provenance": "preflight-fixture",
+      "language": "Python",
+      "cwe": "CWE-89",
+      "detected": 5,
+      "missed": 0,
+      "falsePositives": 0,
+      "clearNegatives": 5,
+      "excluded": 0,
+      "duplicateFindings": 3,
+      "positives": 5,
+      "recall": 1
+    }
+  ],
+  "cases": [
+    {
+      "id": "bandit-tls",
+      "corpus": "bandit-small-sample",
+      "provenance": "independent",
+      "language": "Python",
+      "results": [
+        {
+          "id": "tls-10",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 10,
+          "endLine": 10,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 10,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-11",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 11,
+          "endLine": 11,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-12",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 12,
+          "endLine": 12,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 12,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-13",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 13,
+          "endLine": 13,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-14",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 14,
+          "endLine": 14,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 14,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-15",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 15,
+          "endLine": 15,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-16",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 16,
+          "endLine": 16,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 16,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-17",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 17,
+          "endLine": 17,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-18",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 18,
+          "endLine": 18,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 18,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-21",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 21,
+          "endLine": 21,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-22",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 22,
+          "endLine": 22,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 22,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-23",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 23,
+          "endLine": 23,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-24",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 24,
+          "endLine": 24,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 24,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-25",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 25,
+          "endLine": 25,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-26",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 26,
+          "endLine": 26,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 26,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-27",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 27,
+          "endLine": 27,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-28",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 28,
+          "endLine": 28,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 28,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-29",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 29,
+          "endLine": 29,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-30",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 30,
+          "endLine": 30,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 30,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-31",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 31,
+          "endLine": 31,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-32",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 32,
+          "endLine": 32,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 32,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-33",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 33,
+          "endLine": 33,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-34",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 34,
+          "endLine": 34,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 34,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-35",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 35,
+          "endLine": 35,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-36",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 36,
+          "endLine": 36,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 36,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-37",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 37,
+          "endLine": 37,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-38",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 38,
+          "endLine": 38,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 38,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-39",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 39,
+          "endLine": 39,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-40",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 40,
+          "endLine": 40,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 40,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-41",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 41,
+          "endLine": 41,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-42",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 42,
+          "endLine": 42,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 42,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-5",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 5,
+          "endLine": 5,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-6",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 6,
+          "endLine": 6,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 6,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-7",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 7,
+          "endLine": 7,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "tls-8",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 8,
+          "endLine": 8,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/requests-ssl-verify-disabled.py",
+              "line": 8,
+              "cwe": "CWE-295",
+              "probe": "Python TLS Verification Disabled",
+              "title": "TLS certificate verification disabled (verify=False)"
+            }
+          ]
+        },
+        {
+          "id": "tls-9",
+          "file": "app/requests-ssl-verify-disabled.py",
+          "cwe": "CWE-295",
+          "startLine": 9,
+          "endLine": 9,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        }
+      ],
+      "unadjudicated": []
+    },
+    {
+      "id": "bandit-yaml",
+      "corpus": "bandit-small-sample",
+      "provenance": "independent",
+      "language": "Python",
+      "results": [
+        {
+          "id": "yaml-12",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 12,
+          "endLine": 12,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "yaml-15",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 15,
+          "endLine": 15,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "yaml-20",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 20,
+          "endLine": 20,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "yaml-22",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 22,
+          "endLine": 22,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/yaml_load.py",
+              "line": 22,
+              "cwe": "CWE-502",
+              "probe": "Python Unsafe Deserialization",
+              "title": "Unsafe deserialization: yaml.load without a safe loader"
+            }
+          ]
+        },
+        {
+          "id": "yaml-25",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 25,
+          "endLine": 25,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "yaml-26",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 26,
+          "endLine": 26,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "yaml-27",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 27,
+          "endLine": 27,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "yaml-28",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 28,
+          "endLine": 28,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "yaml-9",
+          "file": "app/yaml_load.py",
+          "cwe": "CWE-502",
+          "startLine": 9,
+          "endLine": 9,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/yaml_load.py",
+              "line": 9,
+              "cwe": "CWE-502",
+              "probe": "Python Unsafe Deserialization",
+              "title": "Unsafe deserialization: yaml.load without a safe loader"
+            }
+          ]
+        }
+      ],
+      "unadjudicated": []
+    },
+    {
+      "id": "preflight-sql-negative",
+      "corpus": "preflight-existing-fixtures",
+      "provenance": "preflight-fixture",
+      "language": "Python",
+      "results": [
+        {
+          "id": "sql-11",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 11,
+          "endLine": 11,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "sql-17",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 17,
+          "endLine": 17,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "sql-22",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 22,
+          "endLine": 22,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "sql-27",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 27,
+          "endLine": 27,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        },
+        {
+          "id": "sql-32",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 32,
+          "endLine": 32,
+          "kind": "negative",
+          "status": "clear",
+          "findings": []
+        }
+      ],
+      "unadjudicated": []
+    },
+    {
+      "id": "preflight-sql-positive",
+      "corpus": "preflight-existing-fixtures",
+      "provenance": "preflight-fixture",
+      "language": "Python",
+      "results": [
+        {
+          "id": "sql-11",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 11,
+          "endLine": 11,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/query.py",
+              "line": 11,
+              "cwe": "CWE-89",
+              "probe": "Python Raw SQL Interpolation",
+              "title": "Raw SQL built with string interpolation"
+            },
+            {
+              "file": "app/query.py",
+              "line": 11,
+              "cwe": "CWE-89",
+              "probe": "SQL Injection",
+              "title": "Python query built with f-string or % / .format() interpolation"
+            }
+          ]
+        },
+        {
+          "id": "sql-16",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 16,
+          "endLine": 16,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/query.py",
+              "line": 16,
+              "cwe": "CWE-89",
+              "probe": "Python Raw SQL Interpolation",
+              "title": "Raw SQL built with string interpolation"
+            }
+          ]
+        },
+        {
+          "id": "sql-20",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 20,
+          "endLine": 20,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/query.py",
+              "line": 20,
+              "cwe": "CWE-89",
+              "probe": "Python Raw SQL Interpolation",
+              "title": "Raw SQL built with string interpolation"
+            }
+          ]
+        },
+        {
+          "id": "sql-24",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 24,
+          "endLine": 24,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/query.py",
+              "line": 24,
+              "cwe": "CWE-89",
+              "probe": "Python Raw SQL Interpolation",
+              "title": "Raw SQL built with string interpolation"
+            },
+            {
+              "file": "app/query.py",
+              "line": 24,
+              "cwe": "CWE-89",
+              "probe": "SQL Injection",
+              "title": "Python query built with f-string or % / .format() interpolation"
+            }
+          ]
+        },
+        {
+          "id": "sql-28",
+          "file": "app/query.py",
+          "cwe": "CWE-89",
+          "startLine": 28,
+          "endLine": 28,
+          "kind": "positive",
+          "status": "detected",
+          "findings": [
+            {
+              "file": "app/query.py",
+              "line": 28,
+              "cwe": "CWE-89",
+              "probe": "Python Raw SQL Interpolation",
+              "title": "Raw SQL built with string interpolation"
+            },
+            {
+              "file": "app/query.py",
+              "line": 28,
+              "cwe": "CWE-89",
+              "probe": "SQL Injection",
+              "title": "Python query built with f-string or % / .format() interpolation"
+            }
+          ]
+        }
+      ],
+      "unadjudicated": []
+    }
+  ],
+  "measurement": {
+    "mode": "measurement-only",
+    "node": "v24.22.1",
+    "scannerRevision": "478bbf0be8d41af7f2951c6a63586b497a3275e1",
+    "scannerSourceSha256": "7ce21e7c3f38bcf71937f929d35fdba3b8805062820ac4db0c93a467b24d9d9e",
+    "manifestSha256": "25ca0da6df628074b8243f67156845a9ff588c8e0df5d8963cbe3a1c0accbc6f",
+    "harnessSha256": "12307751a2b25eaac2a603b1c901debc7ce96bde121a0c2a0559bbdd016ea12c",
+    "probeCount": 131
+  }
+}
